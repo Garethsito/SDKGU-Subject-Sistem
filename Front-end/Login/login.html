@@ -12,13 +12,13 @@
     <main>
         <section class="login">
         <div class="wrapper">
-            <form action="">
+            <form action="" id = "loginForm">
                 <h1>Login ID</h1>
                 <div class="input-box">
-                    <input type="text" placeholder="Login ID">
+                    <input type="text" placeholder="Login ID" name="username" required>
                 </div>
                 <div class="input-box">
-                    <input type="password" placeholder="Password">
+                    <input type="password" placeholder="Password" name="password" required>
                 </div>
 
                 <div class="remember-forgot">
@@ -28,7 +28,51 @@
                 <button type="submit" class="btn">Login</button>
 
             </form>
+            <div id="message"></div>
         </div>
     </main>
+    <script>
+const form = document.getElementById('loginForm');
+const messageDiv = document.getElementById('message');
+
+form.addEventListener('submit', async (e) => {
+    e.preventDefault(); // Evita que el form haga refresh
+
+    const formData = new FormData(form);
+    const data = {
+        username: formData.get('username'),
+        password: formData.get('password')
+    };
+
+    try {
+        const res = await fetch('http://localhost:3000/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+
+        if (result.success) {
+            messageDiv.style.color = 'green';
+            messageDiv.textContent = 'Login exitoso! 🎉';
+
+            // Redirigir a otra página después de 1 segundo
+            setTimeout(() => {
+                window.location.href = '../index.html'; // <-- aquí pones la página destino
+            }, 1000);
+        } else {
+            messageDiv.style.color = 'red';
+            messageDiv.textContent = result.message;
+        }
+
+    } catch (error) {
+        messageDiv.style.color = 'red';
+        messageDiv.textContent = 'Error al conectar con el servidor';
+        console.error(error);
+    }
+});
+</script>
+
 </body>
 </html>
