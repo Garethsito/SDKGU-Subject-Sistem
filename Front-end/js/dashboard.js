@@ -545,4 +545,4 @@ document.addEventListener('DOMContentLoaded', function () {
     createSessionCharts();
 
   }, 100); // Fin del setTimeout
-});
+}); 
