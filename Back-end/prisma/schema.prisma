@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
+  output   = "./generated/prisma"
 }
 
 datasource db {
@@ -138,4 +138,9 @@ model AcademicRecord {
   @@index([studentId])
   @@index([courseId])
   @@index([sessionId])
+}
+model Login {
+  id        Int     @id @default(autoincrement())
+  username  String  @unique
+  password  String
 }
