@@ -22,8 +22,10 @@ model Student {
   id             Int      @id @default(autoincrement())
   firstName      String
   lastName       String
-  email          String?  @unique  // Nullable porque no todos tienen email
+  email          String?  @unique
+  rgmKey         String?  @unique  // Nuevo campo para RGM KEY
   startDate      DateTime
+  admissionDate  DateTime? // Para las fechas de "Admission date"
   enrollmentYear Int
   status         String   @default("active")
   program        Program  @relation(fields: [programId], references: [id])
@@ -31,10 +33,12 @@ model Student {
   enrollments    Enrollment[]
   transfers      Transfer[]
   records        AcademicRecord[]
+  payments       Payment[]  // Nuevo: para registrar pagos
   
-  @@unique([firstName, lastName, startDate]) // Identificación única por nombre y fecha de inicio
+  @@unique([firstName, lastName, startDate])
   @@index([programId])
-  @@index([lastName]) // Para búsquedas alfabéticas
+  @@index([lastName])
+  @@index([rgmKey])
 }
 
 model Course {
@@ -53,7 +57,7 @@ model Course {
   transfers          Transfer[]
   
   @@index([programId])
-  @@index([courseCode]) // Ya es unique, pero útil para búsquedas
+  @@index([courseCode])
 }
 
 model Prerequisite {
@@ -63,14 +67,14 @@ model Prerequisite {
   prerequisiteCourse   Course  @relation("PrerequisitesForOther", fields: [prerequisiteCourseId], references: [id])
   prerequisiteCourseId Int
   
-  @@unique([courseId, prerequisiteCourseId]) // Prevenir duplicados
+  @@unique([courseId, prerequisiteCourseId])
   @@index([courseId])
   @@index([prerequisiteCourseId])
 }
 
 model Session {
   id          Int      @id @default(autoincrement())
-  sessionName String   @unique
+  sessionName String   @unique // "S1 2025", "S7 2025", etc.
   startDate   DateTime
   endDate     DateTime
   program     Program  @relation(fields: [programId], references: [id])
@@ -79,7 +83,7 @@ model Session {
   records     AcademicRecord[]
   
   @@index([programId])
-  @@index([sessionName]) // Ya es unique, pero útil para búsquedas
+  @@index([sessionName])
 }
 
 model CourseOffering {
@@ -105,7 +109,7 @@ model Enrollment {
   status     String          @default("enrolled")
   grade      String?
   
-  @@unique([studentId, offeringId]) // Prevenir inscripciones duplicadas
+  @@unique([studentId, offeringId])
   @@index([studentId])
   @@index([offeringId])
 }
@@ -129,16 +133,33 @@ model AcademicRecord {
   studentId Int
   course    Course   @relation(fields: [courseId], references: [id])
   courseId  Int
-  session   Session  @relation(fields: [sessionId], references: [id])
-  sessionId Int
-  status    String?  // 'completed', 'in-progress', 'pending', 'scheduled', 'failed', 'loa'
-  grade     String?  // A, A-, B+, "S1 2025", "F S5 R", "LOA", etc.
+  session   Session? @relation(fields: [sessionId], references: [id])
+  sessionId Int?
+  status    String?  // 'completed', 'in-progress', 'pending', 'scheduled', 'failed', 'loa', 'R' (repeat)
+  grade     String?  // A, A-, B+, "S1 2025", "LOA", "F S5 R", etc.
+  isPayment Boolean  @default(false) // Para distinguir registros de pago
+  paymentInfo String? // Información del pago si isPayment = true
   
   @@unique([studentId, courseId, sessionId])
   @@index([studentId])
   @@index([courseId])
   @@index([sessionId])
 }
+
+// Nuevo modelo para pagos
+model Payment {
+  id          Int      @id @default(autoincrement())
+  student     Student  @relation(fields: [studentId], references: [id])
+  studentId   Int
+  amount      String   // "$300", "$440", etc.
+  paymentDate DateTime?
+  method      String?  // "Bank", "Paypal", "PP", etc.
+  description String?
+  courseCode  String?  // Para asociar con un curso si aplica
+  
+  @@index([studentId])
+}
+
 model Login {
   id        Int     @id @default(autoincrement())
   username  String  @unique
