@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Program {
+  id           Int      @id @default(autoincrement())
+  programName  String   @unique
+  programType  String
+  totalCourses Int
+  students     Student[]
+  sessions     Session[]
+  courses      Course[]
+}
+
+model Student {
+  id             Int      @id @default(autoincrement())
+  firstName      String
+  lastName       String
+  email          String?  @unique  // Nullable porque no todos tienen email
+  startDate      DateTime
+  enrollmentYear Int
+  status         String   @default("active")
+  program        Program  @relation(fields: [programId], references: [id])
+  programId      Int
+  enrollments    Enrollment[]
+  transfers      Transfer[]
+  records        AcademicRecord[]
+  
+  @@unique([firstName, lastName, startDate]) // Identificación única por nombre y fecha de inicio
+  @@index([programId])
+  @@index([lastName]) // Para búsquedas alfabéticas
+}
+
+model Course {
+  id             Int      @id @default(autoincrement())
+  courseCode     String   @unique
+  courseName     String
+  credits        Int      @default(3)
+  isTransferable Boolean  @default(true)
+  maxCapacity    Int?
+  program        Program  @relation(fields: [programId], references: [id])
+  programId      Int
+  prerequisites      Prerequisite[] @relation("PrerequisitesForCourse")
+  prerequisiteFor    Prerequisite[] @relation("PrerequisitesForOther")
+  offerings          CourseOffering[]
+  records            AcademicRecord[]
+  transfers          Transfer[]
+  
+  @@index([programId])
+  @@index([courseCode]) // Ya es unique, pero útil para búsquedas
+}
+
+model Prerequisite {
+  id                   Int     @id @default(autoincrement())
+  course               Course  @relation("PrerequisitesForCourse", fields: [courseId], references: [id])
+  courseId             Int
+  prerequisiteCourse   Course  @relation("PrerequisitesForOther", fields: [prerequisiteCourseId], references: [id])
+  prerequisiteCourseId Int
+  
+  @@unique([courseId, prerequisiteCourseId]) // Prevenir duplicados
+  @@index([courseId])
+  @@index([prerequisiteCourseId])
+}
+
+model Session {
+  id          Int      @id @default(autoincrement())
+  sessionName String   @unique
+  startDate   DateTime
+  endDate     DateTime
+  program     Program  @relation(fields: [programId], references: [id])
+  programId   Int
+  offerings   CourseOffering[]
+  records     AcademicRecord[]
+  
+  @@index([programId])
+  @@index([sessionName]) // Ya es unique, pero útil para búsquedas
+}
+
+model CourseOffering {
+  id          Int      @id @default(autoincrement())
+  course      Course   @relation(fields: [courseId], references: [id])
+  courseId    Int
+  session     Session  @relation(fields: [sessionId], references: [id])
+  sessionId   Int
+  maxStudents Int?
+  enrollments Enrollment[]
+  
+  @@unique([courseId, sessionId])
+  @@index([courseId])
+  @@index([sessionId])
+}
+
+model Enrollment {
+  id         Int             @id @default(autoincrement())
+  student    Student         @relation(fields: [studentId], references: [id])
+  studentId  Int
+  offering   CourseOffering  @relation(fields: [offeringId], references: [id])
+  offeringId Int
+  status     String          @default("enrolled")
+  grade      String?
+  
+  @@unique([studentId, offeringId]) // Prevenir inscripciones duplicadas
+  @@index([studentId])
+  @@index([offeringId])
+}
+
+model Transfer {
+  id           Int       @id @default(autoincrement())
+  student      Student   @relation(fields: [studentId], references: [id])
+  studentId    Int
+  course       Course    @relation(fields: [courseId], references: [id])
+  courseId     Int
+  transferType String?
+  approvalDate DateTime?
+  
+  @@index([studentId])
+  @@index([courseId])
+}
+
+model AcademicRecord {
+  id        Int      @id @default(autoincrement())
+  student   Student  @relation(fields: [studentId], references: [id])
+  studentId Int
+  course    Course   @relation(fields: [courseId], references: [id])
+  courseId  Int
+  session   Session  @relation(fields: [sessionId], references: [id])
+  sessionId Int
+  status    String?  // 'completed', 'in-progress', 'pending', 'scheduled', 'failed', 'loa'
+  grade     String?  // A, A-, B+, "S1 2025", "F S5 R", "LOA", etc.
+  
+  @@unique([studentId, courseId, sessionId])
+  @@index([studentId])
+  @@index([courseId])
+  @@index([sessionId])
+}
