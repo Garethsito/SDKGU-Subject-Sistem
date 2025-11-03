@@ -8,8 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://kit.fontawesome.com/337be747ec.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="/js/dashboard.js"></script>
-  <script src="/js/session.js"></script>
+  <script src="/js/script.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <style>
   [x-cloak] { display: none !important; }
@@ -361,94 +360,94 @@
     </div>
   </main>
 
-<!-- Modal de Detalles de Sesión -->
-<div x-show="openModalFlag" 
-    x-cloak
-    x-transition.opacity 
-    @click.self="openModalFlag = false" 
-    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+  <!-- Modal de Detalles de Sesión -->
+  <div x-show="openModalFlag" 
+      x-cloak
+      x-transition.opacity 
+      @click.self="openModalFlag = false" 
+      class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
 
-  <div class="bg-white rounded-lg shadow-lg w-[700px] relative overflow-hidden">
-    <!-- Header -->
-    <div class="bg-[#A6192E] h-[70px] flex items-center justify-between px-6">
-      <h2 class="text-2xl text-white font-bold">Session Details</h2>
-      <button @click="openModalFlag = false" class="text-white hover:text-gray-200">
-        <i class="fa-solid fa-times text-2xl"></i>
-      </button>
-    </div>
-
-    <!-- Body -->
-    <div class="p-6 space-y-4">
-      <!-- Primera fila: ID, Programa, Mes -->
-      <div class="grid grid-cols-3 gap-4">
-        <div>
-          <label class="text-gray-800 text-xl mb-2 block">Session ID</label>
-          <input type="text" x-model="selectedSession.id" 
-                class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-100 cursor-not-allowed" 
-                readonly>
-        </div>
-
-        <div>
-          <label class="text-gray-800 text-xl mb-2 block">Program</label>
-          <input type="text" x-model="selectedSession.program" 
-                class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-100 cursor-not-allowed" 
-                readonly>
-        </div>
-
-        <div>
-          <label class="text-gray-800 text-xl mb-2 block">Month</label>
-          <input type="text" x-model="selectedSession.month" 
-                class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-100 cursor-not-allowed" 
-                readonly>
-        </div>
+    <div class="bg-white rounded-lg shadow-lg w-[700px] relative overflow-hidden">
+      <!-- Header -->
+      <div class="bg-[#A6192E] h-[70px] flex items-center justify-between px-6">
+        <h2 class="text-2xl text-white font-bold">Session Details</h2>
+        <button @click="openModalFlag = false" class="text-white hover:text-gray-200">
+          <i class="fa-solid fa-times text-2xl"></i>
+        </button>
       </div>
 
-      <!-- Segunda fila: Status -->
-      <div>
-        <label class="text-gray-800 text-xl mb-2 block">Status</label>
-        <input type="text" x-model="selectedSession.status" 
-              class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-100 cursor-not-allowed capitalize" 
-              readonly>
-      </div>
+      <!-- Body -->
+      <div class="p-6 space-y-4">
+        <!-- Primera fila: ID, Programa, Mes -->
+        <div class="grid grid-cols-3 gap-4">
+          <div>
+            <label class="text-gray-800 text-xl mb-2 block">Session ID</label>
+            <input type="text" x-model="selectedSession.id" 
+                  class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-100 cursor-not-allowed" 
+                  readonly>
+          </div>
 
-      <!-- Tercera fila: Subjects + Botón Manage -->
-      <div class="grid grid-cols-3 gap-4 items-start">
-        <div class="col-span-2">
-          <label class="text-gray-800 text-xl mb-2 block">Subjects</label>
-          <div class="flex flex-wrap border border-gray-300 rounded-md p-2 min-h-[48px] bg-gray-100">
-            <template x-if="selectedSession.subjects && selectedSession.subjects.length > 0">
-              <template x-for="(subject, index) in selectedSession.subjects" :key="index">
-                <div class="flex items-center bg-[#A6192E] text-white rounded-full px-3 py-1 m-1">
-                  <span x-text="subject"></span>
-                </div>
-              </template>
-            </template>
-            <template x-if="!selectedSession.subjects || selectedSession.subjects.length === 0">
-              <span class="text-gray-400 px-2 py-1">No subjects assigned</span>
-            </template>
+          <div>
+            <label class="text-gray-800 text-xl mb-2 block">Program</label>
+            <input type="text" x-model="selectedSession.program" 
+                  class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-100 cursor-not-allowed" 
+                  readonly>
+          </div>
+
+          <div>
+            <label class="text-gray-800 text-xl mb-2 block">Month</label>
+            <input type="text" x-model="selectedSession.month" 
+                  class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-100 cursor-not-allowed" 
+                  readonly>
           </div>
         </div>
-        
-      </div>
 
-      <!-- Cuarta fila: Professor -->
-      <div>
-        <label class="text-gray-800 text-xl mb-2 block">Professor</label>
-        <input type="text" x-model="selectedSession.professor" 
-              class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-100 cursor-not-allowed" 
-              readonly>
-      </div>
+        <!-- Segunda fila: Status -->
+        <div>
+          <label class="text-gray-800 text-xl mb-2 block">Status</label>
+          <input type="text" x-model="selectedSession.status" 
+                class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-100 cursor-not-allowed capitalize" 
+                readonly>
+        </div>
 
-      <!-- Footer -->
-      <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
-        <button @click="openModalFlag = false" 
-                class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium">
-          Close
-        </button>
+        <!-- Tercera fila: Subjects + Botón Manage -->
+        <div class="grid grid-cols-3 gap-4 items-start">
+          <div class="col-span-2">
+            <label class="text-gray-800 text-xl mb-2 block">Subjects</label>
+            <div class="flex flex-wrap border border-gray-300 rounded-md p-2 min-h-[48px] bg-gray-100">
+              <template x-if="selectedSession.subjects && selectedSession.subjects.length > 0">
+                <template x-for="(subject, index) in selectedSession.subjects" :key="index">
+                  <div class="flex items-center bg-[#A6192E] text-white rounded-full px-3 py-1 m-1">
+                    <span x-text="subject"></span>
+                  </div>
+                </template>
+              </template>
+              <template x-if="!selectedSession.subjects || selectedSession.subjects.length === 0">
+                <span class="text-gray-400 px-2 py-1">No subjects assigned</span>
+              </template>
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Cuarta fila: Professor -->
+        <div>
+          <label class="text-gray-800 text-xl mb-2 block">Professor</label>
+          <input type="text" x-model="selectedSession.professor" 
+                class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-100 cursor-not-allowed" 
+                readonly>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <button @click="openModalFlag = false" 
+                  class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium">
+            Close
+          </button>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
   <!-- Footer -->
   <footer :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'" class="bg-[#2D2828] border-t">
@@ -463,8 +462,6 @@
       </div>
     </div>
   </footer>
-
-
 
 </body>
 </html>

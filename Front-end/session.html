@@ -8,7 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://kit.fontawesome.com/337be747ec.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="/js/session.js"></script>
+  <script src="/js/script.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <style>
   [x-cloak] { display: none !important; }
@@ -414,7 +414,8 @@
       </div>
     </div>
   </div>
-<div x-show="showSubjectsModal" 
+
+  <div x-show="showSubjectsModal" 
       x-cloak
      x-transition.opacity 
      @click.self="closeSubjectsModal()" 
@@ -622,6 +623,7 @@
 
     </div>
   </div>
+  
 </div>
     <!-- Footer -->
   <footer :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'" class="bg-[#2D2828] border-t">
