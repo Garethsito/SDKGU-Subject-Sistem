@@ -6,7 +6,7 @@
   <title>SDGKU - Subjects</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://kit.fontawesome.com/337be747ec.js" crossorigin="anonymous"></script>
-  <script src="/js/script.js"></script>
+  <script src="js/script.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
   [x-cloak] { display: none !important; }
@@ -107,6 +107,18 @@
                   </select>
                 </div>
 
+                <!-- Filtro por pre requisitos
+                Criterios
+                Pre: Todos; Si; No; -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Prerequisites</label>
+                  <select x-model="filters.occupancy" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+                    <option value="allpre">All</option>
+                    <option value="yespre">With Prerequisites</option>
+                    <option value="nopre">No Prerequisites</option>
+                  </select>
+                </div>
+
                 <!-- Filtro por estado de grupo 
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Session Status</label>
@@ -164,7 +176,7 @@
           
           <!-- Titulo -->
           <div>
-            <h1 class="text-2xl font-bold text-[#2D2828]">SDGKU Dashboard</h1>
+            <h1 class="text-2xl font-bold text-[#fff]">SDGKU Dashboard</h1>
           </div>
         </div>
       </div>
