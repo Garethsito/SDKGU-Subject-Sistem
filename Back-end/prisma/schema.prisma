@@ -6,6 +6,8 @@ generator client {
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL") // Opcional
+  relationMode = "prisma" // Opcional, para evitar foreign keys
 }
 
 model Program {
@@ -13,32 +15,43 @@ model Program {
   programName  String   @unique
   programType  String
   totalCourses Int
+  totalUnits   Int?     // Nuevo: Total units del programa
   students     Student[]
   sessions     Session[]
   courses      Course[]
 }
 
 model Student {
-  id             Int      @id @default(autoincrement())
-  firstName      String
-  lastName       String
-  email          String?  @unique
-  rgmKey         String?  @unique  // Nuevo campo para RGM KEY
-  startDate      DateTime
-  admissionDate  DateTime? // Para las fechas de "Admission date"
-  enrollmentYear Int
-  status         String   @default("active")
-  program        Program  @relation(fields: [programId], references: [id])
-  programId      Int
-  enrollments    Enrollment[]
-  transfers      Transfer[]
-  records        AcademicRecord[]
-  payments       Payment[]  // Nuevo: para registrar pagos
+  id                      Int      @id @default(autoincrement())
+  firstName               String
+  lastName                String
+  email                   String?  @unique
+  sdgkuEmail              String?  @unique  // Nuevo: SDGKU EMAIL
+  rgmKey                  String?  @unique
+  startDate               DateTime
+  admissionDate           DateTime?
+  enrollmentYear          Int
+  status                  String   @default("active")
+  modality                String?  // Nuevo: Online, Hybrid, etc.
+  cohort                  String?  // Nuevo: USA, etc.
+  language                String?  // Nuevo: English, Spanish, etc.
+  transferredUnits        Int      @default(0)  // Nuevo: Transferred Units
+  unitQuantity            Int      @default(0)  // Nuevo: Unit Quantity
+  totalUnitsEarned        Int      @default(0)  // Nuevo: Total Units Earned
+  scheduledCompletionDate DateTime? // Nuevo: Scheduled Completion Date
+  graduationDate          DateTime? // Nuevo: Graduation Date
+  program                 Program  @relation(fields: [programId], references: [id])
+  programId               Int
+  enrollments             Enrollment[]
+  transfers               Transfer[]
+  records                 AcademicRecord[]
+  payments                Payment[]
   
   @@unique([firstName, lastName, startDate])
   @@index([programId])
   @@index([lastName])
   @@index([rgmKey])
+  @@index([sdgkuEmail])
 }
 
 model Course {
@@ -46,6 +59,7 @@ model Course {
   courseCode     String   @unique
   courseName     String
   credits        Int      @default(3)
+  language       String?  // Nuevo: Language del curso
   isTransferable Boolean  @default(true)
   maxCapacity    Int?
   program        Program  @relation(fields: [programId], references: [id])
@@ -74,7 +88,7 @@ model Prerequisite {
 
 model Session {
   id          Int      @id @default(autoincrement())
-  sessionName String   @unique // "S1 2025", "S7 2025", etc.
+  sessionName String   @unique
   startDate   DateTime
   endDate     DateTime
   program     Program  @relation(fields: [programId], references: [id])
@@ -135,10 +149,10 @@ model AcademicRecord {
   courseId  Int
   session   Session? @relation(fields: [sessionId], references: [id])
   sessionId Int?
-  status    String?  // 'completed', 'in-progress', 'pending', 'scheduled', 'failed', 'loa', 'R' (repeat)
-  grade     String?  // A, A-, B+, "S1 2025", "LOA", "F S5 R", etc.
-  isPayment Boolean  @default(false) // Para distinguir registros de pago
-  paymentInfo String? // Información del pago si isPayment = true
+  status    String?
+  grade     String?
+  isPayment Boolean  @default(false)
+  paymentInfo String?
   
   @@unique([studentId, courseId, sessionId])
   @@index([studentId])
@@ -146,16 +160,15 @@ model AcademicRecord {
   @@index([sessionId])
 }
 
-// Nuevo modelo para pagos
 model Payment {
   id          Int      @id @default(autoincrement())
   student     Student  @relation(fields: [studentId], references: [id])
   studentId   Int
-  amount      String   // "$300", "$440", etc.
+  amount      String
   paymentDate DateTime?
-  method      String?  // "Bank", "Paypal", "PP", etc.
+  method      String?
   description String?
-  courseCode  String?  // Para asociar con un curso si aplica
+  courseCode  String?
   
   @@index([studentId])
 }
