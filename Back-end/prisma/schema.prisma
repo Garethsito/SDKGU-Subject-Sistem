@@ -1,13 +1,10 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
-  shadowDatabaseUrl = env("SHADOW_DATABASE_URL") // Opcional
-  relationMode = "prisma" // Opcional, para evitar foreign keys
 }
 
 model Program {

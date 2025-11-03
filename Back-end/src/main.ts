@@ -1,9 +1,8 @@
-// Back-end/src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
 
-dotenv.config(); // <-- Asegura que las variables de .env se carguen
+dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -17,8 +16,10 @@ async function bootstrap() {
   const PORT = process.env.PORT ?? 3000;
   await app.listen(PORT);
 
+  console.log(`✅ Prisma conectado a la base de datos`);
   console.log(`🚀 API corriendo en http://localhost:${PORT}`);
   console.log(`🔐 Endpoint login: POST http://localhost:${PORT}/api/auth/login`);
+  console.log(`📊 Endpoint estudiantes: GET http://localhost:${PORT}/api/students/count`);
 }
 
 bootstrap();
