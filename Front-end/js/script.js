@@ -385,6 +385,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Gráficas de Donut para cada sesión
+    // Gráficas de Donut para cada sesión
     window.createSessionCharts = function() {
       
       // Destruir gráficas anteriores
@@ -402,6 +403,22 @@ document.addEventListener('DOMContentLoaded', function () {
         if (canvas) {
           const ctx = canvas.getContext('2d');
           
+          // Determinar color según ocupación
+          // Rojo si es crítico (<40%)
+          // Ámbar si es bajo (40-60%)
+          // Verde si es óptimo (60-90%)
+          // Azul si está lleno (≥90%)
+          let chartColor;
+          if (session.occupancy < 40) {
+            chartColor = '#DC2626'; // Rojo
+          } else if (session.occupancy >= 40 && session.occupancy < 60) {
+            chartColor = '#D97706'; // Ámbar
+          } else if (session.occupancy >= 60 && session.occupancy < 90) {
+            chartColor = '#16A34A'; // Verde
+          } else {
+            chartColor = '#2563EB'; // Azul
+          }
+          
           chartInstances['sessionChart' + session.id] = new Chart(ctx, {
             type: 'doughnut', 
             data: {
@@ -409,7 +426,7 @@ document.addEventListener('DOMContentLoaded', function () {
               datasets: [{
                 data: [session.occupancy, 100 - session.occupancy],
                 backgroundColor: [
-                  '#D41736',
+                  chartColor,
                   'rgba(210, 210, 210, 0.4)'
                 ],
                 borderWidth: 0 
@@ -713,13 +730,49 @@ function dashboard() {
       setTimeout(() => {
         const ctx = document.getElementById(id);
         if(ctx) {
+          // Determinar color según ocupación
+          // Rojo si es crítico (<40%)
+          // Ámbar si es bajo (40-60%)
+          // Verde si es óptimo (60-90%)
+          // Azul si está lleno (≥90%)
+          let chartColor;
+          if (progress < 40) {
+            chartColor = '#DC2626'; // Rojo
+          } else if (progress >= 40 && progress < 60) {
+            chartColor = '#D97706'; // Ámbar
+          } else if (progress >= 60 && progress < 90) {
+            chartColor = '#16A34A'; // Verde
+          } else {
+            chartColor = '#2563EB'; // Azul
+          }
+          
           new Chart(ctx.getContext('2d'), {
             type: 'doughnut',
-            data: { datasets: [{ data: [progress, 100-progress], backgroundColor: ['#A6192E','#f3f4f6'], borderWidth: 0, borderRadius: 6, cutout: '75%' }] },
-            options: { responsive:true, maintainAspectRatio:true, plugins:{legend:{display:false}, tooltip:{enabled:false}}, animation:{animateRotate:true, duration:1000, easing:'easeOutQuart'} }
+            data: { 
+              datasets: [{ 
+                data: [progress, 100-progress], 
+                backgroundColor: [chartColor, '#f3f4f6'], 
+                borderWidth: 0, 
+                borderRadius: 6, 
+                cutout: '75%' 
+              }] 
+            },
+            options: { 
+              responsive: true, 
+              maintainAspectRatio: true, 
+              plugins: {
+                legend: {display: false}, 
+                tooltip: {enabled: false}
+              }, 
+              animation: {
+                animateRotate: true, 
+                duration: 1000, 
+                easing: 'easeOutQuart'
+              } 
+            }
           });
         }
-      },100);
+      }, 100);
     },
     
     openSubjectsModal() {
@@ -864,16 +917,18 @@ function subjectsData() {
     filters: {
       program: 'all',
       session: 'all',
-      occupancy: 'all'
+      occupancy: 'all',
+      prerequisites: 'all'
     },
     
-    // Datos de materias
-    subjects: [
+    // Array original que NUNCA se modifica
+    allSubjects: [
       { 
         code: 'GBUS 404', 
         program: 'ASSD', 
         session: 'Session 1', 
         occupancy: 80,
+        maxStudents: 30,
         prerequisites: ['GBUS 101', 'GBUS 202'],
         students: [
           { name: 'Juan Pérez', id: '001', email: 'juan@sdgku.edu' },
@@ -886,6 +941,7 @@ function subjectsData() {
         program: 'ASSD', 
         session: 'Session 1', 
         occupancy: 55,
+        maxStudents: 25,
         prerequisites: ['ACCT 101'],
         students: [
           { name: 'Ana Martínez', id: '004', email: 'ana@sdgku.edu' },
@@ -896,7 +952,8 @@ function subjectsData() {
         code: 'MKTG 205', 
         program: 'ASSD', 
         session: 'Session 1', 
-        occupancy: 80,
+        occupancy: 90,
+        maxStudents: 20,
         prerequisites: ['MKTG 101', 'GBUS 101'],
         students: [
           { name: 'Laura Rodríguez', id: '006', email: 'laura@sdgku.edu' }
@@ -907,6 +964,7 @@ function subjectsData() {
         program: 'BGSM', 
         session: 'Session 1', 
         occupancy: 50,
+        maxStudents: 28,
         prerequisites: ['MATH 101'],
         students: [
           { name: 'Diego Torres', id: '007', email: 'diego@sdgku.edu' }
@@ -917,6 +975,7 @@ function subjectsData() {
         program: 'ASSD', 
         session: 'Session 1', 
         occupancy: 60,
+        maxStudents: 22,
         prerequisites: ['PHYS 101', 'MATH 202'],
         students: []
       },
@@ -925,66 +984,117 @@ function subjectsData() {
         program: 'ASSD', 
         session: 'Session 1', 
         occupancy: 95,
+        maxStudents: 18,
         prerequisites: ['CHEM 101'],
         students: []
       },
       { 
         code: 'ECON 220', 
-        program: 'BSGM', 
+        program: 'BGSM', 
         session: 'Session 1', 
         occupancy: 20,
+        maxStudents: 30,
         prerequisites: [],
         students: []
       },
       { 
         code: 'HIST 150', 
-        program: 'BSGM', 
+        program: 'BGSM', 
         session: 'Session 1', 
         occupancy: 10,
+        maxStudents: 25,
         prerequisites: [],
         students: []
       },
       { 
         code: 'BIOL 302', 
-        program: 'BSGM', 
+        program: 'BGSM', 
         session: 'Session 1', 
-        occupancy: 8,
+        occupancy: 38,
+        maxStudents: 20,
         prerequisites: ['BIOL 101', 'CHEM 101'],
         students: []
       }
     ],
     
-    // Método para obtener el color de fondo según la ocupación
-    // si es mayor a 70 = gris claro
-    // Si es menor a 70 = gris oscuro
-    // si es menor a 40 = rojo grisaseo
+    // Array que se muestra en la UI (este SÍ cambia con filtros)
+    subjects: [],
+    
+    // Inicialización
+    init() {
+      // Copia inicial de todos los subjects
+      this.subjects = [...this.allSubjects];
+    },
+    
     getCardBg(occupancy) {
       if (occupancy >= 70) return 'rgba(255, 255, 255, 0.6)';
       if (occupancy >= 40) return 'rgba(255, 255, 255, 0.4)';
       return 'rgba(255, 194, 194, 0.4)';
     },
     
-    // Método para mostrar estudiantes
     showStudents(subject) {
       this.selectedSubject = subject;
     },
     
-    // Limpiar filtros
+    // Limpiar filtros: restaura DESDE allSubjects
     clearFilters() {
       this.filters = {
         program: 'all',
         session: 'all',
-        occupancy: 'all'
+        occupancy: 'all',
+        prerequisites: 'all'
       };
+      
+      // Restaurar desde el array original
+      this.subjects = [...this.allSubjects];
       this.message = '';
     },
     
-    // Aplicar filtros
+    // SIEMPRE filtra desde allSubjects
     applyFilters() {
       console.log('Aplicando filtros:', this.filters);
       
-      // Aquí puedes implementar la lógica de filtrado
-      // Por ahora solo cierra el panel
+      // Siempre partir del array original
+      let filtered = [...this.allSubjects];
+      
+      // Filtro por programa
+      if (this.filters.program !== 'all') {
+        const programName = this.filters.program === 'bachelor' ? 'BGSM' : 'ASSD';
+        filtered = filtered.filter(s => s.program === programName);
+      }
+      
+      // Filtro por sesión
+      if (this.filters.session !== 'all') {
+        const sessionName = 'Session ' + this.filters.session.replace('session', '');
+        filtered = filtered.filter(s => s.session === sessionName);
+      }
+      
+      // Filtro por ocupación
+      if (this.filters.occupancy !== 'all') {
+        filtered = filtered.filter(s => {
+          switch(this.filters.occupancy) {
+            case 'critical': return s.occupancy < 40;
+            case 'low': return s.occupancy >= 40 && s.occupancy < 60;
+            case 'optimal': return s.occupancy >= 60 && s.occupancy < 90;
+            case 'full': return s.occupancy >= 90;
+            default: return true;
+          }
+        });
+      }
+      
+      // Filtro por prerrequisitos
+      if (this.filters.prerequisites !== 'all') {
+        filtered = filtered.filter(s => {
+          switch(this.filters.prerequisites) {
+            case 'yes': return s.prerequisites.length > 0;
+            case 'no': return s.prerequisites.length === 0;
+            default: return true;
+          }
+        });
+      }
+      
+      // Actualizar subjects mostrados
+      this.subjects = filtered;
       this.showFilters = false;
       
       // Mensaje informativo
@@ -992,12 +1102,15 @@ function subjectsData() {
       if (this.filters.program !== 'all') activeFilters.push('Program');
       if (this.filters.session !== 'all') activeFilters.push('Session');
       if (this.filters.occupancy !== 'all') activeFilters.push('Occupancy');
+      if (this.filters.prerequisites !== 'all') activeFilters.push('Prerequisites');
       
       if (activeFilters.length > 0) {
-        this.message = `Filters applied: ${activeFilters.join(', ')}`;
+        this.message = `Filters applied: ${activeFilters.join(', ')} | Showing ${this.subjects.length} subject(s)`;
       } else {
         this.message = '';
       }
+      
+      console.log('Subjects filtrados:', this.subjects.length);
     }
   }
 }

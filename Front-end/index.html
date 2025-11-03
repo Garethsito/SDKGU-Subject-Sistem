@@ -298,20 +298,7 @@
                 <div class="flex items-center gap-4">
                   <div class="flex">
                     <p class="text-sm text-gray-500">Occupancy: </p>
-                    <!-- 
-                      :class aplica clases CSS dinámicamente según la ocupación:
-                      - Rojo si es crítico (<40%)
-                      - Ámbar si es bajo (40-60%)
-                      - Verde si es óptimo (60-90%)
-                      - Azul si está lleno (≥90%)
-                    -->
-                    <p class="text-sm font-bold ml-1"
-                       :class="{
-                         'text-red-600': session.occupancy < 40,
-                         'text-amber-600': session.occupancy >= 40 && session.occupancy < 60,
-                         'text-green-600': session.occupancy >= 60 && session.occupancy < 90,
-                         'text-blue-600': session.occupancy >= 90
-                       }"
+                    <p class="text-sm ml-1 font-bold text-gray-900"
                        x-text="session.occupancy + '%'"></p>
                   </div>
                 </div>
