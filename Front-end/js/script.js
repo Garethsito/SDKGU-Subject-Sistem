@@ -404,19 +404,19 @@ document.addEventListener('DOMContentLoaded', function () {
           const ctx = canvas.getContext('2d');
           
           // Determinar color según ocupación
-          // Rojo si es crítico (<40%)
-          // Ámbar si es bajo (40-60%)
-          // Verde si es óptimo (60-90%)
-          // Azul si está lleno (≥90%)
+          // Gris Carbon si es crítico (<40%)
+          // Mauve Gris si es bajo (40-60%)
+          // Wine Rose si es óptimo (60-90%)
+          // Crimson Red si está lleno (≥90%)
           let chartColor;
-          if (session.occupancy < 40) {
-            chartColor = '#DC2626'; // Rojo
-          } else if (session.occupancy >= 40 && session.occupancy < 60) {
-            chartColor = '#D97706'; // Ámbar
-          } else if (session.occupancy >= 60 && session.occupancy < 90) {
-            chartColor = '#16A34A'; // Verde
+          if (progress < 40) {
+            chartColor = '#322C2C'; // Rojo 20%
+          } else if (progress >= 40 && progress < 60) {
+            chartColor = '#7B6569'; // Rojo 50%
+          } else if (progress >= 60 && progress < 90) {
+            chartColor = '#8C4650'; // Rojo 80%
           } else {
-            chartColor = '#2563EB'; // Azul
+            chartColor = '#D41736'; // Rojo 100%
           }
           
           chartInstances['sessionChart' + session.id] = new Chart(ctx, {
@@ -731,19 +731,19 @@ function dashboard() {
         const ctx = document.getElementById(id);
         if(ctx) {
           // Determinar color según ocupación
-          // Rojo si es crítico (<40%)
-          // Ámbar si es bajo (40-60%)
-          // Verde si es óptimo (60-90%)
-          // Azul si está lleno (≥90%)
+          // Gris Carbon si es crítico (<40%)
+          // Mauve Gris si es bajo (40-60%)
+          // Wine Rose si es óptimo (60-90%)
+          // Crimson Red si está lleno (≥90%)
           let chartColor;
           if (progress < 40) {
-            chartColor = '#DC2626'; // Rojo
+            chartColor = '#322C2C'; // Rojo 20%
           } else if (progress >= 40 && progress < 60) {
-            chartColor = '#D97706'; // Ámbar
+            chartColor = '#7B6569'; // Rojo 50%
           } else if (progress >= 60 && progress < 90) {
-            chartColor = '#16A34A'; // Verde
+            chartColor = '#8C4650'; // Rojo 80%
           } else {
-            chartColor = '#2563EB'; // Azul
+            chartColor = '#D41736'; // Rojo 100%
           }
           
           new Chart(ctx.getContext('2d'), {
