@@ -1,3 +1,5 @@
+
+//Front-end/js/script.js
 /////////////////////////////////////////////////////
 // Apartado de Index
 // Función del dashboard de index
@@ -21,7 +23,7 @@ function dashboardData() {
     },
     
     stats: {
-      totalStudents: 1247,
+      totalStudents: 1277,
       activeSessions: 38,
       avgOccupancy: 72,
       criticalSessions: 0,
@@ -150,12 +152,55 @@ function dashboardData() {
       }
     ],
     
-    init() {
+    async fetchTotalStudents() {
+  try {
+    const response = await fetch('http://localhost:3000/api/students/count');
+    const data = await response.json();
+    
+    if (data.total !== undefined) {
+      // ✅ PRIMERO actualiza la propiedad reactiva de Alpine
+      this.stats.totalStudents = data.total;
+      console.log('Total de estudiantes actualizado:', data.total);
+
+      // ✅ OPCIONAL: Forzar actualización del DOM
+      this.$nextTick(() => {
+        const totalEl = document.getElementById('totalStudents');
+        if (totalEl) {
+          totalEl.textContent = data.total;
+        }
+      });
+
+      // ✅ Actualizar gráfica si existe (calcula proporciones correctas)
+      if (chartInstances['pieChart']) {
+        // Mantén la proporción Bachelor's vs Associate (aproximadamente 60/40)
+        const bachelorPercentage = 0.59; // 59% como en tus datos originales
+        const bachelorTotal = Math.round(data.total * bachelorPercentage);
+        const associateTotal = data.total - bachelorTotal;
+        
+        chartInstances['pieChart'].data.datasets[0].data = [bachelorTotal, associateTotal];
+        chartInstances['pieChart'].update();
+        
+        // También actualiza studentDistribution para que sea consistente
+        this.studentDistribution.data = [bachelorTotal, associateTotal];
+      }
+    }
+  } catch (error) {
+    console.error('Error al obtener total de estudiantes:', error);
+    // Mantener el valor por defecto en caso de error
+  }
+},
+
+
+    async init() {
       this.upcomingSessions = [...this.allSessions];
+      await this.fetchTotalStudents();
       this.updateStats();
       console.log('Total sessions:', this.allSessions.length);
       console.log('Critical sessions:', this.stats.criticalSessions);
+       console.log('Total students cargado:', this.stats.totalStudents); // ✅ Agregar este log
     },
+
+
     
     // Abre el modal de detalles
     openModal(session, type='details') {
@@ -349,21 +394,42 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Gráfica 2: Distribución de estudiantes (Pie)
+// Gráfica 2: Distribución de estudiantes (Pie)
+async function cargarGraficaDistribucion() {
+  try {
+    const res = await fetch('http://localhost:3000/api/students/distribution');
+    const apiData = await res.json();
+
+    // ✅ Verifica si existe el canvas
     const canvas2 = document.getElementById('miGrafica2');
-    if (!canvas2) return;
-    
+    if (!canvas2) {
+      console.warn('⚠️ No se encontró el elemento #miGrafica2');
+      return;
+    }
     const ctx2 = canvas2.getContext('2d');
-    
+
+    // ✅ Usa los datos del backend si existen, si no usa los locales
+    const distData = apiData?.studentDistribution?.data?.length
+      ? apiData.studentDistribution
+      : Alpine.$data(document.body).studentDistribution;
+
+    // ✅ Si ya existe la gráfica, actualízala
+    if (chartInstances['pieChart']) {
+      chartInstances['pieChart'].data.labels = distData.labels;
+      chartInstances['pieChart'].data.datasets[0].data = distData.data;
+      chartInstances['pieChart'].update();
+      console.log('📊 Gráfica de distribución actualizada.');
+      return;
+    }
+
+    // ✅ Si no existe, créala
     chartInstances['pieChart'] = new Chart(ctx2, {
-      type: 'pie', 
+      type: 'pie',
       data: {
-        labels: data.studentDistribution.labels,
+        labels: distData.labels,
         datasets: [{
-          data: data.studentDistribution.data,
-          backgroundColor: [
-            '#A6192E',
-            '#2D2828'
-          ],
+          data: distData.data,
+          backgroundColor: ['#A6192E', '#2D2828'],
           borderWidth: 1
         }]
       },
@@ -383,6 +449,51 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       }
     });
+
+    console.log('✅ Gráfica de distribución creada exitosamente.');
+  } catch (error) {
+    console.error('❌ Error cargando distribución de estudiantes:', error);
+
+    // 🔄 En caso de error, usa los datos locales
+    const localData = Alpine.$data(document.body).studentDistribution;
+    const canvas2 = document.getElementById('miGrafica2');
+    if (!canvas2) return;
+    const ctx2 = canvas2.getContext('2d');
+
+    if (chartInstances['pieChart']) chartInstances['pieChart'].destroy();
+
+    chartInstances['pieChart'] = new Chart(ctx2, {
+      type: 'pie',
+      data: {
+        labels: localData.labels,
+        datasets: [{
+          data: localData.data,
+          backgroundColor: ['#A6192E', '#2D2828'],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { 
+            display: true,
+            position: 'bottom',
+            labels: { 
+              boxWidth: 12,
+              padding: 5,
+              font: { size: 10 }
+            }
+          }
+        }
+      }
+    });
+  }
+}
+
+cargarGraficaDistribucion();
+
+
 
     // Gráficas de Donut para cada sesión
     // Gráficas de Donut para cada sesión
