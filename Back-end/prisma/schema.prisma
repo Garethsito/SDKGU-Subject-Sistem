@@ -5,6 +5,8 @@ generator client {
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+  relationMode = "prisma"
 }
 
 model Program {
@@ -12,31 +14,32 @@ model Program {
   programName  String   @unique
   programType  String
   totalCourses Int
-  totalUnits   Int?     // Nuevo: Total units del programa
+  totalUnits   Int?
   students     Student[]
   sessions     Session[]
   courses      Course[]
 }
 
 model Student {
-  id                      Int      @id @default(autoincrement())
+  id                      BigInt   @id  // Cambiado: ahora es BigInt sin autoincrement
+  studentIdNumber         String   @unique  // Nuevo: para almacenar el ID original como string
   firstName               String
   lastName                String
   email                   String?  @unique
-  sdgkuEmail              String?  @unique  // Nuevo: SDGKU EMAIL
+  sdgkuEmail              String?  @unique
   rgmKey                  String?  @unique
   startDate               DateTime
   admissionDate           DateTime?
   enrollmentYear          Int
   status                  String   @default("active")
-  modality                String?  // Nuevo: Online, Hybrid, etc.
-  cohort                  String?  // Nuevo: USA, etc.
-  language                String?  // Nuevo: English, Spanish, etc.
-  transferredUnits        Int      @default(0)  // Nuevo: Transferred Units
-  unitQuantity            Int      @default(0)  // Nuevo: Unit Quantity
-  totalUnitsEarned        Int      @default(0)  // Nuevo: Total Units Earned
-  scheduledCompletionDate DateTime? // Nuevo: Scheduled Completion Date
-  graduationDate          DateTime? // Nuevo: Graduation Date
+  modality                String?
+  cohort                  String?
+  language                String?
+  transferredUnits        Int      @default(0)
+  unitQuantity            Int      @default(0)
+  totalUnitsEarned        Int      @default(0)
+  scheduledCompletionDate DateTime?
+  graduationDate          DateTime?
   program                 Program  @relation(fields: [programId], references: [id])
   programId               Int
   enrollments             Enrollment[]
@@ -49,6 +52,7 @@ model Student {
   @@index([lastName])
   @@index([rgmKey])
   @@index([sdgkuEmail])
+  @@index([studentIdNumber])
 }
 
 model Course {
@@ -56,7 +60,7 @@ model Course {
   courseCode     String   @unique
   courseName     String
   credits        Int      @default(3)
-  language       String?  // Nuevo: Language del curso
+  language       String?
   isTransferable Boolean  @default(true)
   maxCapacity    Int?
   program        Program  @relation(fields: [programId], references: [id])
@@ -114,7 +118,7 @@ model CourseOffering {
 model Enrollment {
   id         Int             @id @default(autoincrement())
   student    Student         @relation(fields: [studentId], references: [id])
-  studentId  Int
+  studentId  BigInt
   offering   CourseOffering  @relation(fields: [offeringId], references: [id])
   offeringId Int
   status     String          @default("enrolled")
@@ -128,7 +132,7 @@ model Enrollment {
 model Transfer {
   id           Int       @id @default(autoincrement())
   student      Student   @relation(fields: [studentId], references: [id])
-  studentId    Int
+  studentId    BigInt
   course       Course    @relation(fields: [courseId], references: [id])
   courseId     Int
   transferType String?
@@ -141,7 +145,7 @@ model Transfer {
 model AcademicRecord {
   id        Int      @id @default(autoincrement())
   student   Student  @relation(fields: [studentId], references: [id])
-  studentId Int
+  studentId BigInt
   course    Course   @relation(fields: [courseId], references: [id])
   courseId  Int
   session   Session? @relation(fields: [sessionId], references: [id])
@@ -160,7 +164,7 @@ model AcademicRecord {
 model Payment {
   id          Int      @id @default(autoincrement())
   student     Student  @relation(fields: [studentId], references: [id])
-  studentId   Int
+  studentId   BigInt
   amount      String
   paymentDate DateTime?
   method      String?

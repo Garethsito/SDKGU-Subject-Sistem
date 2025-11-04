@@ -2,7 +2,7 @@ import { PrismaClient } from '../generated/prisma/index.js';
 import XLSX from 'xlsx';
 
 const prisma = new PrismaClient();
-const FILE_PATH = './BSGM_ASSD.xlsx';
+const FILE_PATH = './BSGM_ASSD.xlsx'; 
 
 // Parsear fecha de Excel
 function parseExcelDate(value) {
@@ -15,6 +15,23 @@ function parseExcelDate(value) {
     return isNaN(parsed.getTime()) ? null : parsed;
   }
   return null;
+}
+
+// Función para convertir Students ID Number a BigInt
+function parseStudentId(value) {
+  if (!value) return null;
+  
+  // Remover cualquier caracter no numérico
+  const cleaned = String(value).replace(/[^\d]/g, '');
+  
+  if (!cleaned || cleaned === '') return null;
+  
+  try {
+    return BigInt(cleaned);
+  } catch (err) {
+    console.error(`Error parseando ID: ${value}`);
+    return null;
+  }
 }
 
 // Función para parsear el nombre completo
@@ -30,7 +47,6 @@ function parseFullName(fullName) {
   } else if (parts.length === 2) {
     return { firstName: parts[0], middleName: null, lastName: parts[1] };
   } else {
-    // Más de 2 partes: primer nombre, nombre(s) del medio, apellido(s)
     const firstName = parts[0];
     const lastName = parts[parts.length - 1];
     const middleName = parts.slice(1, -1).join(' ');
@@ -39,14 +55,22 @@ function parseFullName(fullName) {
 }
 
 // Procesar estudiante
-async function processStudent(row, program) {
+async function processStudent(row, programs) {
   try {
     // Parsear nombre completo
     const fullName = row['Full Name'] || '';
     const { firstName, middleName, lastName } = parseFullName(fullName);
     
-    // Extraer datos
+    // Extraer ID del estudiante
     const studentIdNumber = row['Students ID Number'] ? String(row['Students ID Number']).trim() : null;
+    const studentId = parseStudentId(studentIdNumber);
+    
+    if (!studentId) {
+      console.error(`   ❌ ID inválido para ${fullName}: ${studentIdNumber}`);
+      return null;
+    }
+    
+    // Extraer datos
     const rgmKey = row['RGM#'] ? String(row['RGM#']).trim() : null;
     const email = row['Email'] ? String(row['Email']).trim() : null;
     const sdgkuEmail = row['SDGKU EMAIL'] ? String(row['SDGKU EMAIL']).trim() : null;
@@ -55,6 +79,13 @@ async function processStudent(row, program) {
     const modality = row['Modality'] ? String(row['Modality']).trim() : null;
     const cohort = row['Cohort'] ? String(row['Cohort']).trim() : null;
     const language = row['Language'] ? String(row['Language']).trim() : null;
+    
+    // Obtener el programa correcto
+    const program = programs[programName];
+    if (!program) {
+      console.error(`   ❌ Programa no encontrado: ${programName} para ${fullName}`);
+      return null;
+    }
     
     // Unidades
     const totalUnits = row['Total Units'] ? parseInt(row['Total Units']) : 0;
@@ -69,39 +100,14 @@ async function processStudent(row, program) {
     
     const enrollmentYear = startDate.getFullYear();
     
-    // Buscar si el estudiante ya existe por RGM Key o email
-    let student = null;
-    
-    if (rgmKey) {
-      student = await prisma.student.findUnique({
-        where: { rgmKey }
-      });
-    }
-    
-    if (!student && sdgkuEmail) {
-      student = await prisma.student.findUnique({
-        where: { sdgkuEmail }
-      });
-    }
-    
-    if (!student && email) {
-      student = await prisma.student.findUnique({
-        where: { email }
-      });
-    }
-    
-    // Si no existe, buscar por nombre completo y fecha
-    if (!student) {
-      student = await prisma.student.findFirst({
-        where: {
-          firstName,
-          lastName,
-          startDate
-        }
-      });
-    }
+    // Verificar si el estudiante ya existe
+    let student = await prisma.student.findUnique({
+      where: { id: studentId }
+    }).catch(() => null);
     
     const studentData = {
+      id: studentId,
+      studentIdNumber,
       firstName,
       lastName,
       email,
@@ -124,21 +130,22 @@ async function processStudent(row, program) {
     if (student) {
       // Actualizar estudiante existente
       student = await prisma.student.update({
-        where: { id: student.id },
+        where: { id: studentId },
         data: studentData
       });
-      console.log(`   ✏️  Actualizado: ${firstName} ${lastName}`);
+      console.log(`   ✏️  Actualizado: ${firstName} ${lastName} (${programName}) - ID: ${studentId}`);
     } else {
       // Crear nuevo estudiante
       student = await prisma.student.create({
         data: studentData
       });
-      console.log(`   ✅ Creado: ${firstName} ${lastName}`);
+      console.log(`   ✅ Creado: ${firstName} ${lastName} (${programName}) - ID: ${studentId}`);
     }
     
     return student;
   } catch (err) {
     console.error(`   ❌ Error procesando ${row['Full Name']}: ${err.message}`);
+    console.error(`      Stack: ${err.stack}`);
     return null;
   }
 }
@@ -148,39 +155,80 @@ async function main() {
   
   try {
     // Leer el archivo Excel
+    console.log('📁 Intentando leer archivo:', FILE_PATH);
     const workbook = XLSX.readFile(FILE_PATH);
-    const sheetName = workbook.SheetNames[0]; // Primera hoja
+    console.log('✅ Archivo leído correctamente');
+    
+    const sheetName = workbook.SheetNames[0];
+    console.log('📄 Nombre de la hoja:', sheetName);
+    
     const sheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(sheet);
     
-    console.log(`📄 Hoja: ${sheetName}`);
-    console.log(`📊 Total de filas: ${rows.length}\n`);
+    console.log(`📊 Total de filas: ${rows.length}`);
     
-    // Buscar o crear programa BSGM
-    let program = await prisma.program.findUnique({
+    // Mostrar las columnas del Excel
+    if (rows.length > 0) {
+      console.log('📋 Columnas encontradas:', Object.keys(rows[0]));
+    }
+    console.log('');
+    
+    // Crear o buscar ambos programas
+    const programs = {};
+    
+    // Programa BSGM
+    let bsgmProgram = await prisma.program.findUnique({
       where: { programName: 'BSGM' }
     });
     
-    if (!program) {
-      program = await prisma.program.create({
+    if (!bsgmProgram) {
+      bsgmProgram = await prisma.program.create({
         data: {
           programName: 'BSGM',
           programType: 'Bachelor',
           totalCourses: 40,
-          totalUnits: 126 // Según los datos del Excel
+          totalUnits: 126
         }
       });
-      console.log('✅ Programa BSGM creado\n');
+      console.log('✅ Programa BSGM creado');
+    } else {
+      console.log('✅ Programa BSGM encontrado');
     }
+    programs['BSGM'] = bsgmProgram;
+    
+    // Programa ASSD
+    let assdProgram = await prisma.program.findUnique({
+      where: { programName: 'ASSD' }
+    });
+    
+    if (!assdProgram) {
+      assdProgram = await prisma.program.create({
+        data: {
+          programName: 'ASSD',
+          programType: 'Associate',
+          totalCourses: 20,
+          totalUnits: 60
+        }
+      });
+      console.log('✅ Programa ASSD creado');
+    } else {
+      console.log('✅ Programa ASSD encontrado');
+    }
+    programs['ASSD'] = assdProgram;
+    
+    console.log('');
     
     // Procesar cada fila
     let successCount = 0;
     let errorCount = 0;
+    const programStats = { BSGM: 0, ASSD: 0 };
     
     for (const row of rows) {
-      const student = await processStudent(row, program);
+      const student = await processStudent(row, programs);
       if (student) {
         successCount++;
+        const programName = row['Program'] ? String(row['Program']).trim() : 'BSGM';
+        programStats[programName] = (programStats[programName] || 0) + 1;
       } else {
         errorCount++;
       }
@@ -191,13 +239,16 @@ async function main() {
     console.log(`   ✅ Exitosos: ${successCount}`);
     console.log(`   ❌ Errores: ${errorCount}`);
     console.log(`   📝 Total procesados: ${rows.length}`);
+    console.log(`\n📚 Por programa:`);
+    console.log(`   🎓 BSGM: ${programStats.BSGM || 0} estudiantes`);
+    console.log(`   🎓 ASSD: ${programStats.ASSD || 0} estudiantes`);
     
-    // Estadísticas finales
     const totalStudents = await prisma.student.count();
     console.log(`\n👥 Total de estudiantes en la base de datos: ${totalStudents}`);
     
   } catch (err) {
     console.error('❌ Error fatal:', err);
+    console.error('Stack trace:', err.stack);
     throw err;
   }
 }
