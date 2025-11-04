@@ -17,4 +17,15 @@ export class StudentsController {
     const distribution = await this.studentsService.getDistribution();
     return distribution;
   }
+  @Get('sessions/count')
+  async getTotalSessions() {
+    const totalSessions = await this.studentsService.countSessions();
+    return { totalSessions };
+  }
+
+    @Get('sessions')
+  async getAllSessions() {
+    const sessions = await this.studentsService.getAllSessions();
+    return sessions;
+}
 }

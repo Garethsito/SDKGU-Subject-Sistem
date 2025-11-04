@@ -3,6 +3,7 @@
 /////////////////////////////////////////////////////
 // Apartado de Index
 // Función del dashboard de index
+// Función del dashboard de index
 function dashboardData() {
   return {
     open: false,
@@ -23,8 +24,8 @@ function dashboardData() {
     },
     
     stats: {
-      totalStudents: 1277,
-      activeSessions: 38,
+      totalStudents: 0,
+      activeSessions: 0,
       avgOccupancy: 72,
       criticalSessions: 0,
     },
@@ -39,169 +40,42 @@ function dashboardData() {
       data: [754, 493]
     },
     
-    allSessions: [
-      { 
-        id: 1,
-        name: 'Session 1',
-        program: "Bachelor's",
-        month: 'October',
-        occupancy: 85,
-        status: 'active',
-        lowEnrollment: false,
-        subjects: ['MATH 201', 'ENGL 201'],
-        professor: 'Daniel Tornero'
-      },
-      { 
-        id: 2, 
-        name: 'Session 2', 
-        program: 'Associate', 
-        month: 'November', 
-        occupancy: 72, 
-        status: 'active', 
-        lowEnrollment: false,
-        subjects: ['GBUS 404', 'SPCH 201'],
-        professor: 'Jorge Ruiz'
-      },
-      { 
-        id: 3, 
-        name: 'Session 3', 
-        program: 'Associate', 
-        month: 'December', 
-        occupancy: 68, 
-        status: 'active', 
-        lowEnrollment: false,
-        subjects: ['MATH 202', 'ART 201'],
-        professor: 'Daniel Tornero'
-      },
-      { 
-        id: 4, 
-        name: 'Session 4', 
-        program: "Bachelor's", 
-        month: 'January', 
-        occupancy: 91, 
-        status: 'active', 
-        lowEnrollment: false,
-        subjects: ['PHIL 201', 'ENGL 202'],
-        professor: 'Jorge Ruiz'
-      },
-      { 
-        id: 5, 
-        name: 'Session 5', 
-        program: 'Associate', 
-        month: 'February', 
-        occupancy: 55, 
-        status: 'active', 
-        lowEnrollment: false,
-        subjects: ['MATH 203'],
-        professor: 'Daniel Tornero'
-      },
-      { 
-        id: 6, 
-        name: 'Session 6', 
-        program: "Bachelor's", 
-        month: 'March', 
-        occupancy: 78, 
-        status: 'active', 
-        lowEnrollment: false,
-        subjects: ['GBUS 405', 'MATH 201'],
-        professor: 'Jorge Ruiz'
-      },
-      { 
-        id: 7, 
-        name: 'Session 7', 
-        program: 'Associate', 
-        month: 'April', 
-        occupancy: 35, 
-        status: 'active', 
-        lowEnrollment: true,
-        subjects: ['ENGL 201'],
-        professor: 'Daniel Tornero'
-      },
-      { 
-        id: 8, 
-        name: 'Session 8', 
-        program: "Bachelor's", 
-        month: 'May', 
-        occupancy: 42, 
-        status: 'active', 
-        lowEnrollment: true,
-        subjects: ['SPCH 201', 'ART 201'],
-        professor: 'Jorge Ruiz'
-      },
-      { 
-        id: 9, 
-        name: 'Session 9', 
-        program: 'Associate', 
-        month: 'June', 
-        occupancy: 95, 
-        status: 'active', 
-        lowEnrollment: false,
-        subjects: ['MATH 202', 'PHIL 201', 'ENGL 202'],
-        professor: 'Daniel Tornero'
-      },
-      { 
-        id: 10, 
-        name: 'Session 10', 
-        program: "Bachelor's", 
-        month: 'July', 
-        occupancy: 28, 
-        status: 'active', 
-        lowEnrollment: true,
-        subjects: ['GBUS 404'],
-        professor: 'Jorge Ruiz'
-      }
-    ],
-    
-    async fetchTotalStudents() {
-  try {
-    const response = await fetch('http://localhost:3000/api/students/count');
-    const data = await response.json();
-    
-    if (data.total !== undefined) {
-      // ✅ PRIMERO actualiza la propiedad reactiva de Alpine
-      this.stats.totalStudents = data.total;
-      console.log('Total de estudiantes actualizado:', data.total);
-
-      // ✅ OPCIONAL: Forzar actualización del DOM
-      this.$nextTick(() => {
-        const totalEl = document.getElementById('totalStudents');
-        if (totalEl) {
-          totalEl.textContent = data.total;
-        }
-      });
-
-      // ✅ Actualizar gráfica si existe (calcula proporciones correctas)
-      if (chartInstances['pieChart']) {
-        // Mantén la proporción Bachelor's vs Associate (aproximadamente 60/40)
-        const bachelorPercentage = 0.59; // 59% como en tus datos originales
-        const bachelorTotal = Math.round(data.total * bachelorPercentage);
-        const associateTotal = data.total - bachelorTotal;
-        
-        chartInstances['pieChart'].data.datasets[0].data = [bachelorTotal, associateTotal];
-        chartInstances['pieChart'].update();
-        
-        // También actualiza studentDistribution para que sea consistente
-        this.studentDistribution.data = [bachelorTotal, associateTotal];
-      }
-    }
-  } catch (error) {
-    console.error('Error al obtener total de estudiantes:', error);
-    // Mantener el valor por defecto en caso de error
-  }
-},
-
+    allSessions: [],
 
     async init() {
+      await this.fetchData();
       this.upcomingSessions = [...this.allSessions];
-      await this.fetchTotalStudents();
       this.updateStats();
+  
       console.log('Total sessions:', this.allSessions.length);
       console.log('Critical sessions:', this.stats.criticalSessions);
-       console.log('Total students cargado:', this.stats.totalStudents); // ✅ Agregar este log
+      console.log('Total students cargado:', this.stats.totalStudents);
     },
 
+    async fetchData() {
+      try {
+        // 🧠 Obtener total de estudiantes
+        const resStudents = await fetch('http://localhost:3000/api/students/count');
+        const dataStudents = await resStudents.json();
+        if (dataStudents.total !== undefined) {
+          this.stats.totalStudents = dataStudents.total;
+          console.log('✅ Total de estudiantes actualizado:', dataStudents.total);
+        }
 
-    
+        // 🧠 Obtener sesiones desde el backend
+        const res = await fetch('http://localhost:3000/api/students/sessions');
+        const data = await res.json();
+        this.allSessions = data;
+        console.log("📡 Sesiones cargadas desde la BD:", data);
+
+        // 🔥 NO calcular aquí activeSessions manualmente
+        // Se calculará en updateStats() basado en upcomingSessions
+
+      } catch (error) {
+        console.error('❌ Error obteniendo datos del dashboard:', error);
+      }
+    },
+
     // Abre el modal de detalles
     openModal(session, type='details') {
       this.selectedSession = {...session};
@@ -251,7 +125,7 @@ function dashboardData() {
       }
     },
 
-    // Limpia los filtros
+    // 🔥 FIX: Limpia los filtros correctamente
     clearFilters() {
       this.filters = {
         program: 'all',
@@ -263,9 +137,13 @@ function dashboardData() {
         prerequisites: false
       };
       
+      // ✅ Restaurar desde allSessions
       this.upcomingSessions = [...this.allSessions];
-      this.updateStats();
       
+      // ✅ Recalcular estadísticas basadas en upcomingSessions
+      this.updateStats();
+
+      // ✅ Recrear gráficas después de actualizar datos
       setTimeout(() => {
         window.createSessionCharts();
       }, 100);
@@ -324,14 +202,24 @@ function dashboardData() {
       console.log('Sesiones filtradas:', filtered.length);
     },
     
+    // 🔥 FIX: Actualiza estadísticas basadas en upcomingSessions
     updateStats() {
+      // ✅ Calcular critical sessions desde allSessions (siempre)
       this.stats.criticalSessions = this.allSessions.filter(s => s.occupancy < 40).length;
       
+      // ✅ Calcular active sessions desde upcomingSessions (depende de filtros)
       if (this.upcomingSessions.length > 0) {
+        this.stats.activeSessions = this.upcomingSessions.filter(s => s.status === 'active').length;
+        
         const totalOccupancy = this.upcomingSessions.reduce((sum, s) => sum + s.occupancy, 0);
         this.stats.avgOccupancy = Math.round(totalOccupancy / this.upcomingSessions.length);
-        this.stats.activeSessions = this.upcomingSessions.filter(s => s.status === 'active').length;
+      } else {
+        // Si no hay sesiones filtradas, mostrar 0
+        this.stats.activeSessions = 0;
+        this.stats.avgOccupancy = 0;
       }
+      
+      console.log('📊 Stats actualizadas:', this.stats);
     },
 
     redirectToCriticalSessions() {
@@ -342,6 +230,216 @@ function dashboardData() {
     }
   }
 }
+
+// Inicialización para las graficas en cuestión a index.html
+document.addEventListener('DOMContentLoaded', function () {
+  
+  setTimeout(() => {
+    const data = Alpine.$data(document.body);
+    
+    // Gráfica 1: Ocupación por sesión (Barras)
+    const canvas1 = document.getElementById('miGrafica');
+    if (!canvas1) return;
+    
+    const ctx1 = canvas1.getContext('2d');
+    
+    chartInstances['barChart'] = new Chart(ctx1, {
+      type: 'bar', 
+      data: {
+        labels: data.sessionOccupancy.labels,
+        datasets: [{
+          label: 'Occupancy %',
+          data: data.sessionOccupancy.data,
+          backgroundColor: [
+            '#A6192E',
+            '#D41736',
+            '#8E1C2D',
+            '#A6192E',
+            '#D41736',
+            '#8E1C2D'
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: { 
+            beginAtZero: true,
+            max: 100,
+            ticks: {
+              callback: function(value) {
+                return value + '%';
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Gráfica 2: Distribución de estudiantes (Pie)
+    async function cargarGraficaDistribucion() {
+      try {
+        const res = await fetch('http://localhost:3000/api/students/distribution');
+        const apiData = await res.json();
+
+        const canvas2 = document.getElementById('miGrafica2');
+        if (!canvas2) {
+          console.warn('⚠️ No se encontró el elemento #miGrafica2');
+          return;
+        }
+        const ctx2 = canvas2.getContext('2d');
+
+        const distData = apiData?.studentDistribution?.data?.length
+          ? apiData.studentDistribution
+          : Alpine.$data(document.body).studentDistribution;
+
+        if (chartInstances['pieChart']) {
+          chartInstances['pieChart'].data.labels = distData.labels;
+          chartInstances['pieChart'].data.datasets[0].data = distData.data;
+          chartInstances['pieChart'].update();
+          console.log('📊 Gráfica de distribución actualizada.');
+          return;
+        }
+
+        chartInstances['pieChart'] = new Chart(ctx2, {
+          type: 'pie',
+          data: {
+            labels: distData.labels,
+            datasets: [{
+              data: distData.data,
+              backgroundColor: ['#A6192E', '#2D2828'],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { 
+                display: true,
+                position: 'bottom',
+                labels: { 
+                  boxWidth: 12,
+                  padding: 5,
+                  font: { size: 10 }
+                }
+              }
+            }
+          }
+        });
+
+        console.log('✅ Gráfica de distribución creada exitosamente.');
+      } catch (error) {
+        console.error('❌ Error cargando distribución de estudiantes:', error);
+
+        const localData = Alpine.$data(document.body).studentDistribution;
+        const canvas2 = document.getElementById('miGrafica2');
+        if (!canvas2) return;
+        const ctx2 = canvas2.getContext('2d');
+
+        if (chartInstances['pieChart']) chartInstances['pieChart'].destroy();
+
+        chartInstances['pieChart'] = new Chart(ctx2, {
+          type: 'pie',
+          data: {
+            labels: localData.labels,
+            datasets: [{
+              data: localData.data,
+              backgroundColor: ['#A6192E', '#2D2828'],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { 
+                display: true,
+                position: 'bottom',
+                labels: { 
+                  boxWidth: 12,
+                  padding: 5,
+                  font: { size: 10 }
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    cargarGraficaDistribucion();
+
+    // Gráficas de Donut para cada sesión
+    window.createSessionCharts = function() {
+      
+      Object.keys(chartInstances).forEach(key => {
+        if (key.startsWith('sessionChart')) {
+          chartInstances[key].destroy();
+          delete chartInstances[key];
+        }
+      });
+
+      data.upcomingSessions.forEach((session) => {
+        const canvas = document.getElementById('sessionChart' + session.id);
+        
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
+          const progress = session.occupancy;
+          
+          let chartColor;
+          if (progress < 40) {
+            chartColor = '#322C2C';
+          } else if (progress >= 40 && progress < 60) {
+            chartColor = '#7B6569';
+          } else if (progress >= 60 && progress < 90) {
+            chartColor = '#8C4650';
+          } else {
+            chartColor = '#D41736';
+          }
+          
+          chartInstances['sessionChart' + session.id] = new Chart(ctx, {
+            type: 'doughnut', 
+            data: {
+              labels: ['Occupied', 'Available'],
+              datasets: [{
+                data: [session.occupancy, 100 - session.occupancy],
+                backgroundColor: [
+                  chartColor,
+                  'rgba(210, 210, 210, 0.4)'
+                ],
+                borderWidth: 0 
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: '70%',
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return context.label + ': ' + context.parsed + '%';
+                    }
+                  }
+                }
+              }
+            }
+          });
+        }
+      });
+    };
+
+    createSessionCharts();
+
+  }, 100);
+});
 
 // Inicialización para las graficas en cuestión a index.hmtl
 document.addEventListener('DOMContentLoaded', function () {

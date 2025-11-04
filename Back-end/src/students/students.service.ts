@@ -34,4 +34,30 @@ export class StudentsService {
       },
     };
   }
+  async countSessions(){
+    return await this.prisma.session.count();
+  }
+
+ // 🆕 Obtener todas las sesiones reales de la base de datos
+  async getAllSessions() {
+    const sessions = await this.prisma.session.findMany({
+      include: {
+        program: { select: { programName: true } }, // 👈 obtiene el nombre del programa
+      },
+      orderBy: { startDate: 'asc' },
+    });
+
+    // 🔄 Transformar los datos al formato esperado por el frontend
+    return sessions.map(s => ({
+      id: s.id,
+      name: s.sessionName,
+      program: s.program?.programName || 'N/A',
+      month: s.startDate.toLocaleString('default', { month: 'long' }),
+      occupancy: Math.floor(Math.random() * 100), // si no tienes campo real, puedes quitarlo luego
+      status: new Date(s.endDate) > new Date() ? 'active' : 'ended',
+      lowEnrollment: false, // por ahora fijo (puedes calcularlo luego)
+      subjects: [], // puedes relacionarlo con offerings si quieres
+      professor: 'N/A', // si no hay relación, puedes dejarlo vacío
+    }));
+  }
 }
