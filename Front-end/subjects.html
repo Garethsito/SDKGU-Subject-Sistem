@@ -6,43 +6,70 @@
   <title>SDGKU - Subjects</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://kit.fontawesome.com/337be747ec.js" crossorigin="anonymous"></script>
-  <script src="js/script.js"></script>
+  <script src="js/subjects.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
   [x-cloak] { display: none !important; }
+  /* Estilos para los botones de filtro del modal */
+  .modal-filter-btn {
+    @apply px-4 py-2 text-sm font-medium border-b-2 transition-all;
+  }
+  .modal-filter-btn.active {
+    @apply border-[#A6192E] text-[#A6192E] font-bold;
+  }
+  .modal-filter-btn.inactive {
+    @apply border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300;
+  }
   </style>
 </head>
 
-<body x-data="subjectsData()">
+<body x-data="subjectsData()" x-init="init()">
 
-  <!-- Header -->
+  <div class="fixed top-20 right-6 z-[9999] space-y-4 max-w-sm">
+    <div x-show="toast.show"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 transform translate-x-full"
+         x-transition:enter-end="opacity-100 transform translate-x-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 transform translate-x-0"
+         x-transition:leave-end="opacity-0 transform translate-x-full"
+         @click="toast.show = false"
+         class="w-full max-w-sm bg-white rounded-lg shadow-lg p-4 flex items-start cursor-pointer border-l-4"
+         :class="{ 'border-green-500': toast.type === 'success', 'border-red-500': toast.type === 'error' }"
+         x-cloak>
+      <div class="flex-shrink-0">
+        <i class="fa-solid fa-check-circle text-green-500 text-xl" x-show="toast.type === 'success'"></i>
+        <i class="fa-solid fa-exclamation-circle text-red-500 text-xl" x-show="toast.type === 'error'"></i>
+      </div>
+      <div class="ml-3 w-0 flex-1">
+        <p class="text-sm font-medium text-gray-900" 
+           :class="{ 'text-green-800': toast.type === 'success', 'text-red-800': toast.type === 'error' }"
+           x-text="toast.type === 'success' ? 'Success' : 'Error'"></p>
+        <p class="mt-1 text-sm text-gray-600" x-text="toast.message"></p>
+      </div>
+      <button @click="toast.show = false" class="ml-4 flex-shrink-0 text-gray-400 hover:text-gray-500">
+        <i class="fa-solid fa-times"></i>
+      </button>
+    </div>
+  </div>
+
   <header class="bg-[#2D2828] shadow-md border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
     <div class="px-6 py-4">
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-4">
-          <!-- Interacción entre Cerar/Abrir-->
           <button @click="open = !open" class="w-10 h-10 flex items-center justify-center hover:bg-[#252121] rounded transition-colors">
             <span class="text-2xl text-white">☰</span>
           </button>
           
-          <!-- Barra de busqueda 
-          x-model="searchQuery" vincula el input a la variable searchQuery -->
           <div class="absolute right-80">
             <input type="text" x-model="searchQuery" placeholder="Search" class="w-full bg-gray-100 border border-gray-300 rounded-md px-2 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500 transition shadow-sm placeholder:text-gray-400">
           </div>
           
-          <!-- Dropdown de filtros -->
           <div class="fixed right-60">
-            <!-- Botón para abrir/cerrar el panel de filtros -->
             <button @click="showFilters = !showFilters" class="w-10 h-10 flex items-center justify-center text-white bg-[#8E1C2D] border-2 border-[#D41736] hover:bg-[#8E1C2D] hover:border-[#772A34] transition transform duration-300 hover:scale-110 rounded">
               <i class="fa-solid fa-filter"></i>
             </button>
             
-            <!-- Panel de filtros
-              x-show="showFilters" muestra/oculta el panel según el valor de showFilters
-              @click.outside="showFilters = false" cierra el panel al hacer clic fuera
-              x-transition agrega animaciones suaves al abrir/cerrar
-            -->
             <div 
               x-show="showFilters"
               @click.outside="showFilters = false"
@@ -53,9 +80,8 @@
               x-transition:leave-start="opacity-100 translate-y-0"
               x-transition:leave-end="opacity-0 translate-y-1"
               class="absolute right-0 top-full w-80 bg-white rounded-lg shadow-xl border-2 border-gray-200 p-6 mt-2"
-              style="display: none;">
+              x-cloak>
               
-              <!-- Header del panel de filtros -->
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-bold text-gray-800">Filters</h3>
                 <button @click="showFilters = false" class="text-gray-500 hover:text-gray-700">
@@ -64,8 +90,6 @@
               </div>
 
               <div class="space-y-4">
-                <!-- Por programa academico 
-                x-model vincula el select a filters.program -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Program</label>
                   <select x-model="filters.program" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
@@ -75,7 +99,6 @@
                   </select>
                 </div>
 
-                <!-- Filtro por sesión academica -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Academic Session</label>
                   <select x-model="filters.session" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
@@ -93,23 +116,17 @@
                   </select>
                 </div>
 
-                <!-- Filtro por nivel de ocupación
-                Criterios
-                Critical: <40%, Low: 40-60%, Optimal: 60-90%, Full: >=90% -->
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Occupancy Level</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Demand Level (Missing)</label>
                   <select x-model="filters.occupancy" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
                     <option value="all">All Levels</option>
-                    <option value="critical">Critical</option>
-                    <option value="low">Low</option>
-                    <option value="optimal">Optimal</option>
-                    <option value="full">Full</option>
+                    <option value="critical">Critical (High Demand)</option>
+                    <option value="low">Low (Medium Demand)</option>
+                    <option value="optimal">Optimal (Low Demand)</option>
+                    <option value="full">Met (No Demand)</option>
                   </select>
                 </div>
 
-                <!-- Filtro por pre requisitos
-                Criterios
-                Pre: Todos; Si; No; -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Prerequisites</label>
                   <select x-model="filters.prerequisites" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
@@ -118,25 +135,7 @@
                     <option value="no">No Prerequisites</option>
                   </select>
                 </div>
-
-                <!-- Filtro por estado de grupo 
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Session Status</label>
-                  <div class="space-y-2">
-                    Cada checkbox vincula su valor a una propiedad de filters 
-                    <label class="flex items-center">
-                      <input type="checkbox" x-model="filters.activeSessions" class="rounded border-gray-300 text-[#A6192E] focus:ring-[#A6192E]">
-                      <span class="ml-2 text-sm text-gray-700">Active Sessions</span>
-                    </label>
-                    <label class="flex items-center">
-                      <input type="checkbox" x-model="filters.lowEnrollment" class="rounded border-gray-300 text-[#A6192E] focus:ring-[#A6192E]">
-                      <span class="ml-2 text-sm text-gray-700">Low Enrollment (To Merge)</span>
-                    </label>
-                  </div>
-                </div>
-                -->
-
-                <!-- Botones de Filtros -->
+                
                 <div class="flex gap-3 pt-4 border-t border-gray-200">
                   <button @click="clearFilters()" class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition text-sm font-medium">
                     Clear All
@@ -148,40 +147,17 @@
               </div>
             </div>
           </div>
-            
-          <!-- Botón de Subir Excel
-          <div class="fixed right-40">
-            <input 
-              type="file" 
-              accept=".csv,.xlsx,.xls" 
-              class="hidden" 
-              x-ref="fileInput" 
-              @change="handleExcelUpload"
-            >
-            
-            <button 
-              @click="$refs.fileInput.click()" 
-              class="w-10 h-10 flex items-center justify-center text-white bg-[#8E1C2D] border-2 border-[#D41736] hover:bg-[#8E1C2D] hover:border-[#772A34] transition transform duration-300 hover:scale-110 rounded"
-            >
-              <i class="fa-solid fa-upload"></i>
-            </button>
-          </div>
-          -->
-
           
-          <!-- Foto de Perfiil o Icono -->
           <button class="w-10 h-10 flex items-center justify-center fixed right-10 hover:bg-[#252121] rounded transition-colors">
             <i class="fa-solid fa-circle-user fa-2xl" style="color: #ffffff;"></i>
           </button>
           
-          <!-- Logo SDGKU -->
           <img 
             src="https://cdn.sdgku.edu/wp-content/uploads/2023/11/cropped-SDGKU_Globe-square.png" 
             alt="SDGKU Logo"
             class="w-10 h-10 object-contain"
           >
           
-          <!-- Titulo -->
           <div>
             <h1 class="text-2xl font-bold text-[#fff]">SDGKU Dashboard</h1>
           </div>
@@ -190,7 +166,6 @@
     </div>
   </header>
 
-  <!-- Sidebar -->
   <aside 
     x-show="open"
     x-transition:enter="transition transform duration-300"
@@ -199,89 +174,102 @@
     x-transition:leave="transition transform duration-300"
     x-transition:leave-start="translate-x-0 opacity-100"
     x-transition:leave-end="-translate-x-full opacity-0"
-    class="w-60 bg-[#A6192E] text-white h-screen p-4 top-16 fixed z-40">
+    class="w-60 bg-[#A6192E] text-white h-screen p-4 top-16 fixed z-40"
+    x-cloak>
     <ul class="pt-6 space-y-4 text-xl font-medium">
-      <li><a href="index.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]">Dashboard</a></li>
-      <li><a href="session.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]">Sessions</a></li>
-      <li><a href="subjects.html" class="block w-full px-4 py-2 rounded bg-[#971629]">Subjects</a></li>
-      <li><a href="#" class="block w-full px-4 py-2 rounded hover:bg-[#971629]">Students</a></li>
-      <li><a href="#" class="block w-full px-4 py-2 rounded hover:bg-[#971629]">Reports</a></li>
-      <li><a href="#" class="block w-full px-4 py-2 rounded hover:bg-[#971629]">Settings</a></li>
+      <li><a href="index.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-chart-line mr-2"></i>Dashboard</a></li>
+      <li><a href="session.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-calendar-days mr-2"></i>Sessions</a></li>
+      <li><a href="subjects.html" class="block w-full px-4 py-2 rounded bg-[#8E1C2D]"><i class="fa-solid fa-book mr-2"></i>Subjects</a></li>
+      <li><a href="students.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-users mr-2"></i>Students</a></li>
+      <li><a href="#" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-file-lines mr-2"></i>Reports</a></li>
+      <li><a href="#" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-gear mr-2"></i>Settings</a></li>
     </ul>
   </aside>
 
-  <!-- Contenido -->
   <main
     :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'"
     class="flex-1 p-6 bg-gray-100 min-h-screen pt-20">
     
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-3xl font-bold text-gray-800">Subjects</h1>
-      <button class="px-6 py-2 bg-[#A6192E] text-white rounded-lg hover:bg-[#8E1C2D] transition font-medium shadow-md">
-        Add New Subject
-      </button>
+      <div>
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Subjects</h1>
+        <p class="text-gray-600">Browse and manage course sessions</p>
+      </div>
     </div>
 
-    <!-- Grid de materias -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20">
       <template x-for="(subject, index) in subjects" :key="index">
         <div 
           @click="showStudents(subject)"
-          :style="'background-color: ' + getCardBg(subject.occupancy)"
-          class="border-2 border-[#A6192E] rounded-lg p-3 cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105 backdrop-blur-sm">
+          class="bg-white border-2 border-gray-200 hover:border-[#A6192E] rounded-xl p-4 cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105">
           
-          <!-- Header de la card -->
-          <div class="flex justify-between items-start mb-2">
-            <h3 class="text-lg font-bold text-gray-800" x-text="subject.code"></h3>
-            <span class="px-2 py-0.5 bg-[#A6192E] text-white text-xs font-semibold rounded-full" x-text="subject.program"></span>
+          <div class="flex justify-between items-start mb-3">
+            <div>
+              <h3 class="text-xl font-bold text-gray-800 flex items-center">
+                <i class="fa-solid fa-book-open text-[#A6192E] mr-2"></i>
+                <span x-text="subject.code"></span>
+              </h3>
+            </div>
+            <span class="px-3 py-1 bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] text-white text-xs font-semibold rounded-full flex items-center">
+              <i class="fa-solid fa-graduation-cap mr-1"></i>
+              <span x-text="subject.program"></span>
+            </span>
           </div>
 
-          <!-- Sesión -->
-          <p class="text-xs text-gray-600 mb-2" x-text="subject.session"></p>
+          <p class="text-sm text-gray-600 mb-3 flex items-center">
+            <i class="fa-solid fa-calendar-alt mr-1"></i>
+            <span x-text="subject.session"></span>
+          </p>
 
-          <!-- Badges de prerrequisitos -->
-          <div class="flex gap-1.5 mb-2 flex-wrap">
-            <template x-for="(prereq, i) in subject.prerequisites" :key="i">
-              <div class="relative group">
-                <div class="w-6 h-6 rounded-full bg-gray-400 flex items-center justify-center text-white text-xs font-bold cursor-pointer hover:bg-gray-600 transition">
-                  <span x-text="i + 1"></span>
-                </div>
-                <!-- Tooltip -->
-                <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                  <span x-text="prereq"></span>
+          <div class="mb-3">
+            <template x-if="subject.prerequisites && subject.prerequisites.length > 0">
+              <div>
+                <span class="text-xs font-medium text-gray-500 mb-1.5 block">
+                  <i class="fa-solid fa-link mr-1"></i>
+                  Prerequisites:
+                </span>
+                <div class="flex gap-1.5 flex-wrap">
+                  <template x-for="(prereq, i) in subject.prerequisites" :key="i">
+                    <span class="px-2.5 py-1 bg-gray-100 border border-gray-300 text-gray-700 text-xs font-semibold rounded-full flex items-center">
+                      <span x-text="prereq"></span>
+                    </span>
+                  </template>
                 </div>
               </div>
             </template>
+            <template x-if="!subject.prerequisites || subject.prerequisites.length === 0">
+              <span class="text-xs text-gray-400 italic flex items-center">
+                <i class="fa-solid fa-check-circle mr-1"></i>No prerequisites
+              </span>
+            </template>
           </div>
 
-          <!-- Barra de progreso -->
           <div>
-            <div class="flex justify-between items-center mb-1">
-              <span class="text-xs font-medium text-gray-700">Occupancy:</span>
-              <!-- Colores dinámicos según ocupación
-              - Gris Carbon si es crítico (<40%)
-              - Mauve Gris si es bajo (40-60%)
-              - Wine Rose si es óptimo (60-90%)
-              - Crimson Red si está lleno (≥90%) -->
-              <span class="text-xs font-bold"
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-sm font-medium text-gray-700 flex items-center">
+                <i class="fa-solid fa-user-clock mr-1 text-xs"></i>Course Demand (Missing):
+              </span>
+              <span class="text-sm font-bold flex items-center gap-1"
                     :class="{
-                      'text-[#322C2C]': subject.occupancy < 40,
-                      'text-[#7B6569]': subject.occupancy >= 40 && subject.occupancy < 60,
-                      'text-[#8C4650]': subject.occupancy >= 60 && subject.occupancy < 90,
-                      'text-[#D41736]': subject.occupancy >= 90
-                    }"
-                    x-text="subject.occupancy + '%'"></span>
+                      'text-[#D41736]': subject.missingPercent >= 75, /* Rojo - Alta demanda */
+                      'text-[#A6192E]': subject.missingPercent >= 40 && subject.missingPercent < 75, /* Naranja - Media */
+                      'text-[#F69A1C]': subject.missingPercent >= 10 && subject.missingPercent < 40, /* Amarillo - Baja */
+                      'text-blue-600': subject.missingPercent < 10   /* Azul - Casi nula */
+                    }">
+                <i class="fa-solid fa-chart-simple text-xs"></i>
+                <span x-text="subject.missingPercent + '% (' + subject.missingCount + ')'"></span>
+              </span>
             </div>
-            <div class="w-full bg-gray-300 rounded-full h-2 overflow-hidden">
+            <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden shadow-inner">
               <div 
-                class="h-full transition-all duration-500"
+                class="h-full transition-all duration-500 rounded-full"
                 :class="{
-                  'bg-[#322C2C]': subject.occupancy < 40,
-                  'bg-[#7B6569]': subject.occupancy >= 40 && subject.occupancy < 60,
-                  'bg-[#8C4650]': subject.occupancy >= 60 && subject.occupancy < 90,
-                  'bg-[#D41736]': subject.occupancy >= 90
+                  'bg-gradient-to-r from-[#D41736] to-[#A6192E]': subject.missingPercent >= 75,
+                  'bg-gradient-to-r from-[#A6192E] to-[#8E1C2D]': subject.missingPercent >= 40 && subject.missingPercent < 75,
+                  'bg-gradient-to-r from-[#F69A1C] to-yellow-500': subject.missingPercent >= 10 && subject.missingPercent < 40,
+                  'bg-gradient-to-r from-blue-500 to-blue-700': subject.missingPercent < 10
                 }"
-                :style="'width: ' + subject.occupancy + '%'">
+                :style="'width: ' + subject.missingPercent + '%'">
               </div>
             </div>
           </div>
@@ -289,7 +277,6 @@
       </template>
     </div>
 
-    <!-- Modal de estudiantes -->
     <div 
       x-show="selectedSubject !== null"
       @click.self="selectedSubject = null"
@@ -300,7 +287,7 @@
       x-transition:leave-start="opacity-100"
       x-transition:leave-end="opacity-0"
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-      style="display: none;">
+      x-cloak>
       
       <div 
         x-show="selectedSubject !== null"
@@ -311,82 +298,332 @@
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100 scale-100"
         x-transition:leave-end="opacity-0 scale-90"
-        class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+        class="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         
-        <!-- Header del modal -->
-        <div class="bg-[#A6192E] text-white p-6 flex justify-between items-center">
+        <div class="bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] text-white p-6 flex justify-between items-center">
           <div>
-            <h2 class="text-2xl font-bold" x-text="selectedSubject?.code"></h2>
-            <p class="text-sm opacity-90" x-text="selectedSubject?.session"></p>
+            <h2 class="text-2xl font-bold flex items-center">
+              <i class="fa-solid fa-book-open mr-2"></i>
+              <span x-text="selectedSubject?.code"></span>
+            </h2>
+            <p class="text-sm opacity-90 flex items-center mt-1">
+              <i class="fa-solid fa-calendar mr-1"></i>
+              <span x-text="selectedSubject?.session"></span>
+            </p>
           </div>
-          <button @click="selectedSubject = null" class="text-white hover:bg-[#8E1C2D] rounded-full p-2 transition">
+          <button @click="selectedSubject = null" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
             <i class="fa-solid fa-times text-xl"></i>
           </button>
         </div>
 
-        <!-- Contenido del modal -->
-        <div class="p-6 overflow-y-auto max-h-[60vh]">
-          <!-- Información de ocupación y total de estudiantes -->
-          <div class="mb-4 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-medium text-gray-600">Occupancy:</span>
-              <!-- Colores dinámicos según ocupación
-              - Rojo si es crítico (<40%)
-              - Ámbar si es bajo (40-60%)
-              - Verde si es óptimo (60-90%)
-              - Azul si está lleno (≥90%) -->
-              <span class="text-lg font-bold"
-                    :class="{
-                      'text-red-600': selectedSubject?.occupancy < 40,
-                      'text-amber-600': selectedSubject?.occupancy >= 40 && selectedSubject?.occupancy < 60,
-                      'text-green-600': selectedSubject?.occupancy >= 60 && selectedSubject?.occupancy < 90,
-                      'text-blue-600': selectedSubject?.occupancy >= 90
-                    }"
-                    x-text="selectedSubject?.occupancy + '%'"></span>
+        <div class="p-6 overflow-y-auto" style="max-height: calc(90vh - 180px);">
+          
+          <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fa-solid fa-circle-info text-[#A6192E] mr-2"></i>Session Details
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-display w-4 text-center text-gray-500"></i>
+                <span class="font-medium text-gray-600">Modality:</span>
+                <span class="text-gray-800 font-semibold" x-text="selectedSubject?.modality"></span>
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-user-tie w-4 text-center text-gray-500"></i>
+                <span class="font-medium text-gray-600">Instructor:</span>
+                <span class="text-gray-800 font-semibold" x-text="selectedSubject?.instructor"></span>
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-graduation-cap w-4 text-center text-gray-500"></i>
+                <span class="font-medium text-gray-600">Program:</span>
+                <span class="px-3 py-0.5 bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] text-white text-xs font-semibold rounded-full flex items-center">
+                  <span x-text="selectedSubject?.program"></span>
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+            <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
+              <i class="fa-solid fa-users text-blue-600 mr-2"></i>Session Occupancy
+            </h3>
+            <div class="flex items-center justify-between mb-3">
+              <div class="text-left">
+                <span class="text-sm font-medium text-gray-600 flex items-center">
+                  <i class="fa-solid fa-users mr-1.5"></i>Enrolled (Session)
+                </span>
+                <p class="text-2xl font-bold text-gray-800" 
+                    x-text="selectedSubject?.students.length">
+                </p>
+              </div>
+              <div class="text-center">
+                <span class="text-sm font-medium text-gray-600 flex items-center">
+                  <i class="fa-solid fa-user-check mr-1.5"></i>Max Capacity
+                </span>
+                <p class="text-2xl font-bold text-gray-800" 
+                    x-text="selectedSubject?.maxStudents">
+                </p>
+              </div>
+              <div class="text-right">
+                <span class="text-sm font-medium text-gray-600 flex items-center justify-end">
+                  <i class="fa-solid fa-user-plus mr-1.5"></i>Remaining Seats
+                </span>
+                <p class="text-2xl font-bold text-blue-600" 
+                    x-text="selectedSubject?.maxStudents - selectedSubject?.students.length">
+                </p>
+              </div>
             </div>
             
-            <!-- Total de estudiantes -->
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-medium text-gray-600">Total Students:</span>
-              <span class="text-lg font-bold text-gray-800" 
-                    x-text="selectedSubject?.students.length + ' / ' + selectedSubject?.maxStudents"></span>
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-sm font-medium text-gray-700 flex items-center">
+                  Remaining Session Capacity:
+                </span>
+                <span class="text-sm font-bold text-blue-600"
+                  x-text="Math.round(((selectedSubject?.maxStudents - selectedSubject?.students.length) / selectedSubject?.maxStudents) * 100) + '%'">
+                </span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden shadow-inner">
+                <div 
+                  class="h-full transition-all duration-500 rounded-full bg-gradient-to-r from-blue-500 to-blue-700"
+                  :style="'width: ' + Math.round(((selectedSubject?.maxStudents - selectedSubject?.students.length) / selectedSubject?.maxStudents) * 100) + '%'">
+                </div>
+              </div>
             </div>
           </div>
 
-          <h3 class="text-lg font-bold text-gray-800 mb-4">Enrolled Students</h3>
-          
-          <template x-if="selectedSubject?.students.length === 0">
-            <div class="text-center py-8 text-gray-500">
-              <i class="fa-solid fa-user-slash text-4xl mb-3"></i>
-              <p>No students enrolled yet</p>
-            </div>
-          </template>
+          <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
+            <i class="fa-solid fa-book-open text-[#A6192E] mr-2"></i>Course Data
+          </h3>
+          <div class="mb-4 border-b border-gray-200">
+            <nav class="flex -mb-px space-x-6">
+              <button 
+                @click="modalStudentFilter = 'current'" 
+                :class="modalStudentFilter === 'current' ? 'active' : 'inactive'"
+                class="modal-filter-btn">
+                <i class="fa-solid fa-user-graduate mr-1"></i>
+                Enrolled (This Session)
+              </button>
+              <button 
+                @click="modalStudentFilter = 'missing'" 
+                :class="modalStudentFilter === 'missing' ? 'active' : 'inactive'"
+                class="modal-filter-btn">
+                <i class="fa-solid fa-user-clock mr-1"></i>
+                Missing Course (<span x-text="selectedSubject?.missingCount"></span>)
+              </button>
+              <button 
+                @click="modalStudentFilter = 'passed'" 
+                :class="modalStudentFilter === 'passed' ? 'active' : 'inactive'"
+                class="modal-filter-btn">
+                <i class="fa-solid fa-user-check mr-1"></i>
+                Already Passed (<span x-text="selectedSubject?.courseData.passedStudents.length"></span>)
+              </button>
+            </nav>
+          </div>
 
-          <template x-if="selectedSubject?.students.length > 0">
-            <div class="space-y-3">
-              <template x-for="(student, i) in selectedSubject?.students" :key="i">
-                <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition">
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <p class="font-semibold text-gray-800" x-text="student.name"></p>
-                      <p class="text-sm text-gray-600" x-text="'ID: ' + student.id"></p>
-                      <p class="text-sm text-gray-500" x-text="student.email"></p>
-                    </div>
-                    <div class="w-10 h-10 bg-[#A6192E] rounded-full flex items-center justify-center text-white font-bold">
-                      <span x-text="student.name.charAt(0)"></span>
+          <div x-show="modalStudentFilter === 'current'">
+            <template x-if="selectedSubject?.students.length === 0">
+              <div class="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+                <i class="fa-solid fa-user-slash text-5xl mb-4 text-gray-300"></i>
+                <p class="text-gray-500 font-medium">No students enrolled in this session yet</p>
+              </div>
+            </template>
+            <template x-if="selectedSubject?.students.length > 0">
+              <div class="space-y-2">
+                <template x-for="(student, i) in selectedSubject?.students" :key="i">
+                  <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-all hover:border-gray-300">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-[#A6192E] to-[#8E1C2D] rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md">
+                          <span x-text="student.name.charAt(0)"></span>
+                        </div>
+                        <div>
+                          <p class="font-semibold text-gray-800" x-text="student.name"></p>
+                          <p class="text-sm text-gray-600">
+                            <i class="fa-solid fa-id-card mr-1 text-xs"></i>
+                            <span x-text="'ID: ' + student.id"></span>
+                          </p>
+                        </div>
+                      </div>
+                      <div class="text-right">
+                        <button @click="removeStudent(student.id)" class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold hover:bg-red-200 transition-colors">
+                          <i class="fa-solid fa-user-times mr-1"></i>Drop (to Missing)
+                        </button>
+                      </div>
                     </div>
                   </div>
+                </template>
+              </div>
+            </template>
+          </div>
+
+          <div x-show="modalStudentFilter === 'passed'" style="display: none;">
+            <template x-if="!selectedSubject?.courseData || selectedSubject?.courseData.passedStudents.length === 0">
+              <div class="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+                <p class="text-gray-500 font-medium">No data for students who passed</p>
+              </div>
+            </template>
+            <template x-if="selectedSubject?.courseData && selectedSubject?.courseData.passedStudents.length > 0">
+              <div class="space-y-2">
+                <template x-for="(student, i) in selectedSubject?.courseData.passedStudents" :key="i">
+                  <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gray-200 border border-gray-300 rounded-full flex items-center justify-center text-gray-600 font-bold text-lg">
+                          <span x-text="student.name.charAt(0)"></span>
+                        </div>
+                        <div>
+                          <p class="font-semibold text-gray-800" x-text="student.name"></p>
+                          <p class="text-sm text-gray-600">
+                            <i class="fa-solid fa-id-card mr-1 text-xs"></i>
+                            <span x-text="'ID: ' + student.id"></span>
+                          </p>
+                        </div>
+                      </div>
+                      <div class="text-right">
+                        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                          <i class="fa-solid fa-check mr-1"></i>Passed
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+
+          <div x-show="modalStudentFilter === 'missing'" style="display: none;">
+            <template x-if="selectedSubject?.missingCount > 10">
+              <div class="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 flex items-center justify-between">
+                <div>
+                  <p class="font-bold text-yellow-800">High Demand Alert!</p>
+                  <p class="text-sm text-yellow-700">There are <span x-text="selectedSubject?.missingCount"></span> students missing this course.</p>
                 </div>
-              </template>
+                <button 
+                  @click="openCreateSessionModal()"
+                  class="px-4 py-2 bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] text-white rounded-lg transition-all font-medium shadow-md transform hover:scale-105">
+                  <i class="fa-solid fa-plus mr-1"></i> Create New Session
+                </button>
+              </div>
+            </template>
+            
+            <template x-if="!selectedSubject?.courseData || selectedSubject?.courseData.missingStudents.length === 0">
+              <div class="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+                <i class="fa-solid fa-check-circle text-5xl mb-4 text-green-300"></i>
+                <p class="text-gray-500 font-medium">No students are missing this course</p>
+              </div>
+            </template>
+            <template x-if="selectedSubject?.courseData && selectedSubject?.courseData.missingStudents.length > 0">
+              <div class="space-y-2">
+                <template x-for="(student, i) in selectedSubject?.courseData.missingStudents" :key="student.id">
+                  <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-all hover:border-gray-300">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gray-200 border border-gray-300 rounded-full flex items-center justify-center text-gray-600 font-bold text-lg">
+                          <span x-text="student.name.charAt(0)"></span>
+                        </div>
+                        <div>
+                          <p class="font-semibold text-gray-800" x-text="student.name"></p>
+                          <p class="text-sm text-gray-600">
+                            <i class="fa-solid fa-id-card mr-1 text-xs"></i>
+                            <span x-text="'ID: ' + student.id"></span>
+                          </p>
+                        </div>
+                      </div>
+                      <div class="text-right">
+                        <button @click="enrollStudent(student)" class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold hover:bg-green-200 transition-colors">
+                          <i class="fa-solid fa-plus mr-1"></i>Enroll in Session
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+
+        </div> </div>
+    </div>
+
+    <div x-show="showCreateSessionModal"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[999]"
+         x-cloak>
+      <div @click.outside="showCreateSessionModal = false"
+           class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        
+        <div class="p-6 border-b flex justify-between items-center">
+          <h3 class="text-2xl font-bold">Add New Session</h3>
+          <button @click="showCreateSessionModal = false" class="text-gray-500 hover:text-gray-700">
+            <i class="fa-solid fa-times text-xl"></i>
+          </button>
+        </div>
+        
+        <div class="p-6 space-y-4 overflow-y-auto">
+          <div>
+            <label for="sessionNumber" class="block text-sm font-medium text-gray-700 mb-1">Session Number</label>
+            <input type="number" id="sessionNumber" x-model.number="newSession.number"
+                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="startDate" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+              <input type="date" id="startDate" x-model="newSession.startDate"
+                     class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
             </div>
-          </template>
+            <div>
+              <label for="endDate" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+              <input type="date" id="endDate" x-model="newSession.endDate"
+                     class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+            </div>
+          </div>
+          
+          <div>
+            <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select id="status" x-model="newSession.status"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+              <option value="Planning">Planning</option>
+              <option value="Open">Open</option>
+              <option value="Closed">Closed</option>
+              <option value="Finished">Finished</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="subjects" class="block text-sm font-medium text-gray-700 mb-1">Subjects (comma-separated)</label>
+            <input type="text" id="subjects" x-model="newSessionSubjectsInput"
+                   @input="updateNewSessionSubjectsArray()"
+                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]"
+                   placeholder="e.g., GBUS 404, ACCT 301">
+          </div>
+          <div class="flex flex-wrap gap-2" x-show="newSession.subjects.length > 0">
+            <template x-for="subject in newSession.subjects" :key="subject">
+              <span class="px-3 py-1 bg-gray-100 text-gray-700 text-sm font-medium rounded-full border border-gray-200" x-text="subject"></span>
+            </template>
+          </div>
+        </div>
+        
+        <div class="p-4 bg-gray-50 rounded-b-xl flex justify-end gap-3">
+          <button @click="showCreateSessionModal = false" 
+                  class="px-5 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">
+            Cancel
+          </button>
+          <button @click="saveNewSession()" 
+                  class="px-5 py-2 bg-[#A6192E] text-white rounded-md hover:bg-[#8E1C2D] font-medium transition">
+            <i class="fa-solid fa-save mr-1"></i>
+            <span>Save Session</span>
+          </button>
         </div>
       </div>
     </div>
+    </main>
 
-  </main>
-
-  <!-- Footer -->
   <footer :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'" class="bg-[#2D2828] border-t">
     <div class="max-w-7xl mx-auto px-6 py-4">
       <div class="flex justify-between items-center">
