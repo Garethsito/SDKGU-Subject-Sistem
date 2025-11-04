@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SDGKU</title>
+  <title>SDGKU - Sessions</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://kit.fontawesome.com/337be747ec.js" crossorigin="anonymous"></script>
@@ -13,7 +13,6 @@
 <style>
   [x-cloak] { display: none !important; }
 </style>
-
 </head>
 <body x-data="dashboard()"> 
   <!-- Header -->
@@ -21,29 +20,19 @@
     <div class="px-6 py-4">
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-4">
-          <!-- Interacción entre Cerar/Abrir-->
           <button @click="open = !open" class="w-10 h-10 flex items-center justify-center hover:bg-[#252121] rounded transition-colors">
             <span class="text-2xl text-white">☰</span>
           </button>
           
-          <!-- Barra de busqueda 
-          x-model="searchQuery" vincula el input a la variable searchQuery -->
           <div class="absolute right-80">
             <input type="text" x-model="searchQuery" placeholder="Search" class="w-full bg-gray-100 border border-gray-300 rounded-md px-2 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500 transition shadow-sm placeholder:text-gray-400">
           </div>
           
-          <!-- Dropdown de filtros -->
           <div class="fixed right-60">
-            <!-- Botón para abrir/cerrar el panel de filtros -->
             <button @click="showFilters = !showFilters" class="w-10 h-10 flex items-center justify-center text-white bg-[#8E1C2D] border-2 border-[#D41736] hover:bg-[#8E1C2D] hover:border-[#772A34] transition transform duration-300 hover:scale-110 rounded">
               <i class="fa-solid fa-filter"></i>
             </button>
             
-            <!-- Panel de filtros
-              x-show="showFilters" muestra/oculta el panel según el valor de showFilters
-              @click.outside="showFilters = false" cierra el panel al hacer clic fuera
-              x-transition agrega animaciones suaves al abrir/cerrar
-            -->
             <div 
               x-show="showFilters"
               @click.outside="showFilters = false"
@@ -56,7 +45,6 @@
               class="absolute right-0 top-full w-80 bg-white rounded-lg shadow-xl border-2 border-gray-200 p-6 mt-2"
               style="display: none;">
               
-              <!-- Header del panel de filtros -->
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-bold text-gray-800">Filters</h3>
                 <button @click="showFilters = false" class="text-gray-500 hover:text-gray-700">
@@ -65,8 +53,6 @@
               </div>
 
               <div class="space-y-4">
-                <!-- Por programa academico 
-                x-model vincula el select a filters.program -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Program</label>
                   <select x-model="filters.program" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
@@ -76,7 +62,6 @@
                   </select>
                 </div>
 
-                <!-- Filtro por sesión academica -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Academic Session</label>
                   <select x-model="filters.session" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
@@ -94,7 +79,6 @@
                   </select>
                 </div>
 
-                <!-- Filtro por Mes -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Month</label>
                   <select x-model="filters.month" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
@@ -114,9 +98,6 @@
                   </select>
                 </div>
 
-                <!-- Filtro por nivel de ocupación
-                Criterios
-                Critical: <40%, Low: 40-60%, Optimal: 60-90%, Full: >=90% -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Occupancy Level</label>
                   <select x-model="filters.occupancy" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
@@ -128,7 +109,6 @@
                   </select>
                 </div>
 
-                <!-- Filtro por Materia -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
                   <select x-model="filters.subject" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
@@ -144,8 +124,6 @@
                   </select>
                 </div>
 
-
-                <!-- Botones de Filtros -->
                 <div class="flex gap-3 pt-4 border-t border-gray-200">
                   <button @click="clearFilters()" class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition text-sm font-medium">
                     Clear All
@@ -157,41 +135,17 @@
               </div>
             </div>
           </div>
-            
-          <!-- Botón de Subir Excel 
-          <div class="fixed right-40">
-            <input 
-              type="file" 
-              accept=".csv,.xlsx,.xls" 
-              class="hidden" 
-              x-ref="fileInput" 
-              @change="handleExcelUpload"
-            >
           
-
-            <button 
-              @click="$refs.fileInput.click()" 
-              class="w-10 h-10 flex items-center justify-center text-white bg-[#8E1C2D] border-2 border-[#D41736] hover:bg-[#8E1C2D] hover:border-[#772A34] transition transform duration-300 hover:scale-110 rounded"
-            >
-              <i class="fa-solid fa-upload"></i>
-            </button>
-          </div>
-          -->
-
-          
-          <!-- Foto de Perfiil o Icono -->
           <button class="w-10 h-10 flex items-center justify-center fixed right-10 hover:bg-[#252121] rounded transition-colors">
             <i class="fa-solid fa-circle-user fa-2xl" style="color: #ffffff;"></i>
           </button>
           
-          <!-- Logo SDGKU -->
           <img 
             src="https://cdn.sdgku.edu/wp-content/uploads/2023/11/cropped-SDGKU_Globe-square.png" 
             alt="SDGKU Logo"
             class="w-10 h-10 object-contain"
           >
           
-          <!-- Titulo -->
           <div>
             <h1 class="text-2xl font-bold text-[#fff]">SDGKU Dashboard</h1>
           </div>
@@ -211,36 +165,47 @@
     x-transition:leave-end="-translate-x-full opacity-0"
     class="w-60 bg-[#A6192E] text-white h-screen p-4 top-16 fixed z-40">
     
-    <!-- Menu de navegación -->
     <ul class="pt-6 space-y-4 text-xl font-medium">
-      <li><a href="index.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]">Dashboard</a></li>
-      <li><a href="session.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]">Sessions</a></li>
-      <li><a href="subjects.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]">Subjects</a></li>
-      <li><a href="students.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]">Students</a></li>
-      <li><a href="#" class="block w-full px-4 py-2 rounded hover:bg-[#971629]">Reports</a></li>
-      <li><a href="#" class="block w-full px-4 py-2 rounded hover:bg-[#971629]">Settings</a></li>
+      <li><a href="index.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-chart-line mr-2"></i>Dashboard</a></li>
+      <li><a href="session.html" class="block w-full px-4 py-2 rounded bg-[#8E1C2D]"><i class="fa-solid fa-calendar-days mr-2"></i>Sessions</a></li>
+      <li><a href="subjects.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-book mr-2"></i>Subjects</a></li>
+      <li><a href="students.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-users mr-2"></i>Students</a></li>
+      <li><a href="#" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-file-lines mr-2"></i>Reports</a></li>
+      <li><a href="#" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-gear mr-2"></i>Settings</a></li>
     </ul>
   </aside>
 
   <!-- Contenido -->
   <main :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'" class="flex-1 p-6 bg-gray-100 min-h-screen pt-20">
-    <div class="flex justify-between items-center mb-4">
+    <div class="flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-2xl font-bold">Sessions</h1>
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Sessions</h1>
+        <p class="text-gray-600">Manage and monitor academic sessions</p>
         <p x-show="message" x-text="message" class="text-sm text-[#A6192E] font-medium mt-1"></p>
       </div>
-      <!--
-      <button @click="openModal()" class="bg-[#A6192E] hover:bg-[#8E1C2D] text-white font-semibold py-2 px-4 rounded-lg transition-colors">Add New Session</button>
-      -->
     </div>
 
     <!-- Estadísticas Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-fr">
       <template x-for="session in sessions" :key="session.id">
-        <div x-data="{ progress: session.progress }" x-init="initChart($el, progress, session.chartId)" class="bg-white rounded-2xl border-3 border-[#A6192E] p-4 shadow-lg transform transition duration-300 hover:scale-105">
-          <div class="inline-block bg-[#A6192E] text-white px-3 py-0.5 rounded-md font-semibold text-xs mb-2" x-text="session.program"></div>
-          <h3 class="text-lg font-bold text-gray-900">Session <span x-text="session.number"></span></h3>
-          <p class="text-sm text-gray-400 mb-3" x-text="session.month"></p>
+        <div x-data="{ progress: session.progress }" x-init="initChart($el, progress, session.chartId)" class="bg-white rounded-xl border-2 border-gray-200 hover:border-[#A6192E] p-4 shadow-md hover:shadow-xl transform transition duration-300 hover:scale-105">
+          <div class="flex items-center justify-between mb-2">
+            <span class="bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] text-white px-3 py-1 rounded-full font-semibold text-xs flex items-center">
+              <i class="fa-solid fa-graduation-cap mr-1"></i>
+              <span x-text="session.program"></span>
+            </span>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-900 mb-1 flex items-center">
+            <i class="fa-solid fa-calendar-alt text-[#A6192E] mr-2"></i>
+            Session <span x-text="session.number"></span>
+          </h3>
+          
+          <p class="text-sm text-gray-500 mb-3 flex items-center">
+            <i class="fa-solid fa-clock mr-1"></i>
+            <span x-text="session.month"></span>
+          </p>
+          
           <div class="flex justify-center mb-3">
             <div class="relative w-24 h-24">
               <canvas :id="session.chartId"></canvas>
@@ -249,9 +214,14 @@
               </div>
             </div>
           </div>
-          <div class="flex gap-2 mb-0">
-            <button @click="openModal(session, 'details')" class="w-full bg-[#A6192E] hover:bg-[#8E1C2D] text-white font-semibold py-1.5 rounded-lg transition-colors text-xs">Details</button>
-            <button @click="openModal(session, 'edit')" class="w-full bg-[#A6192E] hover:bg-[#8E1C2D] text-white font-semibold py-1.5 rounded-lg transition-colors text-xs">Edit</button>
+          
+          <div class="flex gap-2">
+            <button @click="openModal(session, 'details')" class="w-full bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] hover:from-[#8E1C2D] hover:to-[#A6192E] text-white font-semibold py-2 rounded-lg transition-all duration-300 text-xs flex items-center justify-center">
+              <i class="fa-solid fa-info-circle mr-1"></i>Details
+            </button>
+            <button @click="openModal(session, 'edit')" class="w-full bg-[#252121] hover:bg-[#1a1616] text-white font-semibold py-2 rounded-lg transition-all duration-300 text-xs flex items-center justify-center">
+              <i class="fa-solid fa-edit mr-1"></i>Edit
+            </button>
           </div>
         </div>
       </template>
@@ -265,39 +235,44 @@
       @click.self="openModalFlag = false" 
       class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
 
-    <div class="bg-white rounded-lg shadow-lg w-[700px] relative overflow-hidden">
-      <!-- Header -->
-      <div class="bg-[#A6192E] h-[70px] flex items-center justify-between px-6">
-        <h2 class="text-2xl text-white font-bold" 
-            x-text="modalType === 'edit' ? 'Edit Session' : modalType === 'details' ? 'Session Details' : 'Add New Session'"></h2>
+    <div class="bg-white rounded-xl shadow-2xl w-[700px] relative overflow-hidden">
+      <div class="bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] h-[70px] flex items-center justify-between px-6">
+        <h2 class="text-2xl text-white font-bold flex items-center" 
+            x-text="modalType === 'edit' ? ' Edit Session' : modalType === 'details' ? ' Session Details' : ' Add New Session'"></h2>
+        <button @click="openModalFlag = false" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
+          <i class="fa-solid fa-times text-xl"></i>
+        </button>
       </div>
 
-      <!-- Body -->
-<!-- Body -->
       <div class="p-6 space-y-4">
-        <!-- Primera fila -->
         <div class="grid grid-cols-3 gap-4">
           <div>
-            <label class="text-gray-800 text-xl mb-2 block">ID Session</label>
+            <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
+              <i class="fa-solid fa-hashtag mr-1 text-xs"></i>ID Session
+            </label>
             <input type="text" x-model="selectedSession.id" 
-                  class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-100 cursor-not-allowed" 
+                  class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-50 cursor-not-allowed text-sm" 
                   readonly>
           </div>
 
           <div>
-            <label class="text-gray-800 text-xl mb-2 block">Session #</label>
+            <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
+              <i class="fa-solid fa-list-ol mr-1 text-xs"></i>Session #
+            </label>
             <input type="number" x-model="selectedSession.number" 
-                  class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-100 cursor-not-allowed" 
+                  class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-50 cursor-not-allowed text-sm" 
                   readonly>
           </div>
 
           <div>
-            <label class="text-gray-800 text-xl mb-2 block">Program</label>
+            <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
+              <i class="fa-solid fa-graduation-cap mr-1 text-xs"></i>Program
+            </label>
             <select 
               x-model="selectedSession.program"
-              class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#A6192E]" 
+              class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#A6192E] text-sm" 
               :disabled="modalType==='details'"
-              :class="{'bg-gray-100 cursor-not-allowed': modalType==='details'}">
+              :class="{'bg-gray-50 cursor-not-allowed': modalType==='details'}">
               <option value="">Select Program</option>
               <option value="Associate">Associate</option>
               <option value="Bachelor's">Bachelor's</option>
@@ -305,40 +280,43 @@
           </div>
         </div>
 
-        <!-- Segunda fila -->
         <div class="grid grid-cols-3 gap-4">
           <div>
-            <label class="text-gray-800 text-xl mb-2 block">Date</label>
+            <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
+              <i class="fa-solid fa-calendar mr-1 text-xs"></i>Date
+            </label>
             <input type="date" 
                   x-model="selectedSession.date" 
                   @change="selectedSession.month = new Date($event.target.value + 'T00:00:00').toLocaleDateString('en-US', {month: 'long'})"
-                  class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#A6192E]" 
+                  class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#A6192E] text-sm" 
                   :readonly="modalType==='details'"
-                  :class="{'bg-gray-100 cursor-not-allowed': modalType==='details'}">
+                  :class="{'bg-gray-50 cursor-not-allowed': modalType==='details'}">
           </div>
 
           <div>
-            <label class="text-gray-800 text-xl mb-2 block">Month</label>
+            <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
+              <i class="fa-solid fa-calendar-days mr-1 text-xs"></i>Month
+            </label>
             <input type="text" x-model="selectedSession.month" 
-                  class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-100 cursor-not-allowed" 
+                  class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-50 cursor-not-allowed text-sm" 
                   readonly>
           </div>
-
         </div>
 
-        <!-- Tercera fila: Subject + Botón "Manage" -->
         <div class="grid grid-cols-3 gap-4 items-start">
           <div class="col-span-2 relative">
-            <label class="text-gray-800 text-xl mb-2 block">Subjects</label>
+            <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
+              <i class="fa-solid fa-book-open mr-1 text-xs"></i>Subjects
+            </label>
             
-            <!-- Contenedor de etiquetas -->
             <div class="flex flex-wrap border border-gray-300 rounded-md p-2 min-h-[48px]"
-                :class="{'bg-gray-100 pointer-events-none': modalType==='details', 'focus-within:border-[#A6192E]': modalType!=='details'}"
+                :class="{'bg-gray-50 pointer-events-none': modalType==='details', 'focus-within:border-[#A6192E]': modalType!=='details'}"
                 x-data="subjectTags(selectedSession)"
                 @click.outside="filteredSubjects = []">
               
               <template x-for="(tag, index) in selectedTags" :key="index">
-                <div class="flex items-center bg-[#A6192E] text-white rounded-full px-3 py-1 m-1">
+                <div class="flex items-center bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] text-white rounded-full px-3 py-1 m-1 text-xs">
+                  <i class="fa-solid fa-book mr-1 text-xs"></i>
                   <span x-text="tag"></span>
                   <button
                     x-show="$root.modalType!=='details'"
@@ -348,7 +326,6 @@
                 </div>
               </template>
               
-              <!-- Campo de búsqueda -->
               <input
                 x-show="$root.modalType!=='details'"
                 x-model="query"
@@ -360,10 +337,9 @@
                 @keydown.escape="filteredSubjects = []"
                 type="text"
                 placeholder="Select subject"
-                class="flex-1 min-w-[120px] px-2 py-1 focus:outline-none text-gray-700 placeholder:text-gray-400"
+                class="flex-1 min-w-[120px] px-2 py-1 focus:outline-none text-gray-700 placeholder:text-gray-400 text-sm"
               >
               
-              <!-- Lista desplegable -->
               <div
                 x-show="filteredSubjects.length && $root.modalType!=='details'"
                 class="absolute w-full left-0 border border-gray-300 rounded-md mt-1 bg-white shadow-lg max-h-40 overflow-y-auto z-50"
@@ -374,7 +350,7 @@
                   <div
                     @click="if($root.modalType !== 'details') addTag(subject)"
                     :class="{'bg-gray-100': highlightedIndex === i}"
-                    class="px-3 py-2 cursor-pointer hover:bg-gray-100 text-gray-700"
+                    class="px-3 py-2 cursor-pointer hover:bg-gray-100 text-gray-700 text-sm"
                     x-text="subject">
                   </div>
                 </template>
@@ -382,75 +358,70 @@
             </div>
           </div>
           
-          <!-- Botón "Manage" -->
           <div class="flex items-center justify-center mt-[38px]">
             <button
               @click="openSubjectsModal()"
-              class="bg-[#A6192E] hover:bg-[#8E1C2D] text-white font-semibold text-lg w-24 h-10 rounded-lg flex items-center justify-center transition">
-              Manage
+              class="bg-[#252121] hover:bg-[#1a1616] text-white font-semibold text-sm w-24 h-10 rounded-lg flex items-center justify-center transition">
+              <i class="fa-solid fa-sliders mr-1"></i>Manage
             </button>
           </div>
         </div>
         
-        <!-- Cuarta fila: Professor -->
         <div>
-          <label class="text-gray-800 text-xl mb-2 block">Professor</label>
+          <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
+            <i class="fa-solid fa-chalkboard-user mr-1 text-xs"></i>Professor
+          </label>
           <select
             x-model="selectedSession.professor"
-            class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#A6192E]"
+            class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#A6192E] text-sm"
             :disabled="modalType==='details'"
-            :class="{'bg-gray-100 cursor-not-allowed': modalType==='details'}">
+            :class="{'bg-gray-50 cursor-not-allowed': modalType==='details'}">
             <option value="">Select Professor</option>
             <option value="Daniel Tornero">Daniel Tornero</option>
             <option value="Jorge Ruiz">Jorge Ruiz</option>
           </select>
         </div>
 
-        <!-- Footer -->
         <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
           <button @click="openModalFlag = false" 
-                  class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium">
+                  class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">
             Close
           </button>
           <button x-show="modalType==='edit' || modalType==='add'" 
                   @click="saveSession()" 
-                  class="px-4 py-2 bg-[#A6192E] text-white rounded-md hover:bg-[#8E1C2D] font-medium">
-            Save
+                  class="px-4 py-2 bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] text-white rounded-md hover:from-[#8E1C2D] hover:to-[#A6192E] font-medium transition">
+            <i class="fa-solid fa-save mr-1"></i>Save
           </button>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Modal de Subjects -->
   <div x-show="showSubjectsModal" 
       x-cloak
      x-transition.opacity 
      @click.self="closeSubjectsModal()" 
      class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50">
 
-  <div class="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
-    <!-- Header -->
-    <div class="bg-[#A6192E] h-16 flex items-center justify-between px-6">
-      <h2 class="text-2xl text-white font-bold" 
-          x-text="subjectsView === 'list' ? 'Subject Management' : 'Students - ' + selectedSubject?.name"></h2>
-      <button @click="closeSubjectsModal()" class="text-white hover:text-gray-200 transition">
-        <i class="fa-solid fa-times text-2xl"></i>
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
+    <div class="bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] h-16 flex items-center justify-between px-6">
+      <h2 class="text-2xl text-white font-bold flex items-center" 
+          x-text="subjectsView === 'list' ? ' Subject Management' : ' Students - ' + selectedSubject?.name"></h2>
+      <button @click="closeSubjectsModal()" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
+        <i class="fa-solid fa-times text-xl"></i>
       </button>
     </div>
 
-    <!-- Body -->
     <div class="p-6 overflow-y-auto" style="max-height: calc(90vh - 64px);">
       
-      <!-- Search and Action Bar -->
       <div class="flex gap-3 mb-6">
-        <!-- Botón Volver (solo en vista de estudiantes) -->
         <button x-show="subjectsView === 'students'" 
                 @click="backToSubjects()"
-                class="bg-[#322C2C] hover:bg-[#2F2929] text-white px-4 py-2 rounded-lg transition-colors">
+                class="bg-[#252121] hover:bg-[#1a1616] text-white px-4 py-2 rounded-lg transition-colors font-medium">
           <i class="fa-solid fa-arrow-left mr-2"></i>Back
         </button>
         
-        <!-- Barra de búsqueda -->
         <div class="flex-1 relative">
           <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
           <input
@@ -460,20 +431,8 @@
             class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#A6192E]"
           />
         </div>
-        
-        <!-- Botones de acción 
-        <button class="bg-[#D41736] hover:bg-[#A6192E] text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
-          <i class="fa-solid fa-upload"></i>
-          Upload
-        </button>
-        <button class="bg-[#322C2C] hover:bg-[#2F2929] text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
-          <i class="fa-solid fa-download"></i>
-          Download
-        </button>
-        -->
       </div>
 
-      <!-- Vista de Materias (Lista) -->
       <div x-show="subjectsView === 'list'" class="space-y-3">
         <template x-if="filteredSubjects.length === 0">
           <div class="text-center p-8 text-gray-500">
@@ -483,71 +442,60 @@
         </template>
         
         <template x-for="subject in filteredSubjects" :key="subject.id">
-          <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-all p-4 border-l-4 border-[#A6192E]">
+          <div class="bg-white rounded-lg shadow-md hover:shadow-xl transition-all p-4 border-l-4 border-[#A6192E]">
             <div class="flex items-center justify-between">
               <div @click="viewStudents(subject)" class="flex-1 cursor-pointer">
                 <div class="flex items-center gap-4">
-                  <!-- Contador de estudiantes -->
-                  <div class="bg-red-100 rounded-lg p-3 w-16 h-16 flex items-center justify-center">
-                    <span class="text-2xl font-bold text-[#A6192E]" 
+                  <div class="bg-red-50 border-2 border-[#D41736] rounded-lg p-3 w-16 h-16 flex items-center justify-center">
+                    <span class="text-2xl font-bold text-[#D41736]" 
                           x-text="subject.students.length"></span>
                   </div>
                   
-                  <!-- Info de la materia -->
                   <div class="flex-1">
-                    <h3 class="text-lg font-bold text-gray-800" x-text="subject.name"></h3>
-                    <p class="text-sm text-gray-500">
+                    <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                      <i class="fa-solid fa-book-open text-[#A6192E] mr-2"></i>
+                      <span x-text="subject.name"></span>
+                    </h3>
+                    <p class="text-sm text-gray-500 flex items-center">
+                      <i class="fa-solid fa-code mr-1"></i>
                       <span x-text="subject.code"></span> • 
+                      <i class="fa-solid fa-chalkboard-user ml-2 mr-1"></i>
                       <span x-text="subject.teacher"></span>
                     </p>
                     
-                    <!-- Barra de progreso -->
                     <div class="mt-2 flex items-center gap-2">
                       <div class="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
                         <div 
-                          class="bg-[#A6192E] h-full transition-all"
+                          class="bg-gradient-to-r from-[#A6192E] to-[#D41736] h-full transition-all"
                           :style="`width: ${(subject.students.filter(s => s.status === 'active').length / subject.students.length) * 100}%`">
                         </div>
                       </div>
-                      <span class="text-sm font-medium text-gray-600">
+                      <span class="text-sm font-medium text-gray-600 flex items-center">
+                        <i class="fa-solid fa-user-check mr-1 text-xs"></i>
                         <span x-text="subject.students.filter(s => s.status === 'active').length"></span>/<span x-text="subject.students.length"></span> active
                       </span>
                     </div>
                   </div>
                 </div>
               </div>
-              
-              <!-- Botones de acción 
-              <div class="flex gap-2 ml-4">
-                <button @click="alert('Edit: ' + subject.name)"
-                        class="bg-[#322C2C] hover:bg-[#2F2929] text-white p-2 rounded transition-colors"
-                        title="Edit">
-                  <i class="fa-solid fa-edit"></i>
-                </button>
-                <button @click="deleteSubject(subject.id)"
-                        class="bg-[#D41736] hover:bg-[#A6192E] text-white p-2 rounded transition-colors"
-                        title="Delete">
-                  <i class="fa-solid fa-trash"></i>
-              -->
-                </button>
-              </div>
             </div>
           </div>
         </template>
       </div>
 
-      <!-- Vista de Estudiantes (Heatmap + Lista) -->
       <div x-show="subjectsView === 'students'" class="space-y-4">
         
-        <!-- Resumen -->
         <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-[#A6192E]">
           <div class="flex items-center justify-between mb-4">
             <div>
-              <h3 class="text-lg font-semibold text-gray-800">
-                Total: <span x-text="selectedSubject?.students.length"></span> students
+              <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                <i class="fa-solid fa-users mr-2 text-[#A6192E]"></i>
+                Total: <span class="ml-1" x-text="selectedSubject?.students.length"></span> students
               </h3>
-              <p class="text-sm text-gray-600">
-                <span x-text="selectedSubject?.students.filter(s => s.status === 'active').length"></span> active • 
+              <p class="text-sm text-gray-600 flex items-center mt-1">
+                <i class="fa-solid fa-user-check mr-1 text-[#D41736]"></i>
+                <span x-text="selectedSubject?.students.filter(s => s.status === 'active').length"></span> active •
+                <i class="fa-solid fa-user-xmark ml-2 mr-1 text-gray-500"></i>
                 <span x-text="selectedSubject?.students.filter(s => s.status === 'inactive').length"></span> inactive
               </p>
             </div>
@@ -557,13 +505,12 @@
                 <span>Active</span>
               </div>
               <div class="flex items-center gap-2">
-                <div class="w-4 h-4 rounded bg-[#CDCDC8]"></div>
+                <div class="w-4 h-4 rounded bg-gray-400"></div>
                 <span>Inactive</span>
               </div>
             </div>
           </div>
           
-          <!-- Heatmap Grid -->
           <div class="grid grid-cols-8 md:grid-cols-12 lg:grid-cols-16 gap-2">
             <template x-for="(student, index) in filteredStudents" :key="student.id">
               <div :class="`aspect-square rounded-lg cursor-pointer transition-all hover:scale-110 hover:shadow-lg relative group ${
@@ -573,7 +520,6 @@
                 <div class="absolute inset-0 flex items-center justify-center text-white font-bold text-xs"
                      x-text="index + 1"></div>
                 
-                <!-- Tooltip -->
                 <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none">
                   <div class="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-xl">
                     <p class="font-semibold" x-text="student.name"></p>
@@ -588,9 +534,10 @@
           </div>
         </div>
 
-        <!-- Lista Detallada -->
         <div class="bg-white rounded-lg shadow-md p-4">
-          <h3 class="text-lg font-semibold text-gray-800 mb-4">Detailed List</h3>
+          <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <i class="fa-solid fa-list mr-2 text-[#A6192E]"></i>Detailed List
+          </h3>
           <div class="space-y-2 max-h-96 overflow-y-auto">
             <template x-for="(student, index) in filteredStudents" :key="student.id">
               <div class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors border border-gray-200">
@@ -611,16 +558,6 @@
                         }`"
                         x-text="student.status === 'active' ? 'ACTIVE' : 'INACTIVE'">
                   </span>
-                  <!-- 
-                  <button @click="alert('Edit: ' + student.name)"
-                          class="bg-[#322C2C] hover:bg-[#2F2929] text-white p-2 rounded transition-colors">
-                    <i class="fa-solid fa-edit text-sm"></i>
-                  </button>
-                  <button @click="deleteStudent(student.id)"
-                          class="bg-[#D41736] hover:bg-[#A6192E] text-white p-2 rounded transition-colors">
-                    <i class="fa-solid fa-trash text-sm"></i>
-                  </button>
-                  -->
                 </div>
               </div>
             </template>
@@ -632,7 +569,7 @@
   </div>
   
 </div>
-    <!-- Footer -->
+
   <footer :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'" class="bg-[#2D2828] border-t">
     <div class="max-w-7xl mx-auto px-6 py-4">
       <div class="flex justify-between items-center">
@@ -645,7 +582,6 @@
       </div>
     </div>
   </footer>
-
 
 </body>
 </html>
