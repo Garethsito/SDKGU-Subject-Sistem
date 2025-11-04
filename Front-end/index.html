@@ -8,7 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://kit.fontawesome.com/337be747ec.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="js/script.js"></script>
+  <script src="js/dashboard.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <style>
   [x-cloak] { display: none !important; }
@@ -184,7 +184,7 @@
       <div class="bg-white rounded-lg shadow p-6">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-gray-500 text-sm font-medium mb-1">Average Occupancy</p>
+            <p class="text-gray-500 text-sm font-medium mb-1">Enrollment Growth</p>
             <p class="text-3xl font-bold text-[#A6192E]" x-text="stats.avgOccupancy + '%'"></p>
           </div>
           <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
@@ -193,14 +193,14 @@
         </div>
       </div>
     </div>
-
-    <!-- Graficas -->
+    
+  <!-- Graficas -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
       
-      <!-- Grafica 1: Ocupación por sesión -->
+      <!-- Grafica 1: Estudiantes con Materias Faltantes -->
       <div class="bg-white border-2 border-gray-200 rounded-lg shadow-md p-4 order-1">
         <h3 class="text-lg font-bold text-[#A6192E] mb-3 flex items-center">
-          <i class="fa-solid fa-chart-column mr-2"></i>Occupancy per Session
+          <i class="fa-solid fa-user-xmark mr-2"></i>Students with Missing Subjects
         </h3>
         <div style="position: relative; height: 200px;">
           <canvas id="miGrafica"></canvas>

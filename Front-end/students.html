@@ -8,14 +8,13 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://kit.fontawesome.com/337be747ec.js" crossorigin="anonymous"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <script src="js/script.js"></script>  
+  <script src="js/students.js"></script>  
   <style>
   [x-cloak] { display: none !important; }
   </style>
 </head>
-<body x-data="academicData()"> 
+<body x-data="academicData()" @load="init()"> 
 
-  <!-- Header -->
   <header class="bg-[#2D2828] shadow-md border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
     <div class="px-6 py-4">
       <div class="flex items-center justify-between">
@@ -23,11 +22,16 @@
           <button @click="open = !open" class="w-10 h-10 flex items-center justify-center hover:bg-[#252121] rounded transition-colors">
             <span class="text-2xl text-white">☰</span>
           </button>
+          
           <div class="absolute right-60">
-            <input type="text" x-model="searchTerm" @input="filterStudents" placeholder="Search students..." class="w-full bg-gray-100 border border-gray-300 rounded-md px-2 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500 transition shadow-sm placeholder:text-gray-400">
+            <input 
+              type="text" 
+              x-model="searchTerm" 
+              @input.debounce.300ms="applyFilters" 
+              placeholder="Search students, ID, email..." 
+              class="w-full bg-gray-100 border border-gray-300 rounded-md px-2 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500 transition shadow-sm placeholder:text-gray-400">
           </div>
           
-          <!-- Dropdown de filtro -->
           <div class="fixed right-40">
             <button @click="showFilters = !showFilters" class="w-10 h-10 flex items-center justify-center text-white bg-[#8E1C2D] border-2 border-[#D41736] hover:bg-[#8E1C2D] hover:border-[#772A34] transition transform duration-300 hover:scale-110 rounded">
               <i class="fa-solid fa-filter"></i>
@@ -43,7 +47,7 @@
               x-transition:leave-start="opacity-100 translate-y-0"
               x-transition:leave-end="opacity-0 translate-y-1"
               class="absolute right-0 top-full w-80 bg-white rounded-lg shadow-xl border-2 border-gray-200 p-6 mt-2"
-              style="display: none;">
+              x-cloak>
               
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-bold text-gray-800">Filters</h3>
@@ -55,7 +59,10 @@
               <div class="space-y-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Program</label>
-                  <select x-model="filters.program" @change="applyFilters" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+                  <select 
+                    x-model="filters.program" 
+                    @change="syncProgramFilter('dropdown'); applyFilters()" 
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
                     <option value="">All Programs</option>
                     <option value="bachelor">Bachelor's</option>
                     <option value="associate">Associate</option>
@@ -64,20 +71,32 @@
 
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Progress Status</label>
-                  <select x-model="filters.status" @change="applyFilters" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+                  <select 
+                    x-model="filters.status" 
+                    @change="applyFilters" 
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
                     <option value="">All Students</option>
                     <option value="complete">Completed All</option>
                     <option value="ontrack">On Track</option>
                     <option value="behind">Behind Schedule</option>
                   </select>
                 </div>
-
+                
+                <div>
+                  <label class="flex items-center space-x-2 text-sm font-medium text-gray-700 mt-3">
+                    <input 
+                      type="checkbox" 
+                      x-model="filters.missingSubjects" 
+                      class="rounded border-gray-300 text-[#A6192E] shadow-sm focus:border-[#A6192E] focus:ring focus:ring-offset-0 focus:ring-[#A6192E] focus:ring-opacity-50">
+                    <span>Show only missing (Heatmap view)</span>
+                  </label>
+                </div>
                 <div class="flex gap-3 pt-4 border-t border-gray-200">
                   <button @click="clearFilters" class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition text-sm font-medium">
                     Clear All
                   </button>
-                  <button @click="showFilters = false; applyFilters()" class="flex-1 px-4 py-2 bg-[#A6192E] text-white rounded-md hover:bg-[#8E1C2D] transition text-sm font-medium">
-                    Apply Filters
+                  <button @click="showFilters = false" class="flex-1 px-4 py-2 bg-[#A6192E] text-white rounded-md hover:bg-[#8E1C2D] transition text-sm font-medium">
+                    Apply
                   </button>
                 </div>
               </div>
@@ -102,7 +121,6 @@
     </div>
   </header>
 
-  <!-- Sidebar -->
   <aside 
     x-show="open"
     x-transition:enter="transition transform duration-300"
@@ -111,18 +129,19 @@
     x-transition:leave="transition transform duration-300"
     x-transition:leave-start="translate-x-0 opacity-100"
     x-transition:leave-end="-translate-x-full opacity-0"
-    class="w-60 bg-[#A6192E] text-white h-screen p-4 top-16 fixed z-40">
+    class="w-60 bg-[#A6192E] text-white h-screen p-4 top-16 fixed z-40"
+    x-cloak>
+    
     <ul class="pt-6 space-y-4 text-xl font-medium">
-      <li><a href="index.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]">Dashboard</a></li>
-      <li><a href="session.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]">Sessions</a></li>
-      <li><a href="subjects.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]">Subjects</a></li>
-      <li><a href="students.html" class="block w-full px-4 py-2 rounded bg-[#8E1C2D]">Students</a></li>
-      <li><a href="#" class="block w-full px-4 py-2 rounded hover:bg-[#971629]">Reports</a></li>
-      <li><a href="#" class="block w-full px-4 py-2 rounded hover:bg-[#971629]">Settings</a></li>
+      <li><a href="index.html" class="block w-full px-4 py-2 rounded bg-[#8E1C2D]"><i class="fa-solid fa-chart-line mr-2"></i>Dashboard</a></li>
+      <li><a href="session.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-calendar-days mr-2"></i>Sessions</a></li>
+      <li><a href="subjects.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-book mr-2"></i>Subjects</a></li>
+      <li><a href="students.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-users mr-2"></i>Students</a></li>
+      <li><a href="#" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-file-lines mr-2"></i>Reports</a></li>
+      <li><a href="#" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-gear mr-2"></i>Settings</a></li>
     </ul>
   </aside>
 
-  <!-- Contenido -->
   <main
     :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'"
     class="flex-1 p-6 bg-gray-100 min-h-screen pt-20">
@@ -132,13 +151,13 @@
       <p class="text-gray-600">Track student progress across all subjects</p>
     </div>
 
-    <!-- Resumen de estadísticas -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
       <div class="bg-white rounded-lg shadow p-6">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-gray-500 text-sm font-medium">Total Students</p>
-            <p class="text-3xl font-bold text-gray-800" x-text="students.length"></p>
+            <p class="text-3xl font-bold text-gray-800" x-text="filteredStudents.length"></p>
+            <p class="text-xs text-gray-500">Matching filters</p>
           </div>
           <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
             <i class="fa-solid fa-users text-[#252121] text-xl"></i>
@@ -149,23 +168,12 @@
       <div class="bg-white rounded-lg shadow p-6">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-gray-500 text-sm font-medium">Avg Progress</p>
-            <p class="text-3xl font-bold text-[#D41736]" x-text="Math.round(getAverageProgress()) + '%'"></p>
+            <p class="text-gray-500 text-sm font-medium">Class Performance (GPA)</p>
+            <p class="text-3xl font-bold text-[#D41736]" x-text="getAverageGPALetter()"></p>
+            <p class="text-xs text-gray-500" x-text="'Avg. ' + calculateAverageGPA().toFixed(2)"></p>
           </div>
           <div class="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center">
-            <i class="fa-solid fa-chart-line text-[#D41736] text-xl"></i>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-500 text-sm font-medium">Completed All</p>
-            <p class="text-3xl font-bold text-[#A6192E]" x-text="getCompletedStudents()"></p>
-          </div>
-          <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-            <i class="fa-solid fa-graduation-cap text-[#A6192E] text-xl"></i>
+            <i class="fa-solid fa-star text-[#D41736] text-xl"></i>
           </div>
         </div>
       </div>
@@ -175,6 +183,7 @@
           <div>
             <p class="text-gray-500 text-sm font-medium">Behind Schedule</p>
             <p class="text-3xl font-bold text-[#E35E26]" x-text="getBehindStudents()"></p>
+            <p class="text-xs text-gray-500">Progress &lt; 50%</p>
           </div>
           <div class="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
             <i class="fa-solid fa-exclamation-triangle text-[#E35E26] text-xl"></i>
@@ -183,7 +192,7 @@
       </div>
     </div>
 
-    <!-- Vista de Toggles -->
+
     <div class="bg-white rounded-lg shadow mb-6 p-4">
       <div class="flex items-center justify-between">
         <div class="flex gap-2">
@@ -201,7 +210,6 @@
           </button>
         </div>
         
-        <!-- Leyenda -->
         <div class="flex items-center gap-3 text-sm">
           <div class="flex items-center gap-2">
             <div class="w-4 h-4 bg-gray-400 rounded"></div>
@@ -223,35 +231,31 @@
       </div>
     </div>
 
-  <!-- Heatmap View -->
-    <div x-show="viewMode === 'heatmap'" class="bg-white rounded-lg shadow overflow-hidden">
+  <div x-show="viewMode === 'heatmap'" class="bg-white rounded-lg shadow overflow-hidden" x-cloak>
       <div class="p-6">
         
-        <!-- Filtrar por programa -->
         <div class="mb-6 flex gap-4">
           <button 
-            @click="programFilter = 'all'; applyFilters()" 
+            @click="programFilter = 'all'; syncProgramFilter('buttons'); applyFilters()" 
             :class="programFilter === 'all' ? 'bg-[#A6192E] text-white' : 'bg-gray-200 text-gray-700'"
             class="px-4 py-2 rounded-lg font-medium transition">
             All Programs
           </button>
           <button 
-            @click="programFilter = 'BSGM'; applyFilters()" 
+            @click="programFilter = 'BSGM'; syncProgramFilter('buttons'); applyFilters()" 
             :class="programFilter === 'BSGM' ? 'bg-[#A6192E] text-white' : 'bg-gray-200 text-gray-700'"
             class="px-4 py-2 rounded-lg font-medium transition">
             BSGM (42 courses)
           </button>
           <button 
-            @click="programFilter = 'ASSD'; applyFilters()" 
+            @click="programFilter = 'ASSD'; syncProgramFilter('buttons'); applyFilters()" 
             :class="programFilter === 'ASSD' ? 'bg-[#A6192E] text-white' : 'bg-gray-200 text-gray-700'"
             class="px-4 py-2 rounded-lg font-medium transition">
             ASSD (20 courses)
           </button>
         </div>
 
-        <!-- Contenedor con scroll horizontal sincronizado -->
         <div class="relative">
-          <!-- Scroll superior para navegación rápida -->
           <div 
             x-ref="topScroll"
             @scroll="$refs.bottomScroll.scrollLeft = $refs.topScroll.scrollLeft"
@@ -259,13 +263,11 @@
             <div :style="'width: ' + (248 + (getFilteredSubjects().length * 68) + 96) + 'px'" ></div>
           </div>
 
-          <!-- Scroll principal -->
           <div 
             x-ref="bottomScroll"
             @scroll="$refs.topScroll.scrollLeft = $refs.bottomScroll.scrollLeft"
             class="overflow-x-auto">
             <div class="min-w-max">
-              <!-- Header de materias STICKY -->
               <div class="flex mb-4 sticky top-0 bg-white z-10 pb-2 border-b-2 border-gray-200">
                 <div class="w-48 flex-shrink-0 font-bold text-gray-700">Student Name</div>
                 <template x-for="subject in getFilteredSubjects()" :key="subject.id">
@@ -277,10 +279,9 @@
                 <div class="w-24 flex-shrink-0 ml-4 text-center font-bold text-gray-700">Progress</div>
               </div>
 
-              <!-- Filas de estudiantes -->
               <template x-for="student in getFilteredStudentsByProgram()" :key="student.id">
                 <div 
-                  @click="selectedStudent = selectedStudent === student.id ? null : student.id"
+                  @click="selectedStudent = student.id; courseStatusFilter = 'all'"
                   class="flex items-center mb-2 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition"
                   :class="selectedStudent === student.id ? 'bg-gray-100 ring-2 ring-[#A6192E]' : ''">
                   
@@ -292,6 +293,8 @@
                   <template x-for="subject in getFilteredSubjects()" :key="subject.id">
                     <div class="w-16 flex-shrink-0 mx-1">
                       <div 
+                        x-show="!filters.missingSubjects || (student.progress[subject.id] === 0 || typeof student.progress[subject.id] === 'undefined')"
+                        x-cloak
                         :class="getStatusColor(student.progress[subject.id])"
                         class="h-12 rounded-lg flex items-center justify-center transition-all hover:scale-110 hover:shadow-lg cursor-pointer"
                         :title="subject.name + ': ' + getStatusText(student.progress[subject.id])">
@@ -299,23 +302,24 @@
                       </div>
                     </div>
                   </template>
-
                   <div class="w-24 flex-shrink-0 ml-4 text-center">
                     <p class="text-xl font-bold text-gray-800" x-text="Math.round(calculateProgress(student)) + '%'"></p>
                     <p class="text-xs text-gray-500" x-text="getCompletedCount(student) + '/' + getTotalSubjects(student)"></p>
                   </div>
                 </div>
               </template>
+              
+              <div x-show="getFilteredStudentsByProgram().length === 0" class="text-center text-gray-500 p-8" x-cloak>
+                No students match the current filters.
+              </div>
+              
             </div>
           </div>
         </div>
       </div>
-
-
     </div>
 
-    <!-- List View -->
-    <div x-show="viewMode === 'list'" class="bg-white rounded-lg shadow overflow-hidden">
+    <div x-show="viewMode === 'list'" class="bg-white rounded-lg shadow overflow-hidden" x-cloak>
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
@@ -336,6 +340,7 @@
                   </div>
                   <div class="ml-4">
                     <div class="text-sm font-medium text-gray-900" x-text="student.name"></div>
+                    <div class="text-xs text-gray-500" x-text="student.studentId"></div>
                   </div>
                 </div>
               </td>
@@ -356,31 +361,35 @@
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <button @click="selectedStudent = student.id; viewMode = 'heatmap'" class="text-[#A6192E] hover:text-[#8E1C2D]">
+                <button @click="selectedStudent = student.id; viewMode = 'heatmap'; courseStatusFilter = 'all'" class="text-[#A6192E] hover:text-[#8E1C2D]">
                   View Details
                 </button>
               </td>
             </tr>
           </template>
+          
+          <tr x-show="filteredStudents.length === 0" x-cloak>
+            <td colspan="5" class="text-center text-gray-500 p-8">
+              No students match the current filters.
+            </td>
+          </tr>
+          
         </tbody>
       </table>
     </div>
 
   </main>
 
-  <!-- Modal de Detalle del Estudiante -->
   <div 
     x-show="selectedStudent" 
     x-cloak
     class="fixed inset-0 z-50 overflow-y-auto"
     @keydown.escape.window="selectedStudent = null">
     
-    <!-- Backdrop -->
     <div 
       class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
       @click="selectedStudent = null"></div>
     
-    <!-- Modal Content -->
     <div class="flex items-center justify-center min-h-screen p-4">
       <div 
         x-show="selectedStudent"
@@ -395,7 +404,6 @@
         <template x-for="student in students" :key="student.id">
           <div x-show="student.id === selectedStudent">
             
-            <!-- Header del Modal -->
             <div class="bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] px-8 py-6">
               <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4">
@@ -415,10 +423,8 @@
               </div>
             </div>
 
-            <!-- Body del Modal - Scrollable -->
             <div class="overflow-y-auto max-h-[calc(90vh-200px)] p-8">
               
-              <!-- Información Personal -->
               <div class="mb-6">
                 <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
                   <i class="fa-solid fa-user text-[#A6192E] mr-2"></i>
@@ -452,7 +458,6 @@
                 </div>
               </div>
 
-              <!-- Información Académica -->
               <div class="mb-6">
                 <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
                   <i class="fa-solid fa-graduation-cap text-[#A6192E] mr-2"></i>
@@ -461,7 +466,14 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div class="bg-gray-50 rounded-lg p-4">
                     <p class="text-xs text-gray-500 font-medium mb-1">Status</p>
-                    <p class="text-sm font-semibold" :class="student.status === 'Active' ? 'text-[#D41736]' : 'text-[#E35E26]'" x-text="student.status || 'N/A'"></p>
+                    <p 
+                      class="text-sm font-semibold" 
+                      :class="{
+                        'text-[#D41736]': student.status === 'Active',
+                        'text-[#E35E26]': student.status === 'On Leave',
+                        'text-gray-600': student.status === 'Inactive'
+                      }" 
+                      x-text="student.status || 'N/A'"></p>
                   </div>
                   <div class="bg-gray-50 rounded-lg p-4">
                     <p class="text-xs text-gray-500 font-medium mb-1">Program</p>
@@ -484,6 +496,13 @@
                     <p class="text-sm font-semibold text-gray-800" x-text="student.startDate || 'N/A'"></p>
                   </div>
                   <div class="bg-gray-50 rounded-lg p-4">
+                    <p class="text-xs text-gray-500 font-medium mb-1">GPA</p>
+                    <p class="text-sm font-semibold text-gray-800">
+                      <span x-text="student.letterGrade || 'N/A'"></span> 
+                      (<span x-text="student.gpa || '0.00'"></span>)
+                    </p>
+                  </div>
+                  <div class="bg-gray-50 rounded-lg p-4">
                     <p class="text-xs text-gray-500 font-medium mb-1">Scheduled Completion</p>
                     <p class="text-sm font-semibold text-gray-800" x-text="student.scheduledCompletion || 'N/A'"></p>
                   </div>
@@ -493,8 +512,37 @@
                   </div>
                 </div>
               </div>
+              
+              <div class="mb-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                  <i class="fa-solid fa-plus text-[#A6192E] mr-2"></i>
+                  Enroll Student
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs text-gray-500 font-medium mb-1">Add to Session</label>
+                    <select class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+                      <option value="">Select a session...</option>
+                      <option value="session1">Fall 2025 - Term 1</option>
+                      <option value="session2">Fall 2025 - Term 2</option>
+                      <option value="session3">Spring 2026 - Term 1</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-500 font-medium mb-1">Enroll in Subject</label>
+                    <select class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+                      <option value="">Select a subject...</option>
+                      <template x-for="subject in subjects.filter(s => s.program === (student.program.includes('Bachelor') ? 'BSGM' : 'ASSD'))">
+                        <option :value="subject.id" x-text="subject.name"></option>
+                      </template>
+                    </select>
+                  </div>
+                </div>
+                <button class="mt-4 w-full px-4 py-2 bg-[#A6192E] text-white rounded-lg hover:bg-[#8E1C2D] transition font-medium">
+                  <i class="fa-solid fa-check mr-2"></i>Confirm Enrollment
+                </button>
+              </div>
 
-              <!-- Unidades -->
               <div class="mb-6">
                 <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
                   <i class="fa-solid fa-chart-bar text-[#A6192E] mr-2"></i>
@@ -515,11 +563,10 @@
                   </div>
                   <div class="bg-yellow-50 border-2 border-[#F69A1C] rounded-lg p-4">
                     <p class="text-[#F69A1C] text-xs font-medium mb-1">Remaining Units</p>
-                    <p class="text-3xl font-bold text-[#F69A1C]" x-text="(student.totalUnits || 0) - (student.unitsEarned || 0)"></p>
+                    <p class="text-3xl font-bold text-[#F69A1C]" x-text="(student.totalUnits || 0) - (student.unitsEarned || 0) - (student.transferredUnits || 0)"></p>
                   </div>
                 </div>
                 
-                <!-- Barra de Progreso de Unidades -->
                 <div class="mt-4">
                   <div class="flex justify-between text-sm text-gray-600 mb-2">
                     <span>Units Progress</span>
@@ -533,12 +580,12 @@
                 </div>
               </div>
 
-              <!-- Progress por Materia -->
               <div class="mb-6">
                 <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
                   <i class="fa-solid fa-book-open text-[#A6192E] mr-2"></i>
                   Course Progress
                 </h3>
+                
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <div class="bg-red-50 border-2 border-[#D41736] rounded-lg p-4">
                     <p class="text-[#A6192E] text-xs font-medium mb-1">Completed</p>
@@ -550,7 +597,7 @@
                   </div>
                   <div class="bg-gray-50 border-2 border-gray-400 rounded-lg p-4">
                     <p class="text-gray-600 text-xs font-medium mb-1">Not Started</p>
-                    <p class="text-3xl font-bold text-gray-600" x-text="Object.values(student.progress).filter(s => s === 0).length"></p>
+                    <p class="text-3xl font-bold text-gray-600" x-text="Object.values(student.progress).filter(s => s === 0 || s === undefined).length"></p>
                   </div>
                   <div class="bg-gray-100 border-2 border-[#252121] rounded-lg p-4">
                     <p class="text-[#252121] text-xs font-medium mb-1">Failed</p>
@@ -558,9 +605,17 @@
                   </div>
                 </div>
 
-                <!-- Lista de Materias -->
+                <div class="flex flex-wrap gap-2 mb-4">
+                  <button @click="courseStatusFilter = 'all'" :class="courseStatusFilter === 'all' ? 'bg-[#A6192E] text-white' : 'bg-gray-200 text-gray-700'" class="px-3 py-1 rounded-full text-xs font-medium transition">All</button>
+                  <button @click="courseStatusFilter = 0" :class="courseStatusFilter === 0 ? 'bg-gray-400 text-white' : 'bg-gray-200 text-gray-700'" class="px-3 py-1 rounded-full text-xs font-medium transition">Not Started</button>
+                  <button @click="courseStatusFilter = 3" :class="courseStatusFilter === 3 ? 'bg-[#252121] text-white' : 'bg-gray-200 text-gray-700'" class="px-3 py-1 rounded-full text-xs font-medium transition">Failed</button>
+                  <button @click="courseStatusFilter = 1" :class="courseStatusFilter === 1 ? 'bg-[#F69A1C] text-white' : 'bg-gray-200 text-gray-700'" class="px-3 py-1 rounded-full text-xs font-medium transition">In Progress</button>
+                  <button @click="courseStatusFilter = 2" :class="courseStatusFilter === 2 ? 'bg-[#D41736] text-white' : 'bg-gray-200 text-gray-700'" class="px-3 py-1 rounded-full text-xs font-medium transition">Completed</button>
+                </div>
+
+
                 <div class="space-y-2">
-                  <template x-for="subject in subjects.filter(s => s.program === (student.program.includes('Bachelor') ? 'BSGM' : 'ASSD'))" :key="subject.id">
+                  <template x-for="subject in getSortedAndFilteredCourses(student)" :key="subject.id">
                     <div class="flex items-center justify-between bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition">
                       <div class="flex items-center space-x-3">
                         <div 
@@ -580,18 +635,40 @@
                       </span>
                     </div>
                   </template>
+                  
+                  <div x-show="getSortedAndFilteredCourses(student).length === 0" class="text-center text-gray-500 p-4" x-cloak>
+                    No courses match the selected filter.
+                  </div>
+                  
                 </div>
               </div>
 
             </div>
 
-            <!-- Footer del Modal -->
             <div class="border-t bg-gray-50 px-8 py-4">
               <div class="flex justify-between items-center">
-                <div class="text-sm text-gray-600">
-                  <span class="text-sm font-medium text-[#252121]" x-text="student.status === 'Active' ? 'Status: ' : 'Status: '"></span>
-                  <span class="font-bold" :class="student.status === 'Active' ? 'text-[#D41736]' : 'text-[#E35E26]'" x-text="student.status"></span>
+                
+                <div class="flex gap-2">
+                  <button 
+                    x-show="student.status !== 'Active'" 
+                    @click="setStudentStatus(student, 'Active')"
+                    class="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition font-medium text-sm">
+                    <i class="fa-solid fa-play mr-1"></i> Activate
+                  </button>
+                  <button 
+                    x-show="student.status !== 'On Leave'" 
+                    @click="setStudentStatus(student, 'On Leave')"
+                    class="px-3 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition font-medium text-sm">
+                    <i class="fa-solid fa-pause mr-1"></i> Put On Leave
+                  </button>
+                  <button 
+                    x-show="student.status !== 'Inactive'" 
+                    @click="setStudentStatus(student, 'Inactive')"
+                    class="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-medium text-sm">
+                    <i class="fa-solid fa-stop mr-1"></i> Deactivate (Withdraw)
+                  </button>
                 </div>
+                
                 <div class="flex gap-3">
                   <button 
                     @click="selectedStudent = null"
@@ -611,7 +688,6 @@
     </div>
   </div>
 
-  <!-- Footer -->
   <footer class="bg-[#2D2828] border-t">
     <div class="max-w-7xl mx-auto px-6 py-4">
       <div class="flex justify-between items-center">
