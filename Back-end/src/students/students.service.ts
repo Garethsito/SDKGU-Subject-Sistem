@@ -10,7 +10,7 @@ export class StudentsService {
     const total = await this.prisma.student.count(); // 👈 Usa tu modelo Prisma (ajusta el nombre si es distinto)
     return total;
   }
-    async getDistribution() {
+  async getDistribution() {
     // Cuenta cuántos estudiantes hay por programId
     const programCounts = await this.prisma.student.groupBy({
       by: ['programId'],
@@ -37,6 +37,7 @@ export class StudentsService {
   async countSessions(){
     return await this.prisma.session.count();
   }
+
 
  // 🆕 Obtener todas las sesiones reales de la base de datos
 async getAllSessions() {
@@ -66,5 +67,6 @@ async getAllSessions() {
     professor: 'N/A',
   }));
 }
+
 
 }

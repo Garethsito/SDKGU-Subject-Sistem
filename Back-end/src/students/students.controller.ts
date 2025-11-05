@@ -23,7 +23,7 @@ export class StudentsController {
     return { totalSessions };
   }
 
-    @Get('sessions')
+  @Get('sessions')
   async getAllSessions() {
     const sessions = await this.studentsService.getAllSessions();
     return sessions;

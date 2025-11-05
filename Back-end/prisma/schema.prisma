@@ -20,6 +20,24 @@ model Program {
   courses      Course[]
 }
 
+model Teacher {
+  id              Int      @id @default(autoincrement())
+  teacherIdNumber String   @unique  // Matrícula del profesor
+  firstName       String
+  lastName        String
+  email           String?  @unique
+  phone           String?
+  status          String   @default("active")  // active, inactive, on_leave
+  hireDate        DateTime
+  department      String?
+  specialization  String?
+  offerings       CourseOffering[]
+  
+  @@index([teacherIdNumber])
+  @@index([lastName])
+  @@index([status])
+}
+
 model Student {
   id                      BigInt   @id  // Cambiado: ahora es BigInt sin autoincrement
   studentIdNumber         String   @unique  // Nuevo: para almacenar el ID original como string
@@ -107,12 +125,15 @@ model CourseOffering {
   courseId    Int
   session     Session  @relation(fields: [sessionId], references: [id])
   sessionId   Int
+  teacher     Teacher? @relation(fields: [teacherId], references: [id])
+  teacherId   Int?
   maxStudents Int?
   enrollments Enrollment[]
   
   @@unique([courseId, sessionId])
   @@index([courseId])
   @@index([sessionId])
+  @@index([teacherId])
 }
 
 model Enrollment {

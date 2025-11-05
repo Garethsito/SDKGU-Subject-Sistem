@@ -1,3 +1,181 @@
+// src/courses/courses.controller.ts
+import { Controller, Get, Query } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.services';
+
+@Controller('api/courses')
+export class CoursesController {
+  constructor(private prisma: PrismaService) {}
+
+  @Get()
+  async getCourses(@Query('programId') programId?: string) {
+    const where = programId ? { programId: parseInt(programId) } : {};
+    
+    return this.prisma.course.findMany({
+      where,
+      orderBy: { courseCode: 'asc' },
+      include: {
+        program: true
+      }
+    });
+  }
+}
+
+// src/courses/courses.module.ts
+import { Module } from '@nestjs/common';
+import { CoursesController } from './courses.controller';
+import { PrismaService } from '../prisma/prisma.services';
+
+@Module({
+  controllers: [CoursesController],
+  providers: [PrismaService],
+})
+export class CoursesModule {}
+
+// src/programs/programs.controller.ts
+import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.services';
+
+@Controller('api/programs')
+export class ProgramsController {
+  constructor(private prisma: PrismaService) {}
+
+  @Get()
+  async getAllPrograms() {
+    return this.prisma.program.findMany({
+      orderBy: { programName: 'asc' }
+    });
+  }
+
+  // NUEVO: Obtener cursos de un programa
+  @Get(':id/courses')
+  async getProgramCourses(@Param('id', ParseIntPipe) id: number) {
+    return this.prisma.course.findMany({
+      where: { programId: id },
+      orderBy: { courseCode: 'asc' }
+    });
+  }
+}
+
+// sessions/sessions.controller.ts
+import { Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe } from '@nestjs/common';
+import { SessionsService } from './sessions.service';
+
+@Controller('api/sessions')
+export class SessionsController {
+  constructor(private readonly sessionsService: SessionsService) {}
+
+  // Obtener todas las sesiones
+  @Get()
+  async getAllSessions() {
+    return this.sessionsService.getAllSessions();
+  }
+
+  // Obtener una sesión por ID
+  @Get(':id')
+  async getSessionById(@Param('id', ParseIntPipe) id: number) {
+    return this.sessionsService.getSessionById(id);
+  }
+
+  // Obtener materias de una sesión con estudiantes
+  @Get(':id/courses')
+  async getSessionCourses(@Param('id', ParseIntPipe) id: number) {
+    return this.sessionsService.getSessionCourses(id);
+  }
+
+  // Obtener todos los profesores
+  @Get('teachers/all')
+  async getAllTeachers() {
+    return this.sessionsService.getAllTeachers();
+  }
+
+  // Crear nueva sesión
+  @Post()
+  async create(@Body() data: any) {
+    return this.sessionsService.createSession(data);
+  }
+
+  // Actualizar sesión (ahora incluye actualización de materias)
+  @Put(':id')
+  async update(@Param('id', ParseIntPipe) id: number, @Body() data: any) {
+    return this.sessionsService.updateSession(id, data);
+  }
+
+  // Eliminar sesión
+  @Delete(':id')
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    return this.sessionsService.deleteSession(id);
+  }
+
+  // Obtener materias disponibles para una sesión
+  @Get(':id/available-courses')
+  async getAvailableCourses(@Param('id', ParseIntPipe) id: number) {
+    return this.sessionsService.getAvailableCourses(id);
+  }
+
+  // Agregar materia a sesión
+  @Post(':id/courses')
+  async addCourseToSession(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: { courseId: number; maxStudents?: number }
+  ) {
+    return this.sessionsService.addCourseToSession(id, data.courseId, data.maxStudents);
+  }
+
+  // Eliminar materia de sesión
+  @Delete(':sessionId/courses/:courseId')
+  async removeCourseFromSession(
+    @Param('sessionId', ParseIntPipe) sessionId: number,
+    @Param('courseId', ParseIntPipe) courseId: number
+  ) {
+    return this.sessionsService.removeCourseFromSession(sessionId, courseId);
+  }
+
+  // Obtener estudiantes disponibles para una materia
+  @Get(':sessionId/courses/:courseId/available-students')
+  async getAvailableStudents(
+    @Param('sessionId', ParseIntPipe) sessionId: number,
+    @Param('courseId', ParseIntPipe) courseId: number
+  ) {
+    return this.sessionsService.getAvailableStudents(sessionId, courseId);
+  }
+
+  // Agregar estudiante a una materia
+  @Post(':sessionId/courses/:courseId/students')
+  async addStudentToCourse(
+    @Param('sessionId', ParseIntPipe) sessionId: number,
+    @Param('courseId', ParseIntPipe) courseId: number,
+    @Body() data: { studentId: string }
+  ) {
+    return this.sessionsService.addStudentToCourse(
+      sessionId, 
+      courseId, 
+      BigInt(data.studentId)
+    );
+  }
+
+  // Remover estudiante de una materia
+  @Delete('enrollments/:enrollmentId')
+  async removeStudentFromCourse(
+    @Param('enrollmentId', ParseIntPipe) enrollmentId: number
+  ) {
+    return this.sessionsService.removeStudentFromCourse(enrollmentId);
+  }
+}
+
+// src/sessions/sessions.module.ts
+import { Module } from '@nestjs/common';
+import { SessionsService } from './sessions.service';
+import { PrismaService } from '../prisma/prisma.services';
+
+import { SessionsController } from './sessions.controller';
+
+@Module({
+  controllers: [SessionsController],
+  providers: [SessionsService, PrismaService],
+})
+export class SessionsModule {}
+
+
 // sessions.service.ts
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.services';
@@ -523,3 +701,160 @@ export class SessionsService {
     }));
   }
 }
+
+// Back-end/src/students/students.controller.ts
+import { Controller, Get } from '@nestjs/common';
+import { StudentsService } from './students.service';
+
+@Controller('api/students')
+export class StudentsController {
+  constructor(private readonly studentsService: StudentsService) {}
+
+  @Get('count')
+  async getTotalStudents() {
+    const total = await this.studentsService.countStudents();
+    return { total };
+  }
+
+  @Get('distribution')
+  async getStudentDistribution() {
+    const distribution = await this.studentsService.getDistribution();
+    return distribution;
+  }
+  @Get('sessions/count')
+  async getTotalSessions() {
+    const totalSessions = await this.studentsService.countSessions();
+    return { totalSessions };
+  }
+
+  @Get('sessions')
+  async getAllSessions() {
+    const sessions = await this.studentsService.getAllSessions();
+    return sessions;
+}
+}
+
+
+// Back-end/src/students/students.module.ts
+import { Module } from '@nestjs/common';
+import { StudentsController } from './students.controller';
+import { StudentsService } from './students.service';
+import { PrismaService } from '../prisma/prisma.services';
+
+@Module({
+  controllers: [StudentsController],
+  providers: [StudentsService, PrismaService],
+})
+export class StudentsModule {}
+
+// Back-end/src/students/students.service.ts
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.services';
+
+@Injectable()
+export class StudentsService {
+  constructor(private prisma: PrismaService) {}
+
+  async countStudents(): Promise<number> {
+    const total = await this.prisma.student.count(); // 👈 Usa tu modelo Prisma (ajusta el nombre si es distinto)
+    return total;
+  }
+  async getDistribution() {
+    // Cuenta cuántos estudiantes hay por programId
+    const programCounts = await this.prisma.student.groupBy({
+      by: ['programId'],
+      _count: { programId: true },
+    });
+
+    // Mapeo personalizado: id → nombre
+    const programNames: Record<number, string> = {
+      1: 'BSGM',
+      2: 'ASSD',
+    };
+
+    // Convierte los datos en formato de la gráfica
+    const labels = programCounts.map(p => programNames[p.programId] || `Programa ${p.programId}`);
+    const data = programCounts.map(p => p._count.programId);
+
+    return {
+      studentDistribution: {
+        labels,
+        data,
+      },
+    };
+  }
+  async countSessions(){
+    return await this.prisma.session.count();
+  }
+
+  // Obtener todas las sesiones reales de la base de datos
+  async getAllSessions() {
+    const sessions = await this.prisma.session.findMany({
+      include: {
+        program: { select: { programName: true } }, // 👈 obtiene el nombre del programa
+      },
+      orderBy: { startDate: 'asc' },
+    });
+
+    // 🔄 Transformar los datos al formato esperado por el frontend
+    return sessions.map(s => ({
+      id: s.id,
+      name: s.sessionName,
+      program: s.program?.programName || 'N/A',
+      month: s.startDate.toLocaleString('default', { month: 'long' }),
+      occupancy: Math.floor(Math.random() * 100), // si no tienes campo real, puedes quitarlo luego
+      status: new Date(s.endDate) > new Date() ? 'active' : 'ended',
+      lowEnrollment: false, // por ahora fijo (puedes calcularlo luego)
+      subjects: [], // puedes relacionarlo con offerings si quieres
+      professor: 'N/A', // si no hay relación, puedes dejarlo vacío
+    }));
+  }
+}
+
+
+// src/teachers/teachers.controller.ts
+import { Controller, Get } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.services';
+
+@Controller('api/teachers')
+export class TeachersController {
+  constructor(private prisma: PrismaService) {}
+
+  @Get()
+  async getActiveTeachers() {
+    return this.prisma.teacher.findMany({
+      where: { status: 'active' },
+      orderBy: [
+        { lastName: 'asc' },
+        { firstName: 'asc' }
+      ],
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        specialization: true
+      }
+    });
+  }
+}
+
+// src/app.module.ts
+
+import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
+import { StudentsModule } from './students/students.module';
+import { SessionsModule } from './sessions/sessions.module';
+import { ProgramsController } from './programs/programs.controller';
+import { CoursesController } from './courses/courses.controller';
+import { TeachersController } from './teachers/teachers.controller';
+import { PrismaService } from './prisma/prisma.services';
+
+@Module({
+  imports: [AuthModule, StudentsModule, SessionsModule],
+  controllers: [AppController, ProgramsController, CoursesController, TeachersController],
+  providers: [AppService, PrismaService],
+})
+export class AppModule {}

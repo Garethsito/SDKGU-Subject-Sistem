@@ -319,26 +319,26 @@
               <i class="fa-solid fa-graduation-cap mr-1 text-xs"></i>Program<span class="text-[#D41736] ml-1">*</span>
             </label>
             <select 
-              x-model="selectedSession.program"
-              x-on:change="selectedSession.subject = []" 
+              x-model="selectedSession.programId"
+              @change="selectedSession.subjects = []; selectedSession.sessionName = `Session ${selectedSession.number}`" 
               class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm" 
               :disabled="modalType==='details' || isEditLocked"
               :class="{'bg-gray-50 cursor-not-allowed': modalType==='details' || isEditLocked}">
               <option value="">Select Program</option>
-              <option value="Associate">Associate</option>
-              <option value="Bachelor's">Bachelor's</option>
+              <template x-for="program in allPrograms" :key="program.id">
+                <option :value="program.id" x-text="program.programName"></option>
+              </template>
             </select>
           </div>
         </div>
-
+        
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
-              <i class="fa-solid fa-calendar mr-1 text-xs"></i>Date<span class="text-[#D41736] ml-1">*</span>
+              <i class="fa-solid fa-calendar mr-1 text-xs"></i>Start Date<span class="text-[#D41736] ml-1">*</span>
             </label>
             <input type="date" 
-                  x-model="selectedSession.date"
-                  @change="selectedSession.month = new Date($event.target.value + 'T00:00:00').toLocaleDateString('en-US', {month: 'long'})"
+                  x-model="selectedSession.startDate"
                   class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm" 
                   :readonly="modalType==='details' || isEditLocked"
                   :class="{'bg-gray-50 cursor-not-allowed': modalType==='details' || isEditLocked}">
@@ -346,46 +346,65 @@
 
           <div>
             <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
-              <i class="fa-solid fa-calendar-days mr-1 text-xs"></i>Month
+              <i class="fa-solid fa-calendar-check mr-1 text-xs"></i>End Date<span class="text-[#D41736] ml-1">*</span>
             </label>
-            <input type="text" x-model="selectedSession.month" 
-                  class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-50 cursor-not-allowed text-sm" 
-                  readonly>
+            <input type="date" 
+                  x-model="selectedSession.endDate"
+                  class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm" 
+                  :readonly="modalType==='details' || isEditLocked"
+                  :class="{'bg-gray-50 cursor-not-allowed': modalType==='details' || isEditLocked}">
           </div>
-          
         </div>
 
-        <div class="grid grid-cols-3 gap-4 items-start">
+          <div class="grid grid-cols-3 gap-4 items-start">
           <div class="col-span-2">
             <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
-              <i class="fa-solid fa-book-open mr-1 text-xs"></i>Subjects<span class="text-[#D41736] ml-1">*</span>
+              <i class="fa-solid fa-book-open mr-1 text-xs"></i>Subject<span class="text-[#D41736] ml-1">*</span>
             </label>
             
-            <select
-              multiple
-              x-model="selectedSession.subject"
-              class="border border-gray-300 rounded-md w-full h-32 p-2 focus:outline-none focus:border-[#D41736] text-sm"
-              :disabled="modalType==='details' || isEditLocked || !selectedSession.program"
-              :class="{'bg-gray-50 cursor-not-allowed': modalType==='details' || isEditLocked || !selectedSession.program}"
-            >
-              <template x-for="subjectName in filteredSubjectNames" :key="subjectName">
-                <option :value="subjectName" x-text="subjectName"></option>
-              </template>
-            </select>
+            <!-- 👁️ VISTA PARA DETAILS (SOLO LECTURA CON CHIP) -->
+            <template x-if="modalType === 'details'">
+              <div class="border border-gray-300 rounded-md w-full p-3 bg-gray-50 min-h-[42px]">
+                <template x-if="selectedSession.subject">
+                  <span class="bg-[#D41736] text-white px-3 py-1 rounded-full text-sm">
+                    <i class="fa-solid fa-book mr-1"></i>
+                    <span x-text="selectedSession.subject"></span>
+                  </span>
+                </template>
+                <template x-if="!selectedSession.subject">
+                  <p class="text-gray-400 text-sm">No subject assigned</p>
+                </template>
+              </div>
+            </template>
             
-            <p x-show="!selectedSession.program" class="text-xs text-[#D41736] mt-1">
-              <i class="fa-solid fa-arrow-up"></i> Por favor, selecciona un programa primero.
-            </p>
-            <p x-show="selectedSession.program" class="text-xs text-gray-500 mt-1">
-              Mantén Ctrl (o Cmd en Mac) para seleccionar múltiples materias.
-            </p>
+            <!-- ✏️ VISTA PARA ADD/EDIT (SELECT SIMPLE) -->
+            <template x-if="modalType !== 'details'">
+              <select
+                x-model="selectedSession.subject"
+                class="border border-gray-300 rounded-md w-full p-2 focus:outline-none focus:border-[#D41736] text-sm"
+                :disabled="isEditLocked || !selectedSession.programId"
+                :class="{'bg-gray-50 cursor-not-allowed': isEditLocked || !selectedSession.programId}"
+              >
+                <option value="">Select a subject</option>
+                <template x-for="course in filteredSubjectNames" :key="course.code">
+                  <option :value="course.code" x-text="course.name + ' (' + course.code + ')'"></option>
+                </template>
+              </select>
 
+              <p x-show="!selectedSession.programId" class="text-xs text-[#D41736] mt-1">
+                <i class="fa-solid fa-arrow-up"></i> Please select a program first.
+              </p>
+              <p x-show="selectedSession.programId && filteredSubjectNames.length === 0" class="text-xs text-[#F69A1C] mt-1">
+                <i class="fa-solid fa-exclamation-triangle"></i> No courses available for this program.
+              </p>
+            </template>
           </div>
           
           <div class="flex items-center justify-center mt-[38px]">
             <button
               @click="openSubjectsModal()"
-              class="bg-[#252121] hover:bg-[#1a1616] text-white font-semibold text-sm w-24 h-10 rounded-lg flex items-center justify-center transition">
+              :disabled="!selectedSession.id || selectedSession.id === 'Auto-generated'"
+              class="bg-[#252121] hover:bg-[#1a1616] text-white font-semibold text-sm w-24 h-10 rounded-lg flex items-center justify-center transition disabled:opacity-50 disabled:cursor-not-allowed">
               <i class="fa-solid fa-sliders mr-1"></i>Manage
             </button>
           </div>
@@ -395,16 +414,30 @@
           <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
             <i class="fa-solid fa-chalkboard-user mr-1 text-xs"></i>Professor<span class="text-[#D41736] ml-1">*</span>
           </label>
-          <select
-            x-model="selectedSession.professor"
-            class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm"
-            :disabled="modalType==='details' || isEditLocked"
-            :class="{'bg-gray-50 cursor-not-allowed': modalType==='details' || isEditLocked}">
-            <option value="">Select Professor</option>
-            <option value="Daniel Tornero">Daniel Tornero</option>
-            <option value="Jorge Ruiz">Jorge Ruiz</option>
-          </select>
+          
+          <!-- 👁️ VISTA PARA DETAILS (SOLO LECTURA) -->
+          <template x-if="modalType === 'details'">
+            <input type="text" 
+                  :value="selectedSession.professor || 'TBD'"
+                  class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-50 cursor-not-allowed text-sm" 
+                  readonly>
+          </template>
+          
+          <!-- ✏️ VISTA PARA ADD/EDIT (SELECT) -->
+          <template x-if="modalType !== 'details'">
+            <select
+              x-model="selectedSession.teacherId"
+              class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm"
+              :disabled="isEditLocked"
+              :class="{'bg-gray-50 cursor-not-allowed': isEditLocked}">
+              <option value="">Select Professor</option>
+              <template x-for="teacher in allTeachers" :key="teacher.id">
+                <option :value="teacher.id" x-text="`${teacher.firstName} ${teacher.lastName}`"></option>
+              </template>
+            </select>
+          </template>
         </div>
+
         <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
           <button @click="closeModal()" 
                   class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">
