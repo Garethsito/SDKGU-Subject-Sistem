@@ -1,4 +1,4 @@
-// sessions.controller.ts
+// sessions/sessions.controller.ts
 import { Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe } from '@nestjs/common';
 import { SessionsService } from './sessions.service';
 
