@@ -38,26 +38,35 @@ export class StudentsService {
     return await this.prisma.session.count();
   }
 
-  // Obtener todas las sesiones reales de la base de datos
-  async getAllSessions() {
-    const sessions = await this.prisma.session.findMany({
-      include: {
-        program: { select: { programName: true } }, // 👈 obtiene el nombre del programa
-      },
-      orderBy: { startDate: 'asc' },
-    });
 
-    // 🔄 Transformar los datos al formato esperado por el frontend
-    return sessions.map(s => ({
-      id: s.id,
-      name: s.sessionName,
-      program: s.program?.programName || 'N/A',
-      month: s.startDate.toLocaleString('default', { month: 'long' }),
-      occupancy: Math.floor(Math.random() * 100), // si no tienes campo real, puedes quitarlo luego
-      status: new Date(s.endDate) > new Date() ? 'active' : 'ended',
-      lowEnrollment: false, // por ahora fijo (puedes calcularlo luego)
-      subjects: [], // puedes relacionarlo con offerings si quieres
-      professor: 'N/A', // si no hay relación, puedes dejarlo vacío
-    }));
-  }
+ // 🆕 Obtener todas las sesiones reales de la base de datos
+async getAllSessions() {
+  const sessions = await this.prisma.session.findMany({
+    include: {
+      program: { select: { programName: true } },
+    },
+    orderBy: { startDate: 'asc' },
+  });
+
+  // ✅ Agregar este log para revisar fechas
+  sessions.forEach(s => {
+    console.log(
+      `ID ${s.id} | startDate: ${s.startDate} | Mes num: ${s.startDate.getMonth() + 1}`
+    );
+  });
+
+  return sessions.map(s => ({
+    id: s.id,
+    name: s.sessionName,
+    program: s.program?.programName || 'N/A',
+    month: s.startDate.toLocaleString('es-ES', { month: 'long' , timeZone: 'UTC'}), // <-- aquí estaba el tema
+    occupancy: Math.floor(Math.random() * 100),
+    status: new Date(s.endDate) > new Date() ? 'active' : 'ended',
+    lowEnrollment: false,
+    subjects: [],
+    professor: 'N/A',
+  }));
+}
+
+
 }

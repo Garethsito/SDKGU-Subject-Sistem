@@ -20,6 +20,7 @@ async function bootstrap() {
   console.log(`🚀 API corriendo en http://localhost:${PORT}`);
   console.log(`🔐 Endpoint login: POST http://localhost:${PORT}/api/auth/login`);
   console.log(`📊 Endpoint estudiantes: GET http://localhost:${PORT}/api/students/count`);
+  
 }
 
 bootstrap();
