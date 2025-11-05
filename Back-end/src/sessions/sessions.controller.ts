@@ -24,6 +24,12 @@ export class SessionsController {
     return this.sessionsService.getSessionCourses(id);
   }
 
+  // Obtener todos los profesores
+  @Get('teachers/all')
+  async getAllTeachers() {
+    return this.sessionsService.getAllTeachers();
+  }
+
   // Crear nueva sesión
   @Post()
   async create(@Body() data: any) {
@@ -66,7 +72,7 @@ export class SessionsController {
     return this.sessionsService.removeCourseFromSession(sessionId, courseId);
   }
 
-  // NUEVO: Obtener estudiantes disponibles para una materia
+  // Obtener estudiantes disponibles para una materia
   @Get(':sessionId/courses/:courseId/available-students')
   async getAvailableStudents(
     @Param('sessionId', ParseIntPipe) sessionId: number,
@@ -75,7 +81,7 @@ export class SessionsController {
     return this.sessionsService.getAvailableStudents(sessionId, courseId);
   }
 
-  // NUEVO: Agregar estudiante a una materia
+  // Agregar estudiante a una materia
   @Post(':sessionId/courses/:courseId/students')
   async addStudentToCourse(
     @Param('sessionId', ParseIntPipe) sessionId: number,
@@ -89,7 +95,7 @@ export class SessionsController {
     );
   }
 
-  // NUEVO: Remover estudiante de una materia
+  // Remover estudiante de una materia
   @Delete('enrollments/:enrollmentId')
   async removeStudentFromCourse(
     @Param('enrollmentId', ParseIntPipe) enrollmentId: number

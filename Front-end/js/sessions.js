@@ -1,7 +1,6 @@
 /////////////////////////////////////////////////////
-// Apartado de Sesiones - CRUD Completo
+// Apartado de Sesiones - CRUD Completo con Backend
 
-// Función principal para sesiones
 function dashboard() {
   return {
     open: false,
@@ -15,40 +14,22 @@ function dashboard() {
     editWarning: '',
     isEditLocked: false,
     notifications: [],
-    
     showDeleteModal: false, 
-
     showSubjectsModal: false,
     subjectsView: 'list',
     selectedSubject: null,
     subjectSearchTerm: '',
+    availableCourses: [],
+    allPrograms: [],
+    allTeachers: [],
     
-    // Lista de materias ahora incluye el programa al que pertenecen.
-    // Usamos 'Bachelor's' y 'Associate' para que coincida con el dropdown de Programas.
-    allSubjectDefinitions: [
-      { name: "MATH 201", program: "Bachelor's" },
-      { name: "MATH 202", program: "Associate" },
-      { name: "MATH 203", program: "Bachelor's" },
-      { name: "GBUS 404", program: "Associate" },
-      { name: "GBUS 405", program: "Bachelor's" },
-      { name: "ENGL 201", program: "Associate" },
-      { name: "ENGL 202", program: "Bachelor's" },
-      { name: "SPCH 201", program: "Associate" },
-      { name: "ART 201", program: "Bachelor's" },
-      { name: "PHIL 201", program: "Bachelor's" }
-    ],
-
-    // Getter reactivo que filtra las materias basándose en el programa seleccionado en el modal
     get filteredSubjectNames() {
-      // Si el programa aún no se ha seleccionado en el modal, devuelve una lista vacía.
-      if (!this.selectedSession.program) {
+      if (!this.selectedSession.programId) {
         return [];
       }
-      
-      // Filtra la lista completa y devuelve solo los nombres
-      return this.allSubjectDefinitions
-        .filter(s => s.program === this.selectedSession.program)
-        .map(s => s.name);
+      return this.availableCourses
+        .filter(course => course.programId === parseInt(this.selectedSession.programId))
+        .map(course => course.courseCode);
     },
     
     get filteredSubjects() {
@@ -71,12 +52,7 @@ function dashboard() {
       );
     },
     
-    allSubjects: [
-      { id: 1, name: 'MATH 201', code: 'MATH 201', teacher: 'Dr. Smith', students: [ { id: 1, name: 'Juan Pérez', matricula: '2021001', status: 'active' }, { id: 2, name: 'María García', matricula: '2021002', status: 'active' }, { id: 3, name: 'Carlos López', matricula: '2021003', status: 'active' }, { id: 4, name: 'Ana Martínez', matricula: '2021004', status: 'inactive' } ] }, // 3 activos
-      { id: 2, name: 'PHYS 201', code: 'PHYS 201', teacher: 'Prof. Johnson', students: [ { id: 5, name: 'Pedro Sánchez', matricula: '2021005', status: 'active' }, { id: 6, name: 'Laura Rodríguez', matricula: '2021006', status: 'active' }, { id: 7, name: 'Diego Torres', matricula: '2021007', status: 'active' } ] }, // 3 activos
-      { id: 3, name: 'GBUS 404', code: 'GBUS 404', teacher: 'Dr. Brown', students: [ { id: 8, name: 'Sofia Ramírez', matricula: '2021008', status: 'active' }, { id: 9, name: 'Miguel Flores', matricula: '2021009', status: 'active' }, { id: 10, name: 'Elena Castro', matricula: '2021010', status: 'inactive' }, { id: 11, name: 'Roberto Díaz', matricula: '2021011', status: 'active' } ] }, // 3 activos
-      { id: 4, name: 'ENGL 201', code: 'ENGL 201', teacher: 'Prof. Davis', students: [ { id: 12, name: 'Andrea Morales', matricula: '2021012', status: 'active' }, { id: 13, name: 'Luis Herrera', matricula: '2021013', status: 'active' } ] } // 2 activos
-    ],
+    allSubjects: [],
     
     filters: {
       program: 'all',
@@ -88,89 +64,116 @@ function dashboard() {
       lowEnrollment: false
     },
 
-    allSessions: [
-      { id: 'S1', number: 1, month: 'January', date: '2025-01-15', progress: 80, occupancy: 80, subject:'MATH 201', professor:'Daniel Tornero', chartId:'progressChart-1', program: "Bachelor's", status: 'active'},
-      { id: 'S2', number: 2, month: 'February', date: '2025-02-10', progress: 65, occupancy: 65, subject:'MATH 202, ENGL 201', professor:'Jorge Ruiz', chartId:'progressChart-2', program: 'Associate', status: 'active'},
-      { id: 'S3', number: 3, month: 'March', date: '2025-03-20', progress: 90, occupancy: 90, subject:'MATH 203', professor:'Daniel Tornero', chartId:'progressChart-3', program: "Bachelor's", status: 'active'},
-      { id: 'S4', number: 4, month: 'April', date: '2025-04-05', progress: 35, occupancy: 35, subject:'GBUS 404', professor:'Jorge Ruiz', chartId:'progressChart-4', program: 'Associate', status: 'active'},
-      { id: 'S5', number: 5, month: 'May', date: '2025-05-12', progress: 28, occupancy: 28, subject:'GBUS 405', professor:'Daniel Tornero', chartId:'progressChart-5', program: "Bachelor's", status: 'active'},
-      { id: 'S6', number: 6, month: 'June', date: '2025-06-18', progress: 55, occupancy: 55, subject:'ENGL 201', professor:'Jorge Ruiz', chartId:'progressChart-6', program: 'Associate', status: 'active'},
-      { id: 'S7', number: 7, month: 'July', date: '2025-07-08', progress: 38, occupancy: 38, subject:'ENGL 202', professor:'Daniel Tornero', chartId:'progressChart-7', program: "Bachelor's", status: 'active'},
-      { id: 'S8', number: 8, month: 'November', date: '2025-11-10', progress: 72, occupancy: 72, subject:'SPCH 201', professor:'Jorge Ruiz', chartId:'progressChart-8', program: 'Associate', status: 'active'}
-    ],
-    
+    allSessions: [],
     sessions: [],
     
-    // Sistema de notificaciones
+    async loadTeachers() {
+      try {
+        const response = await fetch('http://localhost:3000/api/teachers');
+        if (!response.ok) throw new Error('Failed to load teachers');
+        this.allTeachers = await response.json();
+        console.log('Teachers loaded:', this.allTeachers);
+      } catch (error) {
+        console.error('Error loading teachers:', error);
+        this.showNotification('error', 'Error', 'Failed to load teachers');
+      }
+    },
+
+    async loadPrograms() {
+      try {
+        const response = await fetch('http://localhost:3000/api/programs');
+        if (!response.ok) throw new Error('Failed to load programs');
+        this.allPrograms = await response.json();
+        console.log('Programs loaded:', this.allPrograms);
+      } catch (error) {
+        console.error('Error loading programs:', error);
+        this.showNotification('error', 'Error', 'Failed to load programs');
+      }
+    },
+    
+    async loadAllCourses() {
+      try {
+        const response = await fetch('http://localhost:3000/api/courses');
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const courses = await response.json();
+        this.availableCourses = courses;
+        console.log('Courses loaded successfully:', this.availableCourses);
+      } catch (error) {
+        console.error('Error loading courses:', error);
+        this.showNotification('error', 'Error', `Failed to load courses: ${error.message}`);
+        this.availableCourses = [];
+      }
+    },
+    
+    async loadSessions() {
+      try {
+        const response = await fetch('http://localhost:3000/api/sessions');
+        if (!response.ok) throw new Error('Failed to load sessions');
+        const sessionsData = await response.json();
+        
+        this.allSessions = sessionsData;
+        this.sessions = [...sessionsData];
+        
+        console.log('Sessions loaded:', this.sessions);
+        
+        this.$nextTick(() => {
+          this.sessions.forEach(session => {
+            this.initChart(document, session.progress || session.occupancy, session.chartId);
+          });
+        });
+      } catch (error) {
+        console.error('Error loading sessions:', error);
+        this.showNotification('error', 'Error', 'Failed to load sessions');
+      }
+    },
+    
+    async loadSessionCourses(sessionId) {
+      try {
+        const response = await fetch(`http://localhost:3000/api/sessions/${sessionId}/courses`);
+        if (!response.ok) throw new Error('Failed to load session courses');
+        this.allSubjects = await response.json();
+        console.log('Session courses loaded:', this.allSubjects);
+      } catch (error) {
+        console.error('Error loading session courses:', error);
+        this.showNotification('error', 'Error', 'Failed to load session courses');
+      }
+    },
+    
     showNotification(type, title, message) {
       const id = Date.now();
-      const notification = {
-        id,
-        type, // 'success', 'error', 'warning'
-        title,
-        message,
-        show: true
-      };
-      
+      const notification = { id, type, title, message, show: true };
       this.notifications.push(notification);
-      
-      setTimeout(() => {
-        this.removeNotification(id);
-      }, 5000);
+      setTimeout(() => this.removeNotification(id), 5000);
     },
     
     removeNotification(id) {
       const index = this.notifications.findIndex(n => n.id === id);
       if (index !== -1) {
         this.notifications[index].show = false; 
-        setTimeout(() => {
-          this.notifications.splice(index, 1);
-        }, 300); 
+        setTimeout(() => this.notifications.splice(index, 1), 300); 
       }
     },
-    
-    // Simulación de cálculo de ocupación
-    calculateOccupancy(subjectArray) {
-      let totalStudents = 0;
-      const maxCapacity = 20; // Capacidad máxima simulada
 
-      subjectArray.forEach(subjectName => {
-        const subjectData = this.allSubjects.find(s => s.name === subjectName);
-        
-        if (subjectData && subjectData.students) {
-          const activeStudents = subjectData.students.filter(s => s.status === 'active').length;
-          totalStudents += activeStudents;
-        } else {
-          // Si la materia (ej. MATH 202) no está en 'allSubjects', simula 5 estudiantes
-          totalStudents += 5; 
-        }
-      });
-
-      const occupancyPercentage = Math.round((totalStudents / maxCapacity) * 100);
-      return Math.min(occupancyPercentage, 100);
-    },
-
-    // Validación de campos requeridos
     validateSession() {
       this.validationError = '';
       
-      if (!this.selectedSession.program) {
+      if (!this.selectedSession.programId) {
         this.validationError = 'Please select a program';
         return false;
       }
       
-      if (!this.selectedSession.date) {
-        this.validationError = 'Please select a date';
+      if (!this.selectedSession.startDate) {
+        this.validationError = 'Please select a start date';
         return false;
       }
       
-      if (!this.selectedSession.subject || this.selectedSession.subject.length === 0) {
+      if (!this.selectedSession.endDate) {
+        this.validationError = 'Please select an end date';
+        return false;
+      }
+      
+      if (!this.selectedSession.subjects || this.selectedSession.subjects.length === 0) {
         this.validationError = 'Please select at least one subject';
-        return false;
-      }
-      
-      if (!this.selectedSession.professor) {
-        this.validationError = 'Please select a professor';
         return false;
       }
       
@@ -181,7 +184,7 @@ function dashboard() {
       if (!sessionDate) return false;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const sessionDateObj = new Date(sessionDate + 'T00:00:00'); 
+      const sessionDateObj = new Date(sessionDate);
       const diffTime = sessionDateObj - today;
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       return diffDays < 7;
@@ -251,170 +254,203 @@ function dashboard() {
       }
     },
     
-    init() {
+    async init() {
       console.log('Session.js init() called');
-      this.sessions = [...this.allSessions];
-      
-      const isCriticalFilter = sessionStorage.getItem('criticalSessionsFilter');
-      if (isCriticalFilter === 'true') {
-         this.sessions = this.sessions.filter(s => s.occupancy < 40);
-         this.sessions.sort((a, b) => a.occupancy - b.occupancy);
-         sessionStorage.removeItem('criticalSessionsFilter');
-         this.message = 'Showing critical sessions (occupancy < 40%) sorted by lowest occupancy';
-      }
-
-      this.$nextTick(() => {
-        this.sessions.forEach(session => {
-          this.initChart(document, session.progress, session.chartId);
-        });
-      });
+      await this.loadPrograms();
+      await this.loadAllCourses();
+      await this.loadTeachers();
+      await this.loadSessions();
+      console.log('Init completed');
     },
     
-    // CREATE & READ - Abrir modal
-    openModal(session = {}, type = 'add') {
+    // 🔥 FUNCIÓN CRÍTICA - CORREGIDA
+    async openModal(session = {}, type = 'add') {
       this.modalType = type;
       this.validationError = '';
       this.editWarning = '';
       this.isEditLocked = false;
 
       if (type === 'add') {
-        const maxNumber = Math.max(...this.allSessions.map(s => s.number || 0), 0);
-        const newNumber = maxNumber + 1;
-        const newId = 'S' + newNumber;
+        const today = new Date();
+        const fiveWeeksLater = new Date(today);
+        fiveWeeksLater.setDate(fiveWeeksLater.getDate() + 35);
+       
+        const formatDate = (date) => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+
+        const nextNumber = this.allSessions.length > 0 
+          ? Math.max(...this.allSessions.map(s => s.number || 0)) + 1 
+          : 1;
 
         this.selectedSession = {
-          id: newId,
-          number: newNumber,
-          date: '',
-          month: '',
-          subject: [], // Inicia como array para el <select multiple>
-          professor: '',
-          program: '', // Vacío, para forzar al usuario a seleccionar
-          occupancy: 0, 
-          status: 'active'
+          id: 'Auto-generated',
+          number: nextNumber,
+          sessionName: `Session ${nextNumber}`,
+          startDate: formatDate(today),
+          endDate: formatDate(fiveWeeksLater),
+          programId: '',
+          program: '',
+          subjects: [],
+          teacherId: '',
+          professor: ''
         };
+        
+        this.openModalFlag = true;
       } else {
-        // Clonamos la sesión
-        this.selectedSession = { ...session };
-        
-        // Transformamos el STRING de subject en un ARRAY para el modal
-        if (typeof this.selectedSession.subject === 'string' && this.selectedSession.subject) {
-          this.selectedSession.subject = this.selectedSession.subject.split(',').map(s => s.trim()).filter(s => s);
-        } else {
-          this.selectedSession.subject = [];
-        }
-        
-        if (type === 'edit' && this.checkEditLock(this.selectedSession.date)) {
-          this.isEditLocked = true;
-          this.editWarning = 'This session is less than 7 days away and cannot be edited';
+        // 🔥 PARA DETAILS Y EDIT: CARGAR DESDE EL BACKEND
+        try {
+          console.log('Loading session details for ID:', session.id);
+          
+          const response = await fetch(`http://localhost:3000/api/sessions/${session.id}`);
+          if (!response.ok) throw new Error('Failed to load session details');
+          
+          const sessionData = await response.json();
+          console.log('Session data from backend:', sessionData);
+          
+          // Asignar los datos correctamente
+          this.selectedSession = {
+            id: sessionData.id,
+            number: session.number, // Mantener el número de la lista
+            sessionName: sessionData.sessionName,
+            startDate: sessionData.startDate, // Ya viene en formato YYYY-MM-DD
+            endDate: sessionData.endDate,     // Ya viene en formato YYYY-MM-DD
+            programId: sessionData.programId.toString(), // Convertir a string para el select
+            program: sessionData.program,
+            subjects: sessionData.subjects || [], // Array de códigos de curso
+            teacherId: sessionData.teacherId ? sessionData.teacherId.toString() : '',
+            professor: sessionData.professor || 'TBD'
+          };
+          
+          console.log('Selected session prepared:', this.selectedSession);
+          
+          // Cargar los cursos de la sesión para el modal de Manage
+          if (type !== 'add') {
+            await this.loadSessionCourses(session.id);
+          }
+          
+          // Verificar si está bloqueado para edición
+          if (type === 'edit' && this.checkEditLock(this.selectedSession.startDate)) {
+            this.isEditLocked = true;
+            this.editWarning = 'This session is less than 7 days away and cannot be edited';
+          }
+          
+          this.openModalFlag = true;
+          
+        } catch (error) {
+          console.error('Error loading session:', error);
+          this.showNotification('error', 'Error', 'Failed to load session details');
+          return;
         }
       }
-
-      this.openModalFlag = true;
     },
     
-    // UPDATE - Guardar sesión (CREATE o UPDATE)
-    saveSession() {
+    async saveSession() {
       if (!this.validateSession()) {
         this.showNotification('error', 'Validation Error', this.validationError);
         return;
       }
       
-      if(this.selectedSession.date) {
-        const dateObj = new Date(this.selectedSession.date + 'T00:00:00');
-        const months = ['January', 'February', 'March', 'April', 'May', 'June', 
-                      'July', 'August', 'September', 'October', 'November', 'December'];
-        this.selectedSession.month = months[dateObj.getMonth()];
-      }
-      
-      const calculatedOccupancy = this.calculateOccupancy(this.selectedSession.subject);
-      const subjectsString = this.selectedSession.subject.join(', ');
-
-      const sessionToSave = {
-        ...this.selectedSession,
-        subject: subjectsString, 
-        occupancy: calculatedOccupancy, 
-        progress: calculatedOccupancy, 
-        chartId: this.selectedSession.chartId || 'progressChart-' + this.selectedSession.number, 
-      };
-      
-      if(this.modalType === 'add') {
-        // CREATE
-        sessionToSave.chartId = 'progressChart-' + sessionToSave.number;
+      try {
+        const sessionData = {
+          sessionName: this.selectedSession.sessionName || `Session ${this.selectedSession.number}`,
+          startDate: this.selectedSession.startDate,
+          endDate: this.selectedSession.endDate,
+          programId: parseInt(this.selectedSession.programId),
+          courses: this.selectedSession.subjects.map(courseCode => {
+            const course = this.availableCourses.find(c => c.courseCode === courseCode);
+            return {
+              courseId: course?.id,
+              teacherId: this.selectedSession.teacherId ? parseInt(this.selectedSession.teacherId) : null
+            };
+          }).filter(c => c.courseId)
+        };
         
-        this.sessions.push(sessionToSave);
-        this.allSessions.push(sessionToSave);
+        console.log('Saving session with data:', sessionData);
         
-        console.log('New session created:', sessionToSave);
-        this.showNotification('success', 'Session Created', `Session ${sessionToSave.number} has been created successfully`);
-        
-      } else if(this.modalType === 'edit') {
-        // UPDATE
-        const idx = this.sessions.findIndex(s => s.id === sessionToSave.id);
-        if(idx !== -1) {
-          this.sessions[idx] = sessionToSave;
+        let response;
+        if (this.modalType === 'add') {
+          response = await fetch('http://localhost:3000/api/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sessionData)
+          });
+        } else {
+          response = await fetch(`http://localhost:3000/api/sessions/${this.selectedSession.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sessionData)
+          });
         }
         
-        const idxAll = this.allSessions.findIndex(s => s.id === sessionToSave.id);
-        if(idxAll !== -1) {
-          this.allSessions[idxAll] = sessionToSave;
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to save session: ${errorText}`);
         }
         
-        console.log('Session updated:', sessionToSave);
-        this.showNotification('success', 'Session Updated', `Session ${sessionToSave.number} has been updated successfully`);
+        this.showNotification('success', 
+          this.modalType === 'add' ? 'Session Created' : 'Session Updated',
+          `Session has been ${this.modalType === 'add' ? 'created' : 'updated'} successfully`
+        );
+        
+        this.closeModal();
+        await this.loadSessions();
+        
+      } catch (error) {
+        console.error('Error saving session:', error);
+        this.showNotification('error', 'Error', error.message || 'Failed to save session');
       }
-      
-      this.closeModal();
-      
-      this.$nextTick(() => {
-        this.sessions.forEach(session => {
-          this.initChart(document, session.progress, session.chartId);
-        });
-      });
     },
     
-    // Paso 1 para Borrar: Abrir modal de confirmación
     requestDelete() {
       this.showDeleteModal = true;
     },
 
-    // Paso 2 para Borrar: Confirmar y ejecutar
-    confirmDelete() {
-      const sessionId = this.selectedSession.id;
-      const sessionNumber = this.selectedSession.number;
-      
-      this.sessions = this.sessions.filter(s => s.id !== sessionId);
-      this.allSessions = this.allSessions.filter(s => s.id !== sessionId);
-      
-      console.log('Session deleted:', sessionId);
-      this.showNotification('success', 'Session Deleted', `Session ${sessionNumber} has been deleted successfully`);
-      
-      this.closeModal(); // Cierra ambos modales
+    async confirmDelete() {
+      try {
+        const response = await fetch(`http://localhost:3000/api/sessions/${this.selectedSession.id}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) throw new Error('Failed to delete session');
+        
+        this.showNotification('success', 'Session Deleted', 
+          `Session ${this.selectedSession.number} has been deleted successfully`);
+        
+        this.closeModal();
+        await this.loadSessions();
+        
+      } catch (error) {
+        console.error('Error deleting session:', error);
+        this.showNotification('error', 'Error', 'Failed to delete session');
+      }
     },
     
     closeModal() {
       this.openModalFlag = false;
-      this.showDeleteModal = false; // Asegurarse de que el modal de borrado también se cierre
+      this.showDeleteModal = false;
       this.validationError = '';
       this.editWarning = '';
       this.isEditLocked = false;
       this.selectedSession = {}; 
     },
     
-    // Inicializar gráfico
     initChart(el, progress, id) {
       setTimeout(() => { 
         const ctx = document.getElementById(id);
         if(ctx) {
           let chartColor;
           if (progress < 40) {
-            chartColor = '#252121'; // Gris Carbón (Crítico)
+            chartColor = '#252121';
           } else if (progress >= 40 && progress < 60) {
-            chartColor = '#F69A1C'; // Amarillo (Bajo)
+            chartColor = '#F69A1C';
           } else if (progress >= 60 && progress < 90) {
-            chartColor = '#A6192E'; // Rojo Oscuro (Óptimo)
+            chartColor = '#A6192E';
           } else {
-            chartColor = '#D41736'; // Rojo Principal (Lleno)
+            chartColor = '#D41736';
           }
           
           if (ctx.chart) {
@@ -439,14 +475,14 @@ function dashboard() {
               animation: { animateRotate: true, duration: 1000, easing: 'easeOutQuart' } 
             }
           });
-        } else {
-          // console.warn('Failed to find canvas with id:', id);
         }
       }, 100); 
     },
     
-    // Modales de subjects
-    openSubjectsModal() {
+    async openSubjectsModal() {
+      if (this.selectedSession.id && this.selectedSession.id !== 'Auto-generated') {
+        await this.loadSessionCourses(this.selectedSession.id);
+      }
       this.showSubjectsModal = true;
       this.subjectsView = 'list';
       this.selectedSubject = null;
@@ -472,25 +508,13 @@ function dashboard() {
       this.subjectSearchTerm = '';
     },
     
-    deleteSubject(subjectId) {
-      if(confirm('Are you sure you want to delete this subject?')) {
-        const index = this.allSubjects.findIndex(s => s.id === subjectId);
-        if(index !== -1) {
-          this.allSubjects.splice(index, 1);
-          console.log('Subject deleted:', subjectId);
-          this.showNotification('success', 'Subject Deleted', `Subject ${subjectId} has been deleted successfully`);
-        }
-      }
-    },
-    
     deleteStudent(studentId) {
       if(confirm('Are you sure you want to delete this student?')) {
         if(this.selectedSubject) {
           const index = this.selectedSubject.students.findIndex(s => s.id === studentId);
           if(index !== -1) {
             this.selectedSubject.students.splice(index, 1);
-            console.log('Student deleted:', studentId);
-            this.showNotification('success', 'Student Deleted', `Student ${studentId} has been deleted successfully`);
+            this.showNotification('success', 'Student Deleted', 'Student has been deleted successfully');
           }
         }
       }

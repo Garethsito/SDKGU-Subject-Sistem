@@ -14,31 +14,41 @@ export class SessionsService {
         offerings: {
           include: {
             course: true,
+            teacher: true, 
             enrollments: true
           }
         }
       },
-      orderBy: { sessionName: 'asc' }
+      orderBy: { startDate: 'asc' }
     });
 
-    return sessions.map(session => {
+    return sessions.map((session, index) => {
       const totalCapacity = session.offerings.reduce((sum, off) => sum + (off.maxStudents || 0), 0);
       const totalEnrolled = session.offerings.reduce((sum, off) => sum + off.enrollments.length, 0);
       const occupancy = totalCapacity > 0 ? Math.round((totalEnrolled / totalCapacity) * 100) : 0;
 
       const month = new Date(session.startDate).toLocaleDateString('en-US', { month: 'long' });
       const subjects = session.offerings.map(off => off.course.courseCode);
+      
+      // Obtener el primer profesor (principal)
+      const mainTeacher = session.offerings.find(off => off.teacher)?.teacher;
 
       return {
         id: session.id,
-        number: session.id,
+        number: index + 1,
+        sessionName: session.sessionName,
         month,
+        startDate: session.startDate,
+        endDate: session.endDate,
         date: session.startDate.toISOString().split('T')[0],
         progress: occupancy,
         occupancy,
-        subject: subjects.join(', ') || '',
+        subject: subjects.join(', ') || 'No courses assigned',
         subjects,
-        professor: '',
+        professor: mainTeacher 
+          ? `${mainTeacher.firstName} ${mainTeacher.lastName}`
+          : 'TBD',
+        teacherId: mainTeacher?.id,
         chartId: `progressChart-${session.id}`,
         program: session.program.programName,
         programId: session.programId,
@@ -47,7 +57,7 @@ export class SessionsService {
     });
   }
 
-  // Obtener una sesión por ID
+  // Obtener una sesión por ID - FORMATO PARA EDICIÓN
   async getSessionById(id: number) {
     const session = await this.prisma.session.findUnique({
       where: { id },
@@ -56,6 +66,7 @@ export class SessionsService {
         offerings: {
           include: {
             course: true,
+            teacher: true,
             enrollments: {
               include: {
                 student: true
@@ -70,7 +81,31 @@ export class SessionsService {
       throw new NotFoundException(`Session with ID ${id} not found`);
     }
 
-    return session;
+    // Obtener el profesor principal
+    const mainTeacher = session.offerings.find(off => off.teacher)?.teacher;
+    
+    // Obtener array de códigos de curso
+    const subjects = session.offerings.map(off => off.course.courseCode);
+
+    return {
+      id: session.id,
+      sessionName: session.sessionName,
+      startDate: session.startDate.toISOString().split('T')[0], // Formato YYYY-MM-DD
+      endDate: session.endDate.toISOString().split('T')[0],     // Formato YYYY-MM-DD
+      program: session.program.programName,
+      programId: session.programId,
+      subjects: subjects, // Array de códigos
+      teacherId: mainTeacher?.id,
+      professor: mainTeacher 
+        ? `${mainTeacher.firstName} ${mainTeacher.lastName}`
+        : 'TBD',
+      // Datos adicionales
+      offerings: session.offerings.map(off => ({
+        courseId: off.courseId,
+        courseCode: off.course.courseCode,
+        teacherId: off.teacherId
+      }))
+    };
   }
 
   // Crear nueva sesión
@@ -83,25 +118,52 @@ export class SessionsService {
       throw new NotFoundException(`Program with ID ${data.programId} not found`);
     }
 
-    return this.prisma.session.create({
+    // Crear la sesión
+    const session = await this.prisma.session.create({
       data: {
         sessionName: data.sessionName,
         startDate: new Date(data.startDate),
         endDate: new Date(data.endDate),
         programId: data.programId,
-      },
+      }
+    });
+
+    // Crear los CourseOfferings si se enviaron cursos
+    if (data.courses && Array.isArray(data.courses) && data.courses.length > 0) {
+      for (const courseData of data.courses) {
+        const course = await this.prisma.course.findUnique({ 
+          where: { id: courseData.courseId } 
+        });
+        
+        if (course) {
+          await this.prisma.courseOffering.create({
+            data: {
+              courseId: courseData.courseId,
+              sessionId: session.id,
+              teacherId: courseData.teacherId || null,
+              maxStudents: course.maxCapacity || 30
+            }
+          });
+        }
+      }
+    }
+
+    // Retornar la sesión con sus relaciones
+    return this.prisma.session.findUnique({
+      where: { id: session.id },
       include: {
         program: true,
         offerings: {
           include: {
-            course: true
+            course: true,
+            teacher: true
           }
         }
       }
     });
   }
 
-  // Actualizar sesión (incluyendo materias)
+  // Actualizar sesión (incluyendo materias y profesores)
   async updateSession(id: number, data: any) {
     const session = await this.prisma.session.findUnique({ 
       where: { id },
@@ -115,7 +177,7 @@ export class SessionsService {
     }
 
     // Actualizar información básica de la sesión
-    const updatedSession = await this.prisma.session.update({
+    await this.prisma.session.update({
       where: { id },
       data: {
         sessionName: data.sessionName,
@@ -125,58 +187,43 @@ export class SessionsService {
       }
     });
 
-    // Si se enviaron materias, actualizar las asignaciones
-    if (data.courseIds && Array.isArray(data.courseIds)) {
-      // Obtener materias actuales
-      const currentCourseIds = session.offerings.map(off => off.courseId);
-      const newCourseIds = data.courseIds;
+    // Si se enviaron materias con profesores
+    if (data.courses && Array.isArray(data.courses)) {
+      // Eliminar todos los offerings existentes
+      await this.prisma.courseOffering.deleteMany({
+        where: { sessionId: id }
+      });
 
-      // Materias a eliminar (están en current pero no en new)
-      const coursesToRemove = currentCourseIds.filter(id => !newCourseIds.includes(id));
-      
-      // Materias a agregar (están en new pero no en current)
-      const coursesToAdd = newCourseIds.filter(id => !currentCourseIds.includes(id));
-
-      // Eliminar materias que ya no están
-      for (const courseId of coursesToRemove) {
-        await this.prisma.courseOffering.delete({
-          where: {
-            courseId_sessionId: {
-              courseId,
-              sessionId: id
-            }
-          }
-        }).catch(() => {
-          // Si falla, puede ser porque tiene enrollments, lo ignoramos
-          console.log(`Could not remove course ${courseId} from session ${id}`);
+      // Crear los nuevos offerings
+      for (const courseData of data.courses) {
+        const course = await this.prisma.course.findUnique({ 
+          where: { id: courseData.courseId } 
         });
-      }
-
-      // Agregar nuevas materias
-      for (const courseId of coursesToAdd) {
-        const course = await this.prisma.course.findUnique({ where: { id: courseId } });
+        
         if (course) {
           await this.prisma.courseOffering.create({
             data: {
-              courseId,
+              courseId: courseData.courseId,
               sessionId: id,
+              teacherId: courseData.teacherId || null,
               maxStudents: course.maxCapacity || 30
             }
-          }).catch(() => {
-            console.log(`Could not add course ${courseId} to session ${id}`);
+          }).catch((error) => {
+            console.log(`Could not add course ${courseData.courseId} to session ${id}:`, error);
           });
         }
       }
     }
 
-    // Retornar sesión actualizada con todas las relaciones
+    // Retornar sesión actualizada
     return this.prisma.session.findUnique({
       where: { id },
       include: {
         program: true,
         offerings: {
           include: {
-            course: true
+            course: true,
+            teacher: true 
           }
         }
       }
@@ -240,8 +287,19 @@ export class SessionsService {
     });
   }
 
-  // Agregar materia a sesión
-  async addCourseToSession(sessionId: number, courseId: number, maxStudents?: number) {
+  // Obtener todos los profesores activos
+  async getAllTeachers() {
+    return this.prisma.teacher.findMany({
+      where: { status: 'active' },
+      orderBy: [
+        { lastName: 'asc' },
+        { firstName: 'asc' }
+      ]
+    });
+  }
+
+  // Agregar materia a sesión con profesor
+  async addCourseToSession(sessionId: number, courseId: number, teacherId?: number, maxStudents?: number) {
     const session = await this.prisma.session.findUnique({ where: { id: sessionId } });
     if (!session) {
       throw new NotFoundException(`Session with ID ${sessionId} not found`);
@@ -254,10 +312,7 @@ export class SessionsService {
 
     const existing = await this.prisma.courseOffering.findUnique({
       where: {
-        courseId_sessionId: {
-          courseId,
-          sessionId
-        }
+        courseId_sessionId: { courseId, sessionId }
       }
     });
 
@@ -269,11 +324,13 @@ export class SessionsService {
       data: {
         courseId,
         sessionId,
+        teacherId: teacherId || null,
         maxStudents: maxStudents || course.maxCapacity || 30
       },
       include: {
         course: true,
-        session: true
+        session: true,
+        teacher: true
       }
     });
   }
@@ -282,10 +339,7 @@ export class SessionsService {
   async removeCourseFromSession(sessionId: number, courseId: number) {
     const offering = await this.prisma.courseOffering.findUnique({
       where: {
-        courseId_sessionId: {
-          courseId,
-          sessionId
-        }
+        courseId_sessionId: { courseId, sessionId }
       },
       include: {
         enrollments: true
@@ -302,10 +356,7 @@ export class SessionsService {
 
     return this.prisma.courseOffering.delete({
       where: {
-        courseId_sessionId: {
-          courseId,
-          sessionId
-        }
+        courseId_sessionId: { courseId, sessionId }
       }
     });
   }
@@ -316,6 +367,7 @@ export class SessionsService {
       where: { sessionId },
       include: {
         course: true,
+        teacher: true,
         enrollments: {
           include: {
             student: true
@@ -327,9 +379,12 @@ export class SessionsService {
     return offerings.map(off => ({
       id: off.course.id,
       offeringId: off.id,
-      name: off.course.courseCode,
+      name: off.course.courseName,
       code: off.course.courseCode,
-      teacher: 'TBD',
+      teacher: off.teacher 
+        ? `${off.teacher.firstName} ${off.teacher.lastName}` 
+        : 'TBD',
+      teacherId: off.teacherId,
       maxStudents: off.maxStudents,
       currentEnrollment: off.enrollments.length,
       students: off.enrollments.map(enr => ({
@@ -339,25 +394,21 @@ export class SessionsService {
         matricula: enr.student.studentIdNumber || `STU-${enr.student.id.toString().padStart(6, '0')}`,
         email: enr.student.email || enr.student.sdgkuEmail,
         status: enr.status === 'enrolled' ? 'active' : 'inactive',
-        enrolledDate: new Date().toISOString().split('T')[0]      }))
+        enrolledDate: new Date().toISOString().split('T')[0]
+      }))
     }));
   }
 
-  // NUEVO: Agregar estudiante a una materia de la sesión
+  // Agregar estudiante a una materia de la sesión
   async addStudentToCourse(sessionId: number, courseId: number, studentId: bigint) {
-    // Verificar que la sesión existe
     const session = await this.prisma.session.findUnique({ where: { id: sessionId } });
     if (!session) {
       throw new NotFoundException(`Session with ID ${sessionId} not found`);
     }
 
-    // Verificar que el offering existe
     const offering = await this.prisma.courseOffering.findUnique({
       where: {
-        courseId_sessionId: {
-          courseId,
-          sessionId
-        }
+        courseId_sessionId: { courseId, sessionId }
       },
       include: {
         enrollments: true
@@ -368,18 +419,15 @@ export class SessionsService {
       throw new NotFoundException('Course offering not found');
     }
 
-    // Verificar que el estudiante existe
     const student = await this.prisma.student.findUnique({ where: { id: studentId } });
     if (!student) {
       throw new NotFoundException(`Student with ID ${studentId} not found`);
     }
 
-    // Verificar capacidad
     if (offering.enrollments.length >= (offering.maxStudents ?? 30)) {
       throw new BadRequestException('Course is at maximum capacity');
     }
 
-    // Verificar que el estudiante no esté ya inscrito
     const existingEnrollment = await this.prisma.enrollment.findUnique({
       where: {
         studentId_offeringId: {
@@ -393,7 +441,6 @@ export class SessionsService {
       throw new BadRequestException('Student is already enrolled in this course');
     }
 
-    // Crear enrollment
     return this.prisma.enrollment.create({
       data: {
         studentId,
@@ -411,7 +458,7 @@ export class SessionsService {
     });
   }
 
-  // NUEVO: Remover estudiante de una materia de la sesión
+  // Remover estudiante de una materia de la sesión
   async removeStudentFromCourse(enrollmentId: number) {
     const enrollment = await this.prisma.enrollment.findUnique({
       where: { id: enrollmentId }
@@ -426,7 +473,7 @@ export class SessionsService {
     });
   }
 
-  // NUEVO: Obtener estudiantes disponibles para agregar a una materia
+  // Obtener estudiantes disponibles para agregar a una materia
   async getAvailableStudents(sessionId: number, courseId: number) {
     const session = await this.prisma.session.findUnique({ 
       where: { id: sessionId },
@@ -441,10 +488,7 @@ export class SessionsService {
 
     const offering = await this.prisma.courseOffering.findUnique({
       where: {
-        courseId_sessionId: {
-          courseId,
-          sessionId
-        }
+        courseId_sessionId: { courseId, sessionId }
       },
       include: {
         enrollments: true
@@ -455,10 +499,8 @@ export class SessionsService {
       throw new NotFoundException('Course offering not found');
     }
 
-    // Obtener IDs de estudiantes ya inscritos
     const enrolledStudentIds = offering.enrollments.map(enr => enr.studentId);
 
-    // Obtener estudiantes del programa que NO están inscritos en esta materia
     const availableStudents = await this.prisma.student.findMany({
       where: {
         programId: session.programId,

@@ -1,4 +1,4 @@
-//Front-end/js/script.js
+//Front-end/js/dashboard.js
 /////////////////////////////////////////////////////
 // Apartado de Index
 // Función del dashboard de index
