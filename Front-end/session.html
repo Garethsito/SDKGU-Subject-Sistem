@@ -356,42 +356,38 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-3 gap-4 items-start">
+          <div class="grid grid-cols-3 gap-4 items-start">
           <div class="col-span-2">
             <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
-              <i class="fa-solid fa-book-open mr-1 text-xs"></i>Subjects<span class="text-[#D41736] ml-1">*</span>
+              <i class="fa-solid fa-book-open mr-1 text-xs"></i>Subject<span class="text-[#D41736] ml-1">*</span>
             </label>
             
-            <!-- 👁️ VISTA PARA DETAILS (SOLO LECTURA CON CHIPS) -->
+            <!-- 👁️ VISTA PARA DETAILS (SOLO LECTURA CON CHIP) -->
             <template x-if="modalType === 'details'">
-              <div class="border border-gray-300 rounded-md w-full p-3 bg-gray-50 min-h-[128px]">
-                <template x-if="selectedSession.subjects && selectedSession.subjects.length > 0">
-                  <div class="flex flex-wrap gap-2">
-                    <template x-for="subject in selectedSession.subjects" :key="subject">
-                      <span class="bg-[#D41736] text-white px-3 py-1 rounded-full text-sm">
-                        <i class="fa-solid fa-book mr-1"></i>
-                        <span x-text="subject"></span>
-                      </span>
-                    </template>
-                  </div>
+              <div class="border border-gray-300 rounded-md w-full p-3 bg-gray-50 min-h-[42px]">
+                <template x-if="selectedSession.subject">
+                  <span class="bg-[#D41736] text-white px-3 py-1 rounded-full text-sm">
+                    <i class="fa-solid fa-book mr-1"></i>
+                    <span x-text="selectedSession.subject"></span>
+                  </span>
                 </template>
-                <template x-if="!selectedSession.subjects || selectedSession.subjects.length === 0">
-                  <p class="text-gray-400 text-sm">No subjects assigned</p>
+                <template x-if="!selectedSession.subject">
+                  <p class="text-gray-400 text-sm">No subject assigned</p>
                 </template>
               </div>
             </template>
             
-            <!-- ✏️ VISTA PARA ADD/EDIT (SELECT MÚLTIPLE) -->
+            <!-- ✏️ VISTA PARA ADD/EDIT (SELECT SIMPLE) -->
             <template x-if="modalType !== 'details'">
               <select
-                multiple
-                x-model="selectedSession.subjects"
-                class="border border-gray-300 rounded-md w-full h-32 p-2 focus:outline-none focus:border-[#D41736] text-sm"
+                x-model="selectedSession.subject"
+                class="border border-gray-300 rounded-md w-full p-2 focus:outline-none focus:border-[#D41736] text-sm"
                 :disabled="isEditLocked || !selectedSession.programId"
                 :class="{'bg-gray-50 cursor-not-allowed': isEditLocked || !selectedSession.programId}"
               >
-                <template x-for="courseName in filteredSubjectNames" :key="courseName">
-                  <option :value="courseName" x-text="courseName"></option>
+                <option value="">Select a subject</option>
+                <template x-for="course in filteredSubjectNames" :key="course.code">
+                  <option :value="course.code" x-text="course.name + ' (' + course.code + ')'"></option>
                 </template>
               </select>
 
@@ -400,9 +396,6 @@
               </p>
               <p x-show="selectedSession.programId && filteredSubjectNames.length === 0" class="text-xs text-[#F69A1C] mt-1">
                 <i class="fa-solid fa-exclamation-triangle"></i> No courses available for this program.
-              </p>
-              <p x-show="selectedSession.programId && filteredSubjectNames.length > 0" class="text-xs text-gray-500 mt-1">
-                Hold Ctrl (or Cmd on Mac) to select multiple subjects.
               </p>
             </template>
           </div>

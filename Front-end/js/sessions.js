@@ -29,7 +29,11 @@ function dashboard() {
       }
       return this.availableCourses
         .filter(course => course.programId === parseInt(this.selectedSession.programId))
-        .map(course => course.courseCode);
+        .map(course => ({
+          code: course.courseCode,
+          id: course.id,
+          name: course.courseName
+        }));
     },
     
     get filteredSubjects() {
@@ -111,14 +115,18 @@ function dashboard() {
         if (!response.ok) throw new Error('Failed to load sessions');
         const sessionsData = await response.json();
         
-        this.allSessions = sessionsData;
-        this.sessions = [...sessionsData];
+        this.allSessions = sessionsData.map(session => ({
+          ...session,
+          chartId: `chart-${session.id}`,
+          subject: session.subjects && session.subjects.length > 0 ? session.subjects.join(', ') : 'No courses assigned'
+        }));
+        this.sessions = [...this.allSessions];
         
         console.log('Sessions loaded:', this.sessions);
         
         this.$nextTick(() => {
           this.sessions.forEach(session => {
-            this.initChart(document, session.progress || session.occupancy, session.chartId);
+            this.initChart(document, session.progress || session.occupancy || 0, session.chartId);
           });
         });
       } catch (error) {
@@ -172,8 +180,13 @@ function dashboard() {
         return false;
       }
       
-      if (!this.selectedSession.subjects || this.selectedSession.subjects.length === 0) {
-        this.validationError = 'Please select at least one subject';
+      if (!this.selectedSession.subject) {
+        this.validationError = 'Please select a subject';
+        return false;
+      }
+      
+      if (!this.selectedSession.teacherId) {
+        this.validationError = 'Please select a professor';
         return false;
       }
       
@@ -263,7 +276,6 @@ function dashboard() {
       console.log('Init completed');
     },
     
-    // 🔥 FUNCIÓN CRÍTICA - CORREGIDA
     async openModal(session = {}, type = 'add') {
       this.modalType = type;
       this.validationError = '';
@@ -294,14 +306,14 @@ function dashboard() {
           endDate: formatDate(fiveWeeksLater),
           programId: '',
           program: '',
-          subjects: [],
+          subject: '',
+          subjectId: null,
           teacherId: '',
           professor: ''
         };
         
         this.openModalFlag = true;
       } else {
-        // 🔥 PARA DETAILS Y EDIT: CARGAR DESDE EL BACKEND
         try {
           console.log('Loading session details for ID:', session.id);
           
@@ -311,28 +323,28 @@ function dashboard() {
           const sessionData = await response.json();
           console.log('Session data from backend:', sessionData);
           
-          // Asignar los datos correctamente
+          // Asignar los datos correctamente - SOLO UNA MATERIA
           this.selectedSession = {
             id: sessionData.id,
-            number: session.number, // Mantener el número de la lista
+            number: session.number,
             sessionName: sessionData.sessionName,
-            startDate: sessionData.startDate, // Ya viene en formato YYYY-MM-DD
-            endDate: sessionData.endDate,     // Ya viene en formato YYYY-MM-DD
-            programId: sessionData.programId.toString(), // Convertir a string para el select
+            startDate: sessionData.startDate,
+            endDate: sessionData.endDate,
+            programId: sessionData.programId.toString(),
             program: sessionData.program,
-            subjects: sessionData.subjects || [], // Array de códigos de curso
+            subject: sessionData.subjects && sessionData.subjects.length > 0 ? sessionData.subjects[0] : '',
+            subjectId: sessionData.subjectId || null,
             teacherId: sessionData.teacherId ? sessionData.teacherId.toString() : '',
             professor: sessionData.professor || 'TBD'
           };
           
           console.log('Selected session prepared:', this.selectedSession);
           
-          // Cargar los cursos de la sesión para el modal de Manage
+          // Cargar los cursos de la sesión
           if (type !== 'add') {
             await this.loadSessionCourses(session.id);
           }
           
-          // Verificar si está bloqueado para edición
           if (type === 'edit' && this.checkEditLock(this.selectedSession.startDate)) {
             this.isEditLocked = true;
             this.editWarning = 'This session is less than 7 days away and cannot be edited';
@@ -355,18 +367,22 @@ function dashboard() {
       }
       
       try {
+        // Encontrar el curso seleccionado
+        const selectedCourse = this.availableCourses.find(c => c.courseCode === this.selectedSession.subject);
+        
+        if (!selectedCourse) {
+          throw new Error('Selected course not found');
+        }
+        
         const sessionData = {
           sessionName: this.selectedSession.sessionName || `Session ${this.selectedSession.number}`,
           startDate: this.selectedSession.startDate,
           endDate: this.selectedSession.endDate,
           programId: parseInt(this.selectedSession.programId),
-          courses: this.selectedSession.subjects.map(courseCode => {
-            const course = this.availableCourses.find(c => c.courseCode === courseCode);
-            return {
-              courseId: course?.id,
-              teacherId: this.selectedSession.teacherId ? parseInt(this.selectedSession.teacherId) : null
-            };
-          }).filter(c => c.courseId)
+          courses: [{
+            courseId: selectedCourse.id,
+            teacherId: parseInt(this.selectedSession.teacherId)
+          }]
         };
         
         console.log('Saving session with data:', sessionData);

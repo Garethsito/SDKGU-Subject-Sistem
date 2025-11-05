@@ -1,0 +1,860 @@
+// src/courses/courses.controller.ts
+import { Controller, Get, Query } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.services';
+
+@Controller('api/courses')
+export class CoursesController {
+  constructor(private prisma: PrismaService) {}
+
+  @Get()
+  async getCourses(@Query('programId') programId?: string) {
+    const where = programId ? { programId: parseInt(programId) } : {};
+    
+    return this.prisma.course.findMany({
+      where,
+      orderBy: { courseCode: 'asc' },
+      include: {
+        program: true
+      }
+    });
+  }
+}
+
+// src/courses/courses.module.ts
+import { Module } from '@nestjs/common';
+import { CoursesController } from './courses.controller';
+import { PrismaService } from '../prisma/prisma.services';
+
+@Module({
+  controllers: [CoursesController],
+  providers: [PrismaService],
+})
+export class CoursesModule {}
+
+// src/programs/programs.controller.ts
+import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.services';
+
+@Controller('api/programs')
+export class ProgramsController {
+  constructor(private prisma: PrismaService) {}
+
+  @Get()
+  async getAllPrograms() {
+    return this.prisma.program.findMany({
+      orderBy: { programName: 'asc' }
+    });
+  }
+
+  // NUEVO: Obtener cursos de un programa
+  @Get(':id/courses')
+  async getProgramCourses(@Param('id', ParseIntPipe) id: number) {
+    return this.prisma.course.findMany({
+      where: { programId: id },
+      orderBy: { courseCode: 'asc' }
+    });
+  }
+}
+
+// sessions/sessions.controller.ts
+import { Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe } from '@nestjs/common';
+import { SessionsService } from './sessions.service';
+
+@Controller('api/sessions')
+export class SessionsController {
+  constructor(private readonly sessionsService: SessionsService) {}
+
+  // Obtener todas las sesiones
+  @Get()
+  async getAllSessions() {
+    return this.sessionsService.getAllSessions();
+  }
+
+  // Obtener una sesión por ID
+  @Get(':id')
+  async getSessionById(@Param('id', ParseIntPipe) id: number) {
+    return this.sessionsService.getSessionById(id);
+  }
+
+  // Obtener materias de una sesión con estudiantes
+  @Get(':id/courses')
+  async getSessionCourses(@Param('id', ParseIntPipe) id: number) {
+    return this.sessionsService.getSessionCourses(id);
+  }
+
+  // Obtener todos los profesores
+  @Get('teachers/all')
+  async getAllTeachers() {
+    return this.sessionsService.getAllTeachers();
+  }
+
+  // Crear nueva sesión
+  @Post()
+  async create(@Body() data: any) {
+    return this.sessionsService.createSession(data);
+  }
+
+  // Actualizar sesión (ahora incluye actualización de materias)
+  @Put(':id')
+  async update(@Param('id', ParseIntPipe) id: number, @Body() data: any) {
+    return this.sessionsService.updateSession(id, data);
+  }
+
+  // Eliminar sesión
+  @Delete(':id')
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    return this.sessionsService.deleteSession(id);
+  }
+
+  // Obtener materias disponibles para una sesión
+  @Get(':id/available-courses')
+  async getAvailableCourses(@Param('id', ParseIntPipe) id: number) {
+    return this.sessionsService.getAvailableCourses(id);
+  }
+
+  // Agregar materia a sesión
+  @Post(':id/courses')
+  async addCourseToSession(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: { courseId: number; maxStudents?: number }
+  ) {
+    return this.sessionsService.addCourseToSession(id, data.courseId, data.maxStudents);
+  }
+
+  // Eliminar materia de sesión
+  @Delete(':sessionId/courses/:courseId')
+  async removeCourseFromSession(
+    @Param('sessionId', ParseIntPipe) sessionId: number,
+    @Param('courseId', ParseIntPipe) courseId: number
+  ) {
+    return this.sessionsService.removeCourseFromSession(sessionId, courseId);
+  }
+
+  // Obtener estudiantes disponibles para una materia
+  @Get(':sessionId/courses/:courseId/available-students')
+  async getAvailableStudents(
+    @Param('sessionId', ParseIntPipe) sessionId: number,
+    @Param('courseId', ParseIntPipe) courseId: number
+  ) {
+    return this.sessionsService.getAvailableStudents(sessionId, courseId);
+  }
+
+  // Agregar estudiante a una materia
+  @Post(':sessionId/courses/:courseId/students')
+  async addStudentToCourse(
+    @Param('sessionId', ParseIntPipe) sessionId: number,
+    @Param('courseId', ParseIntPipe) courseId: number,
+    @Body() data: { studentId: string }
+  ) {
+    return this.sessionsService.addStudentToCourse(
+      sessionId, 
+      courseId, 
+      BigInt(data.studentId)
+    );
+  }
+
+  // Remover estudiante de una materia
+  @Delete('enrollments/:enrollmentId')
+  async removeStudentFromCourse(
+    @Param('enrollmentId', ParseIntPipe) enrollmentId: number
+  ) {
+    return this.sessionsService.removeStudentFromCourse(enrollmentId);
+  }
+}
+
+// src/sessions/sessions.module.ts
+import { Module } from '@nestjs/common';
+import { SessionsService } from './sessions.service';
+import { PrismaService } from '../prisma/prisma.services';
+
+import { SessionsController } from './sessions.controller';
+
+@Module({
+  controllers: [SessionsController],
+  providers: [SessionsService, PrismaService],
+})
+export class SessionsModule {}
+
+
+// sessions.service.ts
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.services';
+
+@Injectable()
+export class SessionsService {
+  constructor(private prisma: PrismaService) {}
+
+  // Obtener todas las sesiones con información completa
+  async getAllSessions() {
+    const sessions = await this.prisma.session.findMany({
+      include: {
+        program: true,
+        offerings: {
+          include: {
+            course: true,
+            teacher: true, 
+            enrollments: true
+          }
+        }
+      },
+      orderBy: { startDate: 'asc' }
+    });
+
+    return sessions.map((session, index) => {
+      const totalCapacity = session.offerings.reduce((sum, off) => sum + (off.maxStudents || 0), 0);
+      const totalEnrolled = session.offerings.reduce((sum, off) => sum + off.enrollments.length, 0);
+      const occupancy = totalCapacity > 0 ? Math.round((totalEnrolled / totalCapacity) * 100) : 0;
+
+      const month = new Date(session.startDate).toLocaleDateString('en-US', { month: 'long' });
+      const subjects = session.offerings.map(off => off.course.courseCode);
+      
+      // Obtener el primer profesor (principal)
+      const mainTeacher = session.offerings.find(off => off.teacher)?.teacher;
+
+      return {
+        id: session.id,
+        number: index + 1,
+        sessionName: session.sessionName,
+        month,
+        startDate: session.startDate,
+        endDate: session.endDate,
+        date: session.startDate.toISOString().split('T')[0],
+        progress: occupancy,
+        occupancy,
+        subject: subjects.join(', ') || 'No courses assigned',
+        subjects,
+        professor: mainTeacher 
+          ? `${mainTeacher.firstName} ${mainTeacher.lastName}`
+          : 'TBD',
+        teacherId: mainTeacher?.id,
+        chartId: `progressChart-${session.id}`,
+        program: session.program.programName,
+        programId: session.programId,
+        status: new Date(session.endDate) > new Date() ? 'active' : 'completed'
+      };
+    });
+  }
+
+  // Obtener una sesión por ID - FORMATO PARA EDICIÓN
+  async getSessionById(id: number) {
+    const session = await this.prisma.session.findUnique({
+      where: { id },
+      include: {
+        program: true,
+        offerings: {
+          include: {
+            course: true,
+            teacher: true,
+            enrollments: {
+              include: {
+                student: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!session) {
+      throw new NotFoundException(`Session with ID ${id} not found`);
+    }
+
+    // Obtener el profesor principal
+    const mainTeacher = session.offerings.find(off => off.teacher)?.teacher;
+    
+    // Obtener array de códigos de curso
+    const subjects = session.offerings.map(off => off.course.courseCode);
+
+    return {
+      id: session.id,
+      sessionName: session.sessionName,
+      startDate: session.startDate.toISOString().split('T')[0], // Formato YYYY-MM-DD
+      endDate: session.endDate.toISOString().split('T')[0],     // Formato YYYY-MM-DD
+      program: session.program.programName,
+      programId: session.programId,
+      subjects: subjects, // Array de códigos
+      teacherId: mainTeacher?.id,
+      professor: mainTeacher 
+        ? `${mainTeacher.firstName} ${mainTeacher.lastName}`
+        : 'TBD',
+      // Datos adicionales
+      offerings: session.offerings.map(off => ({
+        courseId: off.courseId,
+        courseCode: off.course.courseCode,
+        teacherId: off.teacherId
+      }))
+    };
+  }
+
+  // Crear nueva sesión
+  async createSession(data: any) {
+    const program = await this.prisma.program.findUnique({
+      where: { id: data.programId }
+    });
+
+    if (!program) {
+      throw new NotFoundException(`Program with ID ${data.programId} not found`);
+    }
+
+    // Crear la sesión
+    const session = await this.prisma.session.create({
+      data: {
+        sessionName: data.sessionName,
+        startDate: new Date(data.startDate),
+        endDate: new Date(data.endDate),
+        programId: data.programId,
+      }
+    });
+
+    // Crear los CourseOfferings si se enviaron cursos
+    if (data.courses && Array.isArray(data.courses) && data.courses.length > 0) {
+      for (const courseData of data.courses) {
+        const course = await this.prisma.course.findUnique({ 
+          where: { id: courseData.courseId } 
+        });
+        
+        if (course) {
+          await this.prisma.courseOffering.create({
+            data: {
+              courseId: courseData.courseId,
+              sessionId: session.id,
+              teacherId: courseData.teacherId || null,
+              maxStudents: course.maxCapacity || 30
+            }
+          });
+        }
+      }
+    }
+
+    // Retornar la sesión con sus relaciones
+    return this.prisma.session.findUnique({
+      where: { id: session.id },
+      include: {
+        program: true,
+        offerings: {
+          include: {
+            course: true,
+            teacher: true
+          }
+        }
+      }
+    });
+  }
+
+  // Actualizar sesión (incluyendo materias y profesores)
+  async updateSession(id: number, data: any) {
+    const session = await this.prisma.session.findUnique({ 
+      where: { id },
+      include: {
+        offerings: true
+      }
+    });
+    
+    if (!session) {
+      throw new NotFoundException(`Session with ID ${id} not found`);
+    }
+
+    // Actualizar información básica de la sesión
+    await this.prisma.session.update({
+      where: { id },
+      data: {
+        sessionName: data.sessionName,
+        startDate: data.startDate ? new Date(data.startDate) : undefined,
+        endDate: data.endDate ? new Date(data.endDate) : undefined,
+        programId: data.programId,
+      }
+    });
+
+    // Si se enviaron materias con profesores
+    if (data.courses && Array.isArray(data.courses)) {
+      // Eliminar todos los offerings existentes
+      await this.prisma.courseOffering.deleteMany({
+        where: { sessionId: id }
+      });
+
+      // Crear los nuevos offerings
+      for (const courseData of data.courses) {
+        const course = await this.prisma.course.findUnique({ 
+          where: { id: courseData.courseId } 
+        });
+        
+        if (course) {
+          await this.prisma.courseOffering.create({
+            data: {
+              courseId: courseData.courseId,
+              sessionId: id,
+              teacherId: courseData.teacherId || null,
+              maxStudents: course.maxCapacity || 30
+            }
+          }).catch((error) => {
+            console.log(`Could not add course ${courseData.courseId} to session ${id}:`, error);
+          });
+        }
+      }
+    }
+
+    // Retornar sesión actualizada
+    return this.prisma.session.findUnique({
+      where: { id },
+      include: {
+        program: true,
+        offerings: {
+          include: {
+            course: true,
+            teacher: true 
+          }
+        }
+      }
+    });
+  }
+
+  // Eliminar sesión
+  async deleteSession(id: number) {
+    const session = await this.prisma.session.findUnique({
+      where: { id },
+      include: {
+        offerings: {
+          include: {
+            enrollments: true
+          }
+        }
+      }
+    });
+
+    if (!session) {
+      throw new NotFoundException(`Session with ID ${id} not found`);
+    }
+
+    const hasEnrollments = session.offerings.some(off => off.enrollments.length > 0);
+    if (hasEnrollments) {
+      throw new BadRequestException('Cannot delete session with active enrollments');
+    }
+
+    await this.prisma.courseOffering.deleteMany({
+      where: { sessionId: id }
+    });
+
+    return this.prisma.session.delete({
+      where: { id }
+    });
+  }
+
+  // Obtener materias disponibles para agregar a una sesión
+  async getAvailableCourses(sessionId: number) {
+    const session = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+      include: {
+        offerings: true
+      }
+    });
+
+    if (!session) {
+      throw new NotFoundException(`Session with ID ${sessionId} not found`);
+    }
+
+    const assignedCourseIds = session.offerings.map(off => off.courseId);
+
+    return this.prisma.course.findMany({
+      where: {
+        programId: session.programId,
+        id: {
+          notIn: assignedCourseIds
+        }
+      },
+      orderBy: { courseCode: 'asc' }
+    });
+  }
+
+  // Obtener todos los profesores activos
+  async getAllTeachers() {
+    return this.prisma.teacher.findMany({
+      where: { status: 'active' },
+      orderBy: [
+        { lastName: 'asc' },
+        { firstName: 'asc' }
+      ]
+    });
+  }
+
+  // Agregar materia a sesión con profesor
+  async addCourseToSession(sessionId: number, courseId: number, teacherId?: number, maxStudents?: number) {
+    const session = await this.prisma.session.findUnique({ where: { id: sessionId } });
+    if (!session) {
+      throw new NotFoundException(`Session with ID ${sessionId} not found`);
+    }
+
+    const course = await this.prisma.course.findUnique({ where: { id: courseId } });
+    if (!course) {
+      throw new NotFoundException(`Course with ID ${courseId} not found`);
+    }
+
+    const existing = await this.prisma.courseOffering.findUnique({
+      where: {
+        courseId_sessionId: { courseId, sessionId }
+      }
+    });
+
+    if (existing) {
+      throw new BadRequestException('Course is already assigned to this session');
+    }
+
+    return this.prisma.courseOffering.create({
+      data: {
+        courseId,
+        sessionId,
+        teacherId: teacherId || null,
+        maxStudents: maxStudents || course.maxCapacity || 30
+      },
+      include: {
+        course: true,
+        session: true,
+        teacher: true
+      }
+    });
+  }
+
+  // Eliminar materia de sesión
+  async removeCourseFromSession(sessionId: number, courseId: number) {
+    const offering = await this.prisma.courseOffering.findUnique({
+      where: {
+        courseId_sessionId: { courseId, sessionId }
+      },
+      include: {
+        enrollments: true
+      }
+    });
+
+    if (!offering) {
+      throw new NotFoundException('Course offering not found');
+    }
+
+    if (offering.enrollments.length > 0) {
+      throw new BadRequestException('Cannot remove course with active enrollments');
+    }
+
+    return this.prisma.courseOffering.delete({
+      where: {
+        courseId_sessionId: { courseId, sessionId }
+      }
+    });
+  }
+
+  // Obtener materias asignadas a una sesión con estudiantes
+  async getSessionCourses(sessionId: number) {
+    const offerings = await this.prisma.courseOffering.findMany({
+      where: { sessionId },
+      include: {
+        course: true,
+        teacher: true,
+        enrollments: {
+          include: {
+            student: true
+          }
+        }
+      }
+    });
+
+    return offerings.map(off => ({
+      id: off.course.id,
+      offeringId: off.id,
+      name: off.course.courseName,
+      code: off.course.courseCode,
+      teacher: off.teacher 
+        ? `${off.teacher.firstName} ${off.teacher.lastName}` 
+        : 'TBD',
+      teacherId: off.teacherId,
+      maxStudents: off.maxStudents,
+      currentEnrollment: off.enrollments.length,
+      students: off.enrollments.map(enr => ({
+        id: enr.student.id.toString(),
+        enrollmentId: enr.id,
+        name: `${enr.student.firstName} ${enr.student.lastName}`,
+        matricula: enr.student.studentIdNumber || `STU-${enr.student.id.toString().padStart(6, '0')}`,
+        email: enr.student.email || enr.student.sdgkuEmail,
+        status: enr.status === 'enrolled' ? 'active' : 'inactive',
+        enrolledDate: new Date().toISOString().split('T')[0]
+      }))
+    }));
+  }
+
+  // Agregar estudiante a una materia de la sesión
+  async addStudentToCourse(sessionId: number, courseId: number, studentId: bigint) {
+    const session = await this.prisma.session.findUnique({ where: { id: sessionId } });
+    if (!session) {
+      throw new NotFoundException(`Session with ID ${sessionId} not found`);
+    }
+
+    const offering = await this.prisma.courseOffering.findUnique({
+      where: {
+        courseId_sessionId: { courseId, sessionId }
+      },
+      include: {
+        enrollments: true
+      }
+    });
+
+    if (!offering) {
+      throw new NotFoundException('Course offering not found');
+    }
+
+    const student = await this.prisma.student.findUnique({ where: { id: studentId } });
+    if (!student) {
+      throw new NotFoundException(`Student with ID ${studentId} not found`);
+    }
+
+    if (offering.enrollments.length >= (offering.maxStudents ?? 30)) {
+      throw new BadRequestException('Course is at maximum capacity');
+    }
+
+    const existingEnrollment = await this.prisma.enrollment.findUnique({
+      where: {
+        studentId_offeringId: {
+          studentId,
+          offeringId: offering.id
+        }
+      }
+    });
+
+    if (existingEnrollment) {
+      throw new BadRequestException('Student is already enrolled in this course');
+    }
+
+    return this.prisma.enrollment.create({
+      data: {
+        studentId,
+        offeringId: offering.id,
+        status: 'enrolled'
+      },
+      include: {
+        student: true,
+        offering: {
+          include: {
+            course: true
+          }
+        }
+      }
+    });
+  }
+
+  // Remover estudiante de una materia de la sesión
+  async removeStudentFromCourse(enrollmentId: number) {
+    const enrollment = await this.prisma.enrollment.findUnique({
+      where: { id: enrollmentId }
+    });
+
+    if (!enrollment) {
+      throw new NotFoundException('Enrollment not found');
+    }
+
+    return this.prisma.enrollment.delete({
+      where: { id: enrollmentId }
+    });
+  }
+
+  // Obtener estudiantes disponibles para agregar a una materia
+  async getAvailableStudents(sessionId: number, courseId: number) {
+    const session = await this.prisma.session.findUnique({ 
+      where: { id: sessionId },
+      include: {
+        program: true
+      }
+    });
+
+    if (!session) {
+      throw new NotFoundException(`Session with ID ${sessionId} not found`);
+    }
+
+    const offering = await this.prisma.courseOffering.findUnique({
+      where: {
+        courseId_sessionId: { courseId, sessionId }
+      },
+      include: {
+        enrollments: true
+      }
+    });
+
+    if (!offering) {
+      throw new NotFoundException('Course offering not found');
+    }
+
+    const enrolledStudentIds = offering.enrollments.map(enr => enr.studentId);
+
+    const availableStudents = await this.prisma.student.findMany({
+      where: {
+        programId: session.programId,
+        status: 'active',
+        id: {
+          notIn: enrolledStudentIds
+        }
+      },
+      orderBy: [
+        { lastName: 'asc' },
+        { firstName: 'asc' }
+      ]
+    });
+
+    return availableStudents.map(student => ({
+      id: student.id.toString(),
+      name: `${student.firstName} ${student.lastName}`,
+      matricula: student.studentIdNumber || `STU-${student.id.toString().padStart(6, '0')}`,
+      email: student.email || student.sdgkuEmail
+    }));
+  }
+}
+
+// Back-end/src/students/students.controller.ts
+import { Controller, Get } from '@nestjs/common';
+import { StudentsService } from './students.service';
+
+@Controller('api/students')
+export class StudentsController {
+  constructor(private readonly studentsService: StudentsService) {}
+
+  @Get('count')
+  async getTotalStudents() {
+    const total = await this.studentsService.countStudents();
+    return { total };
+  }
+
+  @Get('distribution')
+  async getStudentDistribution() {
+    const distribution = await this.studentsService.getDistribution();
+    return distribution;
+  }
+  @Get('sessions/count')
+  async getTotalSessions() {
+    const totalSessions = await this.studentsService.countSessions();
+    return { totalSessions };
+  }
+
+  @Get('sessions')
+  async getAllSessions() {
+    const sessions = await this.studentsService.getAllSessions();
+    return sessions;
+}
+}
+
+
+// Back-end/src/students/students.module.ts
+import { Module } from '@nestjs/common';
+import { StudentsController } from './students.controller';
+import { StudentsService } from './students.service';
+import { PrismaService } from '../prisma/prisma.services';
+
+@Module({
+  controllers: [StudentsController],
+  providers: [StudentsService, PrismaService],
+})
+export class StudentsModule {}
+
+// Back-end/src/students/students.service.ts
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.services';
+
+@Injectable()
+export class StudentsService {
+  constructor(private prisma: PrismaService) {}
+
+  async countStudents(): Promise<number> {
+    const total = await this.prisma.student.count(); // 👈 Usa tu modelo Prisma (ajusta el nombre si es distinto)
+    return total;
+  }
+  async getDistribution() {
+    // Cuenta cuántos estudiantes hay por programId
+    const programCounts = await this.prisma.student.groupBy({
+      by: ['programId'],
+      _count: { programId: true },
+    });
+
+    // Mapeo personalizado: id → nombre
+    const programNames: Record<number, string> = {
+      1: 'BSGM',
+      2: 'ASSD',
+    };
+
+    // Convierte los datos en formato de la gráfica
+    const labels = programCounts.map(p => programNames[p.programId] || `Programa ${p.programId}`);
+    const data = programCounts.map(p => p._count.programId);
+
+    return {
+      studentDistribution: {
+        labels,
+        data,
+      },
+    };
+  }
+  async countSessions(){
+    return await this.prisma.session.count();
+  }
+
+  // Obtener todas las sesiones reales de la base de datos
+  async getAllSessions() {
+    const sessions = await this.prisma.session.findMany({
+      include: {
+        program: { select: { programName: true } }, // 👈 obtiene el nombre del programa
+      },
+      orderBy: { startDate: 'asc' },
+    });
+
+    // 🔄 Transformar los datos al formato esperado por el frontend
+    return sessions.map(s => ({
+      id: s.id,
+      name: s.sessionName,
+      program: s.program?.programName || 'N/A',
+      month: s.startDate.toLocaleString('default', { month: 'long' }),
+      occupancy: Math.floor(Math.random() * 100), // si no tienes campo real, puedes quitarlo luego
+      status: new Date(s.endDate) > new Date() ? 'active' : 'ended',
+      lowEnrollment: false, // por ahora fijo (puedes calcularlo luego)
+      subjects: [], // puedes relacionarlo con offerings si quieres
+      professor: 'N/A', // si no hay relación, puedes dejarlo vacío
+    }));
+  }
+}
+
+
+// src/teachers/teachers.controller.ts
+import { Controller, Get } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.services';
+
+@Controller('api/teachers')
+export class TeachersController {
+  constructor(private prisma: PrismaService) {}
+
+  @Get()
+  async getActiveTeachers() {
+    return this.prisma.teacher.findMany({
+      where: { status: 'active' },
+      orderBy: [
+        { lastName: 'asc' },
+        { firstName: 'asc' }
+      ],
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        specialization: true
+      }
+    });
+  }
+}
+
+// src/app.module.ts
+
+import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
+import { StudentsModule } from './students/students.module';
+import { SessionsModule } from './sessions/sessions.module';
+import { ProgramsController } from './programs/programs.controller';
+import { CoursesController } from './courses/courses.controller';
+import { TeachersController } from './teachers/teachers.controller';
+import { PrismaService } from './prisma/prisma.services';
+
+@Module({
+  imports: [AuthModule, StudentsModule, SessionsModule],
+  controllers: [AppController, ProgramsController, CoursesController, TeachersController],
+  providers: [AppService, PrismaService],
+})
+export class AppModule {}
