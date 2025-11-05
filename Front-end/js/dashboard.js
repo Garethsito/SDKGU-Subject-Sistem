@@ -426,6 +426,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     cargarGraficaDistribucion();
+    
 
     // Gráficas de Donut para cada sesión
     window.createSessionCharts = function() {
