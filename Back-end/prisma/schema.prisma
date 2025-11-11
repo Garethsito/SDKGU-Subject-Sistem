@@ -42,10 +42,12 @@ model Student {
   id                      BigInt   @id  // Cambiado: ahora es BigInt sin autoincrement
   studentIdNumber         String   @unique  // Nuevo: para almacenar el ID original como string
   firstName               String
-  lastName                String
+  middleName              String?
+  lastName                String?
   email                   String?  @unique
   sdgkuEmail              String?  @unique
   rgmKey                  String?  @unique
+  phone                   String?
   startDate               DateTime
   admissionDate           DateTime?
   enrollmentYear          Int
@@ -53,6 +55,7 @@ model Student {
   modality                String?
   cohort                  String?
   language                String?
+  totalUnits              Int      @default(126)
   transferredUnits        Int      @default(0)
   unitQuantity            Int      @default(0)
   totalUnitsEarned        Int      @default(0)
@@ -71,6 +74,7 @@ model Student {
   @@index([rgmKey])
   @@index([sdgkuEmail])
   @@index([studentIdNumber])
+  @@index([status])
 }
 
 model Course {
@@ -110,13 +114,15 @@ model Session {
   sessionName String   @unique
   startDate   DateTime
   endDate     DateTime
+  year        Int
   program     Program  @relation(fields: [programId], references: [id])
   programId   Int
   offerings   CourseOffering[]
   records     AcademicRecord[]
   
+  @@unique([programId, year, sessionName])
   @@index([programId])
-  @@index([sessionName])
+  @@index([year])
 }
 
 model CourseOffering {
@@ -144,10 +150,12 @@ model Enrollment {
   offeringId Int
   status     String          @default("enrolled")
   grade      String?
+  enrolledAt DateTime @default(now())
   
   @@unique([studentId, offeringId])
   @@index([studentId])
   @@index([offeringId])
+  @@index([status])
 }
 
 model Transfer {

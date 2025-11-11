@@ -1,4 +1,4 @@
-import { PrismaClient } from '../generated/prisma/index.js';
+import { PrismaClient } from '@prisma/client';
 import XLSX from 'xlsx';
 
 const prisma = new PrismaClient();
@@ -34,32 +34,14 @@ function parseStudentId(value) {
   }
 }
 
-// Función para parsear el nombre completo
-function parseFullName(fullName) {
-  if (!fullName) return { firstName: 'Unknown', middleName: null, lastName: 'Unknown' };
-  
-  const parts = fullName.trim().split(' ').filter(p => p);
-  
-  if (parts.length === 0) {
-    return { firstName: 'Unknown', middleName: null, lastName: 'Unknown' };
-  } else if (parts.length === 1) {
-    return { firstName: parts[0], middleName: null, lastName: 'Unknown' };
-  } else if (parts.length === 2) {
-    return { firstName: parts[0], middleName: null, lastName: parts[1] };
-  } else {
-    const firstName = parts[0];
-    const lastName = parts[parts.length - 1];
-    const middleName = parts.slice(1, -1).join(' ');
-    return { firstName, middleName, lastName };
-  }
-}
-
 // Procesar estudiante
 async function processStudent(row, programs) {
   try {
-    // Parsear nombre completo
-    const fullName = row['Full Name'] || '';
-    const { firstName, middleName, lastName } = parseFullName(fullName);
+    // ✅ Extraer nombres directamente de las columnas del Excel
+    const firstName = row['First Name'] ? String(row['First Name']).trim() : 'Unknown';
+    const middleName = row['Middle Name'] ? String(row['Middle Name']).trim() : null;
+    const lastName = row['Last Name'] ? String(row['Last Name']).trim() : null;
+    const fullName = `${firstName} ${middleName || ''} ${lastName || ''}`.trim();
     
     // Extraer ID del estudiante
     const studentIdNumber = row['Students ID Number'] ? String(row['Students ID Number']).trim() : null;
@@ -70,8 +52,9 @@ async function processStudent(row, programs) {
       return null;
     }
     
-    // Extraer datos
+    // ✅ Extraer datos (incluyendo phone)
     const rgmKey = row['RGM#'] ? String(row['RGM#']).trim() : null;
+    const phone = row['Phone #'] ? String(row['Phone #']).trim() : null;
     const email = row['Email'] ? String(row['Email']).trim() : null;
     const sdgkuEmail = row['SDGKU EMAIL'] ? String(row['SDGKU EMAIL']).trim() : null;
     const status = row['Status'] ? String(row['Status']).trim() : 'Active';
@@ -88,7 +71,7 @@ async function processStudent(row, programs) {
     }
     
     // Unidades
-    const totalUnits = row['Total Units'] ? parseInt(row['Total Units']) : 0;
+    const totalUnits = row['Total Units'] ? parseInt(row['Total Units']) : 126;
     const transferredUnits = row['Transfered Units'] ? parseInt(row['Transfered Units']) : 0;
     const unitQuantity = row['Unit Quantity'] ? parseInt(row['Unit Quantity']) : 0;
     const totalUnitsEarned = row['Total Units Earned'] ? parseInt(row['Total Units Earned']) : 0;
@@ -105,11 +88,14 @@ async function processStudent(row, programs) {
       where: { id: studentId }
     }).catch(() => null);
     
+    // ✅ Objeto studentData con todos los campos actualizados
     const studentData = {
       id: studentId,
       studentIdNumber,
       firstName,
+      middleName,
       lastName,
+      phone,
       email,
       sdgkuEmail,
       rgmKey,
@@ -119,6 +105,7 @@ async function processStudent(row, programs) {
       modality,
       cohort,
       language,
+      totalUnits,
       transferredUnits,
       unitQuantity,
       totalUnitsEarned,
@@ -133,13 +120,13 @@ async function processStudent(row, programs) {
         where: { id: studentId },
         data: studentData
       });
-      console.log(`   ✏️  Actualizado: ${firstName} ${lastName} (${programName}) - ID: ${studentId}`);
+      console.log(`   ✏️  Actualizado: ${firstName} ${middleName || ''} ${lastName || ''} (${programName}) - ID: ${studentId}`);
     } else {
       // Crear nuevo estudiante
       student = await prisma.student.create({
         data: studentData
       });
-      console.log(`   ✅ Creado: ${firstName} ${lastName} (${programName}) - ID: ${studentId}`);
+      console.log(`   ✅ Creado: ${firstName} ${middleName || ''} ${lastName || ''} (${programName}) - ID: ${studentId}`);
     }
     
     return student;

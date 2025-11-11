@@ -19,7 +19,10 @@ export class SessionsService {
           }
         }
       },
-      orderBy: { startDate: 'asc' }
+      orderBy: [
+        { year: 'desc' },
+        { startDate: 'asc' }
+      ]
     });
 
     return sessions.map((session, index) => {
@@ -32,11 +35,16 @@ export class SessionsService {
       
       // Obtener el primer profesor (principal)
       const mainTeacher = session.offerings.find(off => off.teacher)?.teacher;
-
+      
+      // Extraer número de sesión del sessionName (ej: "Session 1" -> 1)
+      const sessionNumberMatch = session.sessionName.match(/\d+/);
+      const displayNumber = sessionNumberMatch ? parseInt(sessionNumberMatch[0]) : index + 1;
+      
       return {
         id: session.id,
-        number: index + 1,
+        number: displayNumber,
         sessionName: session.sessionName,
+        year: session.year,
         month,
         startDate: session.startDate,
         endDate: session.endDate,
@@ -87,9 +95,15 @@ export class SessionsService {
     // Obtener array de códigos de curso
     const subjects = session.offerings.map(off => off.course.courseCode);
 
+    // Extraer número de sesión del sessionName
+    const sessionNumberMatch = session.sessionName.match(/\d+/);
+    const displayNumber = sessionNumberMatch ? parseInt(sessionNumberMatch[0]) : null;
+
     return {
       id: session.id,
+      number: displayNumber,
       sessionName: session.sessionName,
+      year: session.year,
       startDate: session.startDate.toISOString().split('T')[0], // Formato YYYY-MM-DD
       endDate: session.endDate.toISOString().split('T')[0],     // Formato YYYY-MM-DD
       program: session.program.programName,
@@ -118,15 +132,40 @@ export class SessionsService {
       throw new NotFoundException(`Program with ID ${data.programId} not found`);
     }
 
-    // Crear la sesión
-    const session = await this.prisma.session.create({
-      data: {
-        sessionName: data.sessionName,
-        startDate: new Date(data.startDate),
-        endDate: new Date(data.endDate),
-        programId: data.programId,
-      }
-    });
+  // Determinar el año
+  const startDate = new Date(data.startDate);
+  const year = startDate.getFullYear();
+
+  // Contar sesiones existentes en ese año para ese programa
+  const sessionCount = await this.prisma.session.count({
+    where: {
+      programId: data.programId,
+      year: year
+    }
+  });
+
+  const sessionNumber = sessionCount + 1;
+
+  // Validar que no exceda 10 sesiones por año
+  if (sessionNumber > 10) {
+    throw new BadRequestException(
+      `Maximum of 10 sessions per year reached for ${program.programName} in ${year}`
+    );
+  }
+
+  // Generar nombre único: "Session 1", "Session 2", etc.
+  const uniqueSessionName = `Session ${sessionNumber}`;
+
+  // Crear la sesión
+  const session = await this.prisma.session.create({
+    data: {
+      sessionName: uniqueSessionName,
+      year: year,
+      startDate: new Date(data.startDate),
+      endDate: new Date(data.endDate),
+      programId: data.programId,
+    }
+  });
 
     // Crear los CourseOfferings si se enviaron cursos
     if (data.courses && Array.isArray(data.courses) && data.courses.length > 0) {
@@ -176,15 +215,25 @@ export class SessionsService {
       throw new NotFoundException(`Session with ID ${id} not found`);
     }
 
-    // Actualizar información básica de la sesión
+    // Calcular año si cambia la fecha
+    const updateData: any = {
+      sessionName: data.sessionName,
+      programId: data.programId,
+    };
+
+    if (data.startDate) {
+      const startDate = new Date(data.startDate);
+      updateData.startDate = startDate;
+      updateData.year = startDate.getFullYear();
+    }
+
+    if (data.endDate) {
+      updateData.endDate = new Date(data.endDate);
+    }
+
     await this.prisma.session.update({
       where: { id },
-      data: {
-        sessionName: data.sessionName,
-        startDate: data.startDate ? new Date(data.startDate) : undefined,
-        endDate: data.endDate ? new Date(data.endDate) : undefined,
-        programId: data.programId,
-      }
+      data: updateData
     });
 
     // Si se enviaron materias con profesores
