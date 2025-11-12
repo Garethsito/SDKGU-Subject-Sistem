@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SDGKU</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://kit.fontawesome.com/337be747ec.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/reports.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+  [x-cloak] { display: none !important; }
+</style>
+</head>
+
+<body x-data="reports()"> 
+  <!-- Header -->
+  <header class="bg-[#2D2828] shadow-md border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
+    <div class="px-6 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <button @click="open = !open" class="w-10 h-10 flex items-center justify-center hover:bg-[#252121] rounded transition-colors">
+            <span class="text-2xl text-white">☰</span>
+          </button>
+          
+          <div class="absolute right-80">
+            <input type="text" x-model="searchQuery" placeholder="Search" class="w-full bg-gray-100 border border-gray-300 rounded-md px-2 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500 transition shadow-sm placeholder:text-gray-400">
+          </div>
+          
+          <div class="fixed right-60">
+            <button @click="showFilters = !showFilters" class="w-10 h-10 flex items-center justify-center text-white bg-[#8E1C2D] border-2 border-[#D41736] hover:bg-[#8E1C2D] hover:border-[#772A34] transition transform duration-300 hover:scale-110 rounded">
+              <i class="fa-solid fa-filter"></i>
+            </button>
+            
+            <div 
+              x-show="showFilters"
+              @click.outside="showFilters = false"
+              x-transition:enter="transition ease-out duration-200"
+              x-transition:enter-start="opacity-0 translate-y-1"
+              x-transition:enter-end="opacity-100 translate-y-0"
+              x-transition:leave="transition ease-in duration-150"
+              x-transition:leave-start="opacity-100 translate-y-0"
+              x-transition:leave-end="opacity-0 translate-y-1"
+              class="absolute right-0 top-full w-80 bg-white rounded-lg shadow-xl border-2 border-gray-200 p-6 mt-2"
+              style="display: none;">
+              
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-800">Filters</h3>
+                <button @click="showFilters = false" class="text-gray-500 hover:text-gray-700">
+                  <i class="fa-solid fa-times"></i>
+                </button>
+              </div>
+
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Program</label>
+                  <select x-model="filters.program" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+                    <option value="all">All Programs</option>
+                    <option value="bachelor">Bachelor's</option>
+                    <option value="associate">Associate</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Academic Session</label>
+                  <select x-model="filters.session" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+                    <option value="all">All Sessions</option>
+                    <option value="session1">Session 1</option>
+                    <option value="session2">Session 2</option>
+                    <option value="session3">Session 3</option>
+                    <option value="session4">Session 4</option>
+                    <option value="session5">Session 5</option>
+                    <option value="session6">Session 6</option>
+                    <option value="session7">Session 7</option>
+                    <option value="session8">Session 8</option>
+                    <option value="session9">Session 9</option>
+                    <option value="session10">Session 10</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Occupancy Level</label>
+                  <select x-model="filters.occupancy" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+                    <option value="all">All Levels</option>
+                    <option value="critical">Critical</option>
+                    <option value="low">Low</option>
+                    <option value="optimal">Optimal</option>
+                    <option value="full">Full</option>
+                  </select>
+                </div>
+
+                <div class="flex gap-3 pt-4 border-t border-gray-200">
+                  <button @click="clearFilters()" class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition text-sm font-medium">
+                    Clear All
+                  </button>
+                  <button @click="applyFilters()" class="flex-1 px-4 py-2 bg-[#A6192E] text-white rounded-md hover:bg-[#8E1C2D] transition text-sm font-medium">
+                    Apply Filters
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <button class="w-10 h-10 flex items-center justify-center fixed right-10 hover:bg-[#252121] rounded transition-colors">
+            <i class="fa-solid fa-circle-user fa-2xl" style="color: #ffffff;"></i>
+          </button>
+          
+          <img 
+            src="https://cdn.sdgku.edu/wp-content/uploads/2023/11/cropped-SDGKU_Globe-square.png" 
+            alt="SDGKU Logo"
+            class="w-10 h-10 object-contain"
+          >
+          
+          <div>
+            <h1 class="text-2xl font-bold text-[#fff]">SDGKU Dashboard</h1>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside 
+    x-show="open"
+    x-transition:enter="transition transform duration-300"
+    x-transition:enter-start="-translate-x-full opacity-0"
+    x-transition:enter-end="translate-x-0 opacity-100"
+    x-transition:leave="transition transform duration-300"
+    x-transition:leave-start="translate-x-0 opacity-100"
+    x-transition:leave-end="-translate-x-full opacity-0"
+    class="w-60 bg-[#A6192E] text-white h-screen p-4 top-16 fixed z-40">
+    
+    <ul class="pt-6 space-y-4 text-xl font-medium">
+      <li><a href="index.html" class="block w-full px-4 py-2 rounded bg-[#8E1C2D]"><i class="fa-solid fa-chart-line mr-2"></i>Dashboard</a></li>
+      <li><a href="session.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-calendar-days mr-2"></i>Sessions</a></li>
+      <li><a href="subjects.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-book mr-2"></i>Subjects</a></li>
+      <li><a href="students.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-users mr-2"></i>Students</a></li>
+      <li><a href="reports.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-file-lines mr-2"></i>Reports</a></li>
+      <li><a href="settings.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-gear mr-2"></i>Settings</a></li>
+    </ul>
+  </aside>
+
+  <!-- Content -->
+   <main
+    :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'"
+    class="flex-1 p-6 bg-gray-100 min-h-screen pt-20">
+    <div class="mb-6">
+       <div class="flex justify-between items-center gap-4 mb-6">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Reports</h1>
+        <div class="flex gap-4">
+      <button 
+      @click="activeReport = 'general'"
+      :class="activeReport === 'general' ? 'bg-[#A6192E]' : 'bg-[#D41736]'" 
+      class="bg-[#D41736] hover:bg-[#A6192E] text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+        <i class="fa-solid fa-file mr-1"></i>Report General
+      </button>
+      <button 
+      @click="activeReport = 'individual'"
+      :class="activeReport === 'individual' ? 'bg-[#A6192E]' : 'bg-[#D41736]'"  
+      class="bg-[#D41736] hover:bg-[#A6192E] text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+        <i class="fa-solid fa-user mr-1"></i>Report Individual
+      </button>
+      </div>
+    </div>
+      <p class="text-gray-600">Overview of academic sessions and student enrollment</p>
+
+    </div>
+    <div x-show="activeReport === 'general'" id="Seccion_reporte_General">
+  <!--<h2 class="text-2xl font-bold mb-4">Reporte General</h2>!-->
+  
+  <div class="bg-white p-6 rounded-lg shadow">
+    <h3 class="text-lg font-semibold mb-4">Selecciona las opciones:</h3>
+    
+    <div class="flex justify-between items-center gap-4 mb-6">
+      <label class="flex items-center cursor-pointer">
+        <input type="checkbox" x-model="opcionesGeneral.totalAlumnos" class="w-4 h-4 text-[#D41736] border-gray-300 rounded focus:ring-[#D41736]">
+        <span class="ml-2 text-gray-600">total number of students</span>
+      </label>
+      
+      <label class="flex items-center cursor-pointer">
+        <input type="checkbox" x-model="opcionesGeneral.listaAlumnos" class="w-4 h-4 text-[#D41736] border-gray-300 rounded focus:ring-[#D41736]">
+        <span class="ml-2 text-gray-700">student description</span>
+      </label>
+      
+      <label class="flex items-center cursor-pointer">
+        <input type="checkbox" x-model="opcionesGeneral.CantidaddeSesiones" class="w-4 h-4 text-[#D41736] border-gray-300 rounded focus:ring-[#D41736]">
+        <span class="ml-2 text-gray-700">number of sessions</span>
+      </label>
+      
+      <label class="flex items-center cursor-pointer">
+        <input type="checkbox" x-model="opcionesGeneral.DescripcionSesion" class="w-4 h-4 text-[#D41736] border-gray-300 rounded focus:ring-[#D41736]">
+        <span class="ml-2 text-gray-700">session description</span>
+      </label>
+      
+      <label class="flex items-center cursor-pointer">
+        <input type="checkbox" x-model="opcionesGeneral.All" @change="watchAll()" class="w-4 h-4 text-[#D41736] border-gray-300 rounded focus:ring-[#D41736]">
+        <span class="ml-2 text-gray-700">Complete</span>
+      </label>
+    </div>
+  </div>
+  <div class="space-y-6">
+    <div x-show="opcionesGeneral.totalAlumnos" class="bg-white p-6 rounded-lg shadow mb-6">
+      <h2 class="text-2xl font-bold mb-4">Total Number of Students</h2>
+      <div>
+        <span class="text-3xl font-bold" x-text="totalStudents()"> </span>
+      </div>
+    </div>
+    
+    <div x-show="opcionesGeneral.listaAlumnos" class="bg-white p-6 rounded-lg shadow mb-6">
+  <h2 class="text-2xl font-bold mb-4">Student Description</h2>
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Student ID</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Program</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Modality</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Units Earned</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        <template x-for="student in students" :key="student.id">
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-sm text-gray-900" x-text="student.studentId"></td>
+            <td class="px-4 py-3 text-sm text-gray-900" x-text="student.name"></td>
+            <td class="px-4 py-3 text-sm text-gray-600" x-text="student.program"></td>
+            <td class="px-4 py-3 text-sm text-gray-600" x-text="student.modality"></td>
+            <td class="px-4 py-3">
+              <span 
+                :class="student.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'" 
+                class="px-2 py-1 text-xs font-semibold rounded-full" 
+                x-text="student.status">
+              </span>
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-600" x-text="`${student.unitsEarned}/${student.totalUnits}`"></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+</div>
+    
+    <div x-show="opcionesGeneral.CantidaddeSesiones" class="bg-white p-6 rounded-lg shadow mb-6">
+      <h2 class="text-2xl font-bold mb-4">Number of Sessions</h2>
+      <div>
+        <!-- Contenido de la cantidad de sesiones -->
+        <span class="text-3xl font-bold" x-text="totalSessions()"> </span>
+      </div>
+    </div>
+    
+    <div x-show="opcionesGeneral.DescripcionSesion" class="bg-white p-6 rounded-lg shadow mb-6">
+      <h2 class="text-2xl font-bold mb-4">Session Description</h2>
+      <div class="space-y-4">
+  <template x-for="session in sessionData" :key="session.id">
+    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+      <div class="flex justify-between items-start mb-3">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-800"
+              x-text="`Session ${session.NumberofSessions}`"></h3>
+          <p class="text-sm text-gray-500" x-text="session.date"></p>
+        </div>
+        <span class="bg-[#D41736] text-white px-3 py-1 rounded-full text-sm font-semibold"
+              x-text="session.program"></span>
+      </div>
+      
+      <div class="grid grid-cols-2 gap-4 mb-3">
+        <div>
+          <p class="text-sm text-gray-600">Number of Students</p>
+          <p class="text-lg font-semibold text-gray-800" x-text="session.cantidadAlumnos"></p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-600">Enrolled Students</p>
+          <p class="text-lg font-semibold text-gray-800" x-text="session.listAlumns.length"></p>
+        </div>
+      </div>
+      
+      <div class="mb-3">
+        <p class="text-sm text-gray-600 mb-1">Subjects</p>
+        <div class="flex flex-wrap gap-2">
+        <template x-for="subjectId in session.Materias" :key="subjectId">
+            <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold"
+                  x-text="getSubjectName(subjectId)">
+            </span>
+        </template>
+    </div>
+  </div>
+      
+      <!-- Lista de estudiantes en esta sesión -->
+      <template x-if="session.listAlumns.length > 0">
+        <div class="mt-4 pt-4 border-t border-gray-200">
+          <p class="text-sm font-semibold text-gray-700 mb-2">Students in this session:</p>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="studentId in session.listAlumns" :key="studentId">
+              <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm"
+                    x-text="students.find(s => s.id === studentId)?.name || 'Unknown'"></span>
+            </template>
+          </div>
+        </div>
+      </template>
+    </div>
+  </template>
+</div>
+
+  </div>
+  <div class="bg-white p-6 rounded-lg shadow mb-6">
+    <h2 class="text-2xl font-bold mb-4 text-gray-800 flex items-center">
+        <i class="fa-solid fa-lightbulb text-yellow-500 mr-3"></i>
+        Automatic Recommendations
+    </h2>
+    <p class="text-gray-600 mb-6">Suggested subjects based on student needs</p>
+    
+    <template x-for="rec in getFormattedRecommendations()" :key="rec.subjectId">
+        <div class="border-l-4 border-[#D41736] bg-gray-50 p-4 mb-4 rounded-lg hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-semibold text-gray-800" x-text="rec.subject"></h3>
+                <span class="bg-[#D41736] text-white px-4 py-1 rounded-full text-sm font-bold" 
+                      x-text="`${rec.studentCount} student${rec.studentCount > 1 ? 's' : ''}`">
+                </span>
+            </div>
+            
+            <p class="text-gray-600 mb-3 text-sm">
+                <span x-text="rec.studentCount"></span> 
+                <span x-text="rec.studentCount === 1 ? 'student needs' : 'students need'"></span> 
+                this subject:
+            </p>
+            
+            <div class="flex flex-wrap gap-2">
+                <template x-for="studentName in rec.students" :key="studentName">
+                    <span class="bg-white border border-gray-300 text-gray-700 px-3 py-1 rounded-full text-sm shadow-sm"
+                          x-text="studentName">
+                    </span>
+                </template>
+            </div>
+        </div>
+    </template>
+    
+    <div x-show="getFormattedRecommendations().length === 0" 
+         class="text-center py-8 text-gray-500">
+        <i class="fa-solid fa-check-circle text-green-500 text-4xl mb-3"></i>
+        <p class="text-lg">All students have completed their required subjects!</p>
+    </div>
+</div>
+  </div>
+  
+
+    </div>
+    <div x-show="activeReport === 'individual'" id="Seccion_reporte_Individual">
+       <h2 class="text-2xl font-bold mb-4">Reporte Individual</h2>
+    <p>Contenido del reporte individual aquí...</p>
+    </div>
+    <!--<button @click="verSeleccionados" class="mt-4 bg-[#D41736] text-white px-4 py-2 rounded">
+  Ver Seleccionados
+</button>-->
+  </main>
+</body>
