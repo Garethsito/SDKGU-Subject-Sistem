@@ -12,7 +12,7 @@ export class AuthController {
 
     if (!username || !password) {
       throw new HttpException(
-        'Usuario y contraseña son requeridos',
+        'Username and password are required',
         HttpStatus.BAD_REQUEST
       );
     }
@@ -25,7 +25,7 @@ export class AuthController {
 
     return {
       success: true,
-      message: 'Inicio de sesión exitoso',
+      message: 'Successful Login',
       user: result.user
     };
   }

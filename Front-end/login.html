@@ -30,18 +30,18 @@
     <form id="loginForm" class="space-y-4">
     <div>
         <label for="username" class="block text-sm font-medium text-slate-700">Login ID</label>
-        <input id="username" name="username" type="text" required
+        <input id="username" name="username" type="text" required placeholder="Login ID" oninvalid="this.setCustomValidity('Please enter your Login ID')" oninput="this.setCustomValidity('')"
             placeholder="Login ID"
             class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2
-                    focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-indigo-600" />
+                    focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600" />
     </div>
 
     <div>
         <label for="password" class="block text-sm font-medium text-slate-700">Password</label>
-        <input id="password" name="password" type="password" required
+        <input id="password" name="password" type="password" required placeholder="Password" oninvalid="this.setCustomValidity('Please enter your password')" oninput="this.setCustomValidity('')"
             placeholder="Password"
             class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2
-                    focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-indigo-600" />
+                    focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600" />
     </div>
 
     <div class="flex justify-end">
@@ -50,12 +50,12 @@
 
     <button type="submit"
             class="w-full rounded-xl bg-red-600 text-white font-medium py-2.5
-                    hover:bg-red-700 active:bg-indigo-800 transition-colors">
+                    hover:bg-red-700 active:bg-red-800 transition-colors">
         Login
     </button>
     </form>
 
-    <div id="message" class="mt-4 text-sm"></div>
+    <div id="message" class="mt-4 text-sm text-red-600 flex items-center justify-center"></div>
 </main>
 
 <script>
@@ -81,18 +81,18 @@
         const result = await res.json();
 
         if (result.success) {
-        messageDiv.className = "mt-4 text-sm text-green-600";
-        messageDiv.textContent = '¡Login exitoso! 🎉';
+        messageDiv.className = "mt-4 text-sm text-red-600 flex items-center justify-center";
+        messageDiv.textContent = '¡Successful Login! ';
         setTimeout(() => {
             window.location.href = 'index.html';
         }, 1000);
         } else {
-        messageDiv.className = "mt-4 text-sm text-red-600";
-        messageDiv.textContent = result.message || 'Credenciales inválidas';
+        messageDiv.className = "mt-4 text-sm text-red-600 flex items-center justify-center";
+        messageDiv.textContent = result.message || 'Invalid credentials';
         }
     } catch (error) {
-        messageDiv.className = "mt-4 text-sm text-red-600";
-        messageDiv.textContent = 'Error al conectar con el servidor';
+        messageDiv.className = "mt-4 text-sm text-red-600 flex items-center justify-center";
+        messageDiv.textContent = 'Connection error';
         console.error(error);
     }
     });
