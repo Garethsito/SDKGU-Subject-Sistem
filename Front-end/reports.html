@@ -349,11 +349,304 @@
 
     </div>
     <div x-show="activeReport === 'individual'" id="Seccion_reporte_Individual">
-       <h2 class="text-2xl font-bold mb-4">Reporte Individual</h2>
-    <p>Contenido del reporte individual aquí...</p>
+      <!-- Buscador -->
+  <div class="mb-6">
+    <label class="block text-sm font-semibold text-gray-700 mb-2">
+      <i class="fa-solid fa-search mr-1"></i>
+      Buscar estudiante
+    </label>
+    <div class="relative">
+      <input 
+        type="text" 
+        x-model="searchQuery"
+        placeholder="Buscar por nombre, ID, programa o email..."
+        class="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+      
+      <!-- Botón para limpiar búsqueda -->
+      <button 
+        x-show="searchQuery.length > 0"
+        @click="searchQuery = ''"
+        class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+        <i class="fa-solid fa-times"></i>
+      </button>
     </div>
+    
+    <!-- Contador de resultados -->
+    <p class="text-sm text-gray-500 mt-2">
+      Mostrando <span class="font-semibold" x-text="filteredStudents.length"></span> 
+      de <span class="font-semibold" x-text="students.length"></span> estudiantes
+    </p>
+  </div>
+  
+  <!-- Tabla de estudiantes filtrados -->
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Student ID</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Program</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Modality</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Units Earned</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+  <template x-for="student in filteredStudents" :key="student.id">
+    <tr class="hover:bg-gray-50 cursor-pointer" @click="selectedStudent = student">
+      <td class="px-4 py-3 text-sm text-gray-900" x-text="student.studentId"></td>
+      <td class="px-4 py-3 text-sm text-gray-900" x-text="student.name"></td>
+      <td class="px-4 py-3 text-sm text-gray-600" x-text="student.program"></td>
+      <td class="px-4 py-3 text-sm text-gray-600" x-text="student.modality"></td>
+      <td class="px-4 py-3">
+        <span 
+          :class="student.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'" 
+          class="px-2 py-1 text-xs font-semibold rounded-full" 
+          x-text="student.status">
+        </span>
+      </td>
+      <td class="px-4 py-3 text-sm text-gray-600" x-text="`${student.unitsEarned}/${student.totalUnits}`"></td>
+      <td class="px-4 py-3">
+        <button 
+          @click.stop="selectedStudent = student"
+          class="text-[#D41736] hover:text-[#A6192E] text-sm font-semibold">
+          <i class="fa-solid fa-eye mr-1"></i>
+          Ver detalles
+        </button>
+      </td>
+    </tr>
+  </template>
+</tbody>
+    </table>
+    
+    <!-- Mensaje cuando no hay resultados -->
+    <div x-show="filteredStudents.length === 0" class="text-center py-8 text-gray-500">
+      <i class="fa-solid fa-search text-4xl mb-3"></i>
+      <p class="text-lg">No se encontraron estudiantes</p>
+      <p class="text-sm">Intenta con otro término de búsqueda</p>
+    </div>
+    </div>
+    <!-- Panel de detalles (se muestra cuando se selecciona un estudiante) -->
+<div x-show="selectedStudent" 
+     x-cloak
+     @click.away="selectedStudent = null"
+     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <!-- Header -->
+    <div class="bg-[#D41736] text-white p-6 rounded-t-lg flex justify-between items-center">
+      <div>
+        <h3 class="text-2xl font-bold" x-text="selectedStudent?.name"></h3>
+        <p class="text-sm opacity-90" x-text="selectedStudent?.studentId"></p>
+      </div>
+      <button @click="selectedStudent = null" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2">
+        <i class="fa-solid fa-times text-xl"></i>
+      </button>
+    </div>
+    
+    <!-- Body -->
+    <div class="p-6">
+      <!-- Información Personal -->
+      <div class="mb-6">
+        <h4 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+          <i class="fa-solid fa-user text-[#D41736] mr-2"></i>
+          Personal Information
+        </h4>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <p class="text-gray-600">Full Name</p>
+            <p class="font-semibold" x-text="`${selectedStudent?.firstName} ${selectedStudent?.middleName} ${selectedStudent?.lastName}`"></p>
+          </div>
+          <div>
+            <p class="text-gray-600">Phone</p>
+            <p class="font-semibold" x-text="selectedStudent?.phone"></p>
+          </div>
+          <div>
+            <p class="text-gray-600">Personal Email</p>
+            <p class="font-semibold" x-text="selectedStudent?.emailPersonal"></p>
+          </div>
+          <div>
+            <p class="text-gray-600">SDGKU Email</p>
+            <p class="font-semibold" x-text="selectedStudent?.emailSDGKU"></p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Información Académica -->
+      <div class="mb-6">
+        <h4 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+          <i class="fa-solid fa-graduation-cap text-[#D41736] mr-2"></i>
+          Academic Information
+        </h4>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <p class="text-gray-600">Program</p>
+            <p class="font-semibold" x-text="selectedStudent?.program"></p>
+          </div>
+          <div>
+            <p class="text-gray-600">Modality</p>
+            <p class="font-semibold" x-text="selectedStudent?.modality"></p>
+          </div>
+          <div>
+            <p class="text-gray-600">Cohort</p>
+            <p class="font-semibold" x-text="selectedStudent?.cohort"></p>
+          </div>
+          <div>
+            <p class="text-gray-600">Language</p>
+            <p class="font-semibold" x-text="selectedStudent?.language"></p>
+          </div>
+          <div>
+            <p class="text-gray-600">Status</p>
+            <span 
+              :class="selectedStudent?.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'" 
+              class="px-3 py-1 text-xs font-semibold rounded-full inline-block"
+              x-text="selectedStudent?.status">
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Progreso Académico -->
+      <div class="mb-6">
+        <h4 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+          <i class="fa-solid fa-chart-line text-[#D41736] mr-2"></i>
+          Academic Progress
+        </h4>
+        <div class="grid grid-cols-3 gap-4 text-sm">
+          <div class="bg-gray-50 p-3 rounded-lg">
+            <p class="text-gray-600 text-xs mb-1">Total Units</p>
+            <p class="text-2xl font-bold text-gray-800" x-text="selectedStudent?.totalUnits"></p>
+          </div>
+          <div class="bg-blue-50 p-3 rounded-lg">
+            <p class="text-gray-600 text-xs mb-1">Transferred Units</p>
+            <p class="text-2xl font-bold text-blue-600" x-text="selectedStudent?.transferredUnits"></p>
+          </div>
+          <div class="bg-green-50 p-3 rounded-lg">
+            <p class="text-gray-600 text-xs mb-1">Units Earned</p>
+            <p class="text-2xl font-bold text-green-600" x-text="selectedStudent?.unitsEarned"></p>
+          </div>
+        </div>
+
+        <!-- Dentro del modal, después de "Academic Progress" y antes de "Fechas" -->
+
+<!-- Calificaciones por Materia -->
+<div class="mb-6">
+  <h4 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+    <i class="fa-solid fa-clipboard-list text-[#D41736] mr-2"></i>
+    Subject Grades
+  </h4>
+  
+  <!-- GPA Display -->
+  <div class="bg-gradient-to-r from-[#D41736] to-[#A6192E] text-white p-4 rounded-lg mb-4">
+    <div class="flex justify-between items-center">
+      <div>
+        <p class="text-sm opacity-90">Current GPA</p>
+        <p class="text-3xl font-bold" x-text="getStudentGPA(selectedStudent?.id)"></p>
+      </div>
+      <i class="fa-solid fa-trophy text-5xl opacity-30"></i>
+    </div>
+  </div>
+  
+  <!-- Tabla de calificaciones -->
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700">Subject</th>
+          <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700">Units</th>
+          <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700">Grade</th>
+          <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700">Letter</th>
+          <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700">Status</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        <template x-for="subject in getStudentSubjectsWithGrades(selectedStudent?.id)" :key="subject.id">
+          <tr class="hover:bg-gray-50">
+            <td class="px-3 py-2 text-gray-900" x-text="subject.name"></td>
+            <td class="px-3 py-2 text-center text-gray-600" x-text="subject.units"></td>
+            <td class="px-3 py-2 text-center">
+              <span class="font-semibold" 
+                    :class="{
+                      'text-green-600': subject.grade >= 90,
+                      'text-blue-600': subject.grade >= 80 && subject.grade < 90,
+                      'text-yellow-600': subject.grade >= 70 && subject.grade < 80,
+                      'text-red-600': subject.grade < 70 && subject.grade !== null,
+                      'text-gray-400': subject.grade === null
+                    }"
+                    x-text="subject.grade !== null ? subject.grade : '-'">
+              </span>
+            </td>
+            <td class="px-3 py-2 text-center">
+              <span class="font-bold" 
+                    :class="{
+                      'text-green-600': subject.letter.startsWith('A'),
+                      'text-blue-600': subject.letter.startsWith('B'),
+                      'text-yellow-600': subject.letter.startsWith('C'),
+                      'text-orange-600': subject.letter.startsWith('D'),
+                      'text-red-600': subject.letter === 'F',
+                      'text-gray-400': subject.letter === '-' || subject.letter === 'IP'
+                    }"
+                    x-text="subject.letter">
+              </span>
+            </td>
+            <td class="px-3 py-2 text-center">
+              <span class="px-2 py-1 text-xs font-semibold rounded-full"
+                    :class="{
+                      'bg-green-100 text-green-800': subject.status === 'Completed',
+                      'bg-blue-100 text-blue-800': subject.status === 'In Progress',
+                      'bg-gray-100 text-gray-600': subject.status === 'Not Started'
+                    }"
+                    x-text="subject.status">
+              </span>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+</div>
+        
+        <!-- Barra de progreso -->
+        <div class="mt-4">
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-gray-600">Progress</span>
+            <span class="font-semibold" x-text="`${Math.round((selectedStudent?.unitsEarned / selectedStudent?.totalUnits) * 100)}%`"></span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-3">
+            <div 
+              class="bg-[#D41736] h-3 rounded-full transition-all duration-300"
+              :style="`width: ${(selectedStudent?.unitsEarned / selectedStudent?.totalUnits) * 100}%`">
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Fechas -->
+      <div>
+        <h4 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+          <i class="fa-solid fa-calendar text-[#D41736] mr-2"></i>
+          Important Dates
+        </h4>
+        <div class="grid grid-cols-3 gap-4 text-sm">
+          <div>
+            <p class="text-gray-600">Start Date</p>
+            <p class="font-semibold" x-text="selectedStudent?.startDate"></p>
+          </div>
+          <div>
+            <p class="text-gray-600">Scheduled Completion</p>
+            <p class="font-semibold" x-text="selectedStudent?.scheduledCompletion"></p>
+          </div>
+          <div>
+            <p class="text-gray-600">Graduation Date</p>
+            <p class="font-semibold" x-text="selectedStudent?.graduationDate"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
     <!--<button @click="verSeleccionados" class="mt-4 bg-[#D41736] text-white px-4 py-2 rounded">
   Ver Seleccionados
 </button>-->
+    </div>
   </main>
 </body>

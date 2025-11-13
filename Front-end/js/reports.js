@@ -1,6 +1,8 @@
 function reports() {
   return {
     activeReport: 'general',
+    searchQuery: '',
+    selectedStudent: null,
     opcionesGeneral: {
       totalAlumnos: false,
       listaAlumnos: false,
@@ -72,7 +74,21 @@ students: [
             graduationDate: 'TBD',
             progress: {} ,
             completedSubjects: [1, 2, 3], // Ya completó Mathematics, Science, History
-        requiredSubjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] // Necesita estas para Computer Science
+        requiredSubjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], // Necesita estas para Computer Science
+        grades: {
+    1: { grade: 95, letter: 'A', status: 'Completed' },
+    2: { grade: 88, letter: 'B+', status: 'Completed' },
+    3: { grade: 92, letter: 'A-', status: 'Completed' },
+    4: { grade: 85, letter: 'B', status: 'In Progress' },
+    5: { grade: null, letter: '-', status: 'Not Started' },
+    6: { grade: null, letter: '-', status: 'Not Started' },
+    7: { grade: null, letter: '-', status: 'Not Started' },
+    8: { grade: null, letter: '-', status: 'Not Started' },
+    9: { grade: null, letter: '-', status: 'Not Started' },
+    10: { grade: null, letter: '-', status: 'Not Started' },
+    11: { grade: null, letter: '-', status: 'Not Started' },
+    12: { grade: null, letter: '-', status: 'Not Started' }
+  }
           },
           { 
             id: 2, 
@@ -97,7 +113,21 @@ students: [
             graduationDate: 'TBD',
             progress: {},
             completedSubjects: [1, 10], // Mathematics, Economics
-        requiredSubjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] // Para Business 
+        requiredSubjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] ,// Para Business
+        grades: {
+    1: { grade: 95, letter: 'A', status: 'Completed' },
+    2: { grade: 88, letter: '-', status: 'In Progress' },
+    3: { grade: 92, letter: '-', status: 'Completed' },
+    4: { grade: 85, letter: '-', status: 'In Progress' },
+    5: { grade: null, letter: '-', status: 'Not Started' },
+    6: { grade: null, letter: '-', status: 'Not Started' },
+    7: { grade: null, letter: '-', status: 'Not Started' },
+    8: { grade: null, letter: '-', status: 'Not Started' },
+    9: { grade: null, letter: '-', status: 'Not Started' },
+    10: { grade: null, letter: 'B+', status: 'Completed' },
+    11: { grade: null, letter: '-', status: 'Not Started' },
+    12: { grade: null, letter: '-', status: 'Not Started' }
+  } 
           },
           { 
             id: 3, 
@@ -122,7 +152,22 @@ students: [
             graduationDate: 'TBD',
             progress: {},
             completedSubjects: [1, 2, 6, 9], // Mathematics, Science, Biology, Computer Science
-        requiredSubjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] // Para Data Science 
+        requiredSubjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], // Para Data Science
+        grades: {
+    1: { grade: 95, letter: 'A', status: 'Completed' },
+    2: { grade: 88, letter: 'B-', status: 'Completed' },
+    3: { grade: 92, letter: 'B+', status: 'Completed' },
+    4: { grade: null, letter: '-', status: 'In Progress' },
+    5: { grade: null, letter: '-', status: 'Not Started' },
+    6: { grade: 85, letter: 'B-', status: 'Completed' },
+    7: { grade: null, letter: '-', status: 'Not Started' },
+    8: { grade: null, letter: '-', status: 'Not Started' },
+    9: { grade: 90, letter: 'B+', status: 'Completed' },
+    10: { grade: 91, letter: 'B+', status: 'Completed' },
+    11: { grade: null, letter: '-', status: 'Not Started' },
+    12: { grade: null, letter: '-', status: 'Not Started' }
+  } 
+
           },
           { 
             id: 4, 
@@ -147,7 +192,21 @@ students: [
             graduationDate: 'TBD',
             progress: {},
             completedSubjects: [1, 11], // Mathematics, Psychology
-        requiredSubjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] // Para Psychology 
+        requiredSubjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], // Para Psychology
+        grades: {
+  1: { grade: 90, letter: 'A-', status: 'Completed' },
+  2: { grade: 85, letter: 'B', status: 'In Progress' },
+  3: { grade: null, letter: '-', status: 'Not Started' },
+  4: { grade: null, letter: '-', status: 'Not Started' },
+  5: { grade: null, letter: '-', status: 'Not Started' },
+  6: { grade: null, letter: '-', status: 'Not Started' },
+  7: { grade: null, letter: '-', status: 'Not Started' },
+  8: { grade: null, letter: '-', status: 'Not Started' },
+  9: { grade: null, letter: '-', status: 'Not Started' },
+  10: { grade: null, letter: '-', status: 'Not Started' },
+  11: { grade: 93, letter: 'A', status: 'Completed' },
+  12: { grade: null, letter: '-', status: 'Not Started' }
+} 
           },
           { 
             id: 5, 
@@ -172,7 +231,21 @@ students: [
             graduationDate: 'TBD',
             progress: {},
             completedSubjects: [1, 9], // Mathematics, Computer Science
-        requiredSubjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] // Para IT 
+        requiredSubjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], // Para IT
+        grades: {
+  1: { grade: 87, letter: 'B+', status: 'Completed' },
+  2: { grade: 80, letter: 'B-', status: 'In Progress' },
+  3: { grade: null, letter: '-', status: 'Not Started' },
+  4: { grade: null, letter: '-', status: 'Not Started' },
+  5: { grade: null, letter: '-', status: 'Not Started' },
+  6: { grade: null, letter: '-', status: 'Not Started' },
+  7: { grade: null, letter: '-', status: 'Not Started' },
+  8: { grade: null, letter: '-', status: 'Not Started' },
+  9: { grade: 91, letter: 'A-', status: 'Completed' },
+  10: { grade: null, letter: '-', status: 'Not Started' },
+  11: { grade: null, letter: '-', status: 'Not Started' },
+  12: { grade: null, letter: '-', status: 'Not Started' }
+} 
           },
           { 
             id: 6, 
@@ -197,7 +270,22 @@ students: [
             graduationDate: 'TBD',
             progress: {},
             completedSubjects: [1, 2, 6, 7], // Mathematics, Science, Biology, Chemistry
-        requiredSubjects: [1, 2, 3, 4, 5, 6, 7] // Para Nursing 
+        requiredSubjects: [1, 2, 3, 4, 5, 6, 7], // Para Nursing 
+        // Estudiante 6 - Jessica Martinez (Nursing)
+grades: {
+  1: { grade: 94, letter: 'A', status: 'Completed' },
+  2: { grade: 89, letter: 'B+', status: 'Completed' },
+  3: { grade: null, letter: '-', status: 'Not Started' },
+  4: { grade: null, letter: '-', status: 'Not Started' },
+  5: { grade: null, letter: '-', status: 'Not Started' },
+  6: { grade: 92, letter: 'A-', status: 'Completed' },
+  7: { grade: 88, letter: 'B+', status: 'Completed' },
+  8: { grade: null, letter: '-', status: 'Not Started' },
+  9: { grade: null, letter: '-', status: 'Not Started' },
+  10: { grade: null, letter: '-', status: 'Not Started' },
+  11: { grade: null, letter: '-', status: 'Not Started' },
+  12: { grade: null, letter: '-', status: 'Not Started' }
+}
           },
           { 
             id: 7, 
@@ -222,7 +310,22 @@ students: [
             graduationDate: 'TBD',
             progress: {},
             completedSubjects: [3, 4, 1], // History, Art, Literature
-        requiredSubjects: [1, 2, 3, 4, 5, 6, 7] // Para Arts 
+        requiredSubjects: [1, 2, 3, 4, 5, 6, 7], // Para Arts 
+        grades: {
+  1: { grade: 75, letter: 'C', status: 'Completed' },
+  2: { grade: null, letter: '-', status: 'Not Started' },
+  3: { grade: 82, letter: 'B-', status: 'Completed' },
+  4: { grade: 88, letter: 'B+', status: 'Completed' },
+  5: { grade: null, letter: '-', status: 'Not Started' },
+  6: { grade: null, letter: '-', status: 'Not Started' },
+  7: { grade: null, letter: '-', status: 'Not Started' },
+  8: { grade: null, letter: '-', status: 'Not Started' },
+  9: { grade: null, letter: '-', status: 'Not Started' },
+  10: { grade: null, letter: '-', status: 'Not Started' },
+  11: { grade: null, letter: '-', status: 'Not Started' },
+  12: { grade: null, letter: '-', status: 'Not Started' }
+}
+
           },
           { 
             id: 8, 
@@ -247,7 +350,21 @@ students: [
             graduationDate: 'TBD',
             progress: {},
             completedSubjects: [1, 2, 3], // Mathematics, Economics, Psychology
-        requiredSubjects: [1, 2, 3, 4, 5, 6, 7] // Para Marketing 
+        requiredSubjects: [1, 2, 3, 4, 5, 6, 7], // Para Marketing 
+        grades: {
+  1: { grade: 96, letter: 'A', status: 'Completed' },
+  2: { grade: 91, letter: 'A-', status: 'Completed' },
+  3: { grade: 89, letter: 'B+', status: 'Completed' },
+  4: { grade: null, letter: '-', status: 'Not Started' },
+  5: { grade: null, letter: '-', status: 'Not Started' },
+  6: { grade: null, letter: '-', status: 'Not Started' },
+  7: { grade: null, letter: '-', status: 'Not Started' },
+  8: { grade: null, letter: '-', status: 'Not Started' },
+  9: { grade: null, letter: '-', status: 'Not Started' },
+  10: { grade: null, letter: '-', status: 'Not Started' },
+  11: { grade: null, letter: '-', status: 'Not Started' },
+  12: { grade: null, letter: '-', status: 'Not Started' }
+}
           },
           { 
             id: 9, 
@@ -272,7 +389,21 @@ students: [
             graduationDate: 'TBD',
             progress: {},
             completedSubjects: [1, 2, 7], // Mathematics, Science, Chemistry
-        requiredSubjects: [1, 2, 3, 4, 5, 6, 7] // Para Engineering 
+        requiredSubjects: [1, 2, 3, 4, 5, 6, 7], // Para Engineering
+        grades: {
+  1: { grade: 98, letter: 'A', status: 'Completed' },
+  2: { grade: 94, letter: 'A', status: 'Completed' },
+  3: { grade: null, letter: '-', status: 'Not Started' },
+  4: { grade: null, letter: '-', status: 'Not Started' },
+  5: { grade: null, letter: '-', status: 'Not Started' },
+  6: { grade: null, letter: '-', status: 'Not Started' },
+  7: { grade: 93, letter: 'A', status: 'Completed' },
+  8: { grade: null, letter: '-', status: 'Not Started' },
+  9: { grade: null, letter: '-', status: 'Not Started' },
+  10: { grade: null, letter: '-', status: 'Not Started' },
+  11: { grade: null, letter: '-', status: 'Not Started' },
+  12: { grade: null, letter: '-', status: 'Not Started' }
+} 
           },
           { 
             id: 10, 
@@ -297,7 +428,21 @@ students: [
             graduationDate: 'TBD',
             progress: {},
             completedSubjects: [2, 6], // Science, Biology
-        requiredSubjects: [1, 2, 3, 4, 5, 6, 7] // Para Healthcare 
+        requiredSubjects: [1, 2, 3, 4, 5, 6, 7], // Para Healthcare 
+        grades: {
+  1: { grade: null, letter: '-', status: 'Not Started' },
+  2: { grade: 86, letter: 'B', status: 'Completed' },
+  3: { grade: null, letter: '-', status: 'Not Started' },
+  4: { grade: null, letter: '-', status: 'Not Started' },
+  5: { grade: null, letter: '-', status: 'Not Started' },
+  6: { grade: 90, letter: 'A-', status: 'Completed' },
+  7: { grade: 84, letter: 'B', status: 'In Progress' },
+  8: { grade: null, letter: '-', status: 'Not Started' },
+  9: { grade: null, letter: '-', status: 'Not Started' },
+  10: { grade: null, letter: '-', status: 'Not Started' },
+  11: { grade: null, letter: '-', status: 'Not Started' },
+  12: { grade: null, letter: '-', status: 'Not Started' }
+}
           }
         ],
 sessionData: [
@@ -432,6 +577,79 @@ getFormattedRecommendations() {
     });
     
     return result.sort((a, b) => b.studentCount - a.studentCount);
+},
+// Computed property para filtrar estudiantes
+    // Computed property para filtrar estudiantes
+    get filteredStudents() {
+      if (!this.searchQuery || this.searchQuery.trim() === '') {
+        return this.students;
+      }
+      
+      const query = this.searchQuery.toLowerCase().trim();
+      
+      return this.students.filter(student => {
+        return (
+          student.name.toLowerCase().includes(query) ||
+          student.studentId.toLowerCase().includes(query) ||
+          student.program.toLowerCase().includes(query) ||
+          student.emailPersonal.toLowerCase().includes(query) || // ⭐ CORREGIDO
+          student.emailSDGKU.toLowerCase().includes(query) // ⭐ CORREGIDO
+        );
+      });
+    },
+    
+    filterStudents() {
+      console.log('Buscando:', this.searchQuery);
+    },
+
+    // Agregar este método en tu función reports()
+getStudentGPA(studentId) {
+  const student = this.students.find(s => s.id === studentId);
+  if (!student || !student.grades) return 'N/A';
+  
+  const completedGrades = Object.values(student.grades)
+    .filter(g => g.status === 'Completed' && g.grade !== null);
+  
+  if (completedGrades.length === 0) return 'N/A';
+  
+  const sum = completedGrades.reduce((acc, g) => acc + g.grade, 0);
+  return (sum / completedGrades.length).toFixed(2);
+},
+
+// Método para obtener letra de calificación según el número
+getLetterGrade(numericGrade) {
+  if (numericGrade >= 93) return 'A';
+  if (numericGrade >= 90) return 'A-';
+  if (numericGrade >= 87) return 'B+';
+  if (numericGrade >= 83) return 'B';
+  if (numericGrade >= 80) return 'B-';
+  if (numericGrade >= 77) return 'C+';
+  if (numericGrade >= 73) return 'C';
+  if (numericGrade >= 70) return 'C-';
+  if (numericGrade >= 67) return 'D+';
+  if (numericGrade >= 63) return 'D';
+  if (numericGrade >= 60) return 'D-';
+  return 'F';
+},
+
+// Obtener materias con calificaciones del estudiante
+getStudentSubjectsWithGrades(studentId) {
+  const student = this.students.find(s => s.id === studentId);
+  if (!student) return [];
+  
+  return student.requiredSubjects.map(subjectId => {
+    const subject = this.subjects.find(s => s.id === subjectId);
+    const gradeInfo = student.grades ? student.grades[subjectId] : null;
+    
+    return {
+      id: subjectId,
+      name: subject ? subject.name : 'Unknown',
+      units: subject ? subject.units : 0,
+      grade: gradeInfo?.grade || null,
+      letter: gradeInfo?.letter || '-',
+      status: gradeInfo?.status || 'Not Started'
+    };
+  });
 }
 
   };
