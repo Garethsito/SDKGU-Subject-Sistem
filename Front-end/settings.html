@@ -143,11 +143,1239 @@
   </aside>
 
   <!-- Content -->
-   <main
-    :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'"
-    class="flex-1 p-6 bg-gray-100 min-h-screen pt-20">
-    <div class="mb-6">
-      <h1 class="text-3xl font-bold text-gray-800 mb-2">settings</h1>
-      <p class="text-gray-600">Overview of academic sessions and student enrollment</p>
+<main
+  :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'"
+  class="flex-1 p-6 bg-gray-100 min-h-screen pt-20"
+  x-data="settingsData()">
+  
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-800 mb-2">Settings</h1>
+    <p class="text-gray-600">Manage system settings, users, and view activity logs</p>
+  </div>
+
+  <!-- Tabs de navegación -->
+  <div class="bg-white rounded-lg shadow mb-6">
+    <div class="border-b border-gray-200">
+      <nav class="flex -mb-px overflow-x-auto">
+        <!-- Activity Log Tab -->
+        <button 
+          @click="activeTab = 'activity'"
+          :class="activeTab === 'activity' ? 'border-[#D41736] text-[#D41736]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+          class="py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+          <i class="fa-solid fa-clock-rotate-left mr-2"></i>
+          Activity Log
+        </button>
+
+        <!-- Teachers Tab -->
+        <button 
+          @click="activeTab = 'teachers'"
+          :class="activeTab === 'teachers' ? 'border-[#D41736] text-[#D41736]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+          class="py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+          <i class="fa-solid fa-chalkboard-user mr-2"></i>
+          Teachers
+        </button>
+        
+        <!-- Programs Tab -->
+        <button 
+          @click="activeTab = 'programs'"
+          :class="activeTab === 'programs' ? 'border-[#D41736] text-[#D41736]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+          class="py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+          <i class="fa-solid fa-graduation-cap mr-2"></i>
+          Programs
+        </button>
+        
+        <!-- Subjects Tab -->
+        <button 
+          @click="activeTab = 'subjects'"
+          :class="activeTab === 'subjects' ? 'border-[#D41736] text-[#D41736]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+          class="py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+          <i class="fa-solid fa-book mr-2"></i>
+          Subjects
+        </button>
+        
+        <!-- Import Data Tab -->
+        <button 
+          @click="activeTab = 'import'"
+          :class="activeTab === 'import' ? 'border-[#D41736] text-[#D41736]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+          class="py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+          <i class="fa-solid fa-file-excel mr-2"></i>
+          Import Data
+        </button>
+      </nav>
     </div>
+  </div>
+
+  <!-- ⭐ ACTIVITY LOG TAB -->
+<div x-show="activeTab === 'activity'" class="space-y-6">
+  
+  <!-- Estadísticas rápidas -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm text-gray-600">Total Activities</p>
+          <p class="text-2xl font-bold text-gray-800" x-text="activityLog.length"></p>
+        </div>
+        <i class="fa-solid fa-list-check text-3xl text-blue-500"></i>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm text-gray-600">Today's Logins</p>
+          <p class="text-2xl font-bold text-gray-800" x-text="getTodayLogins()"></p>
+        </div>
+        <i class="fa-solid fa-right-to-bracket text-3xl text-green-500"></i>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm text-gray-600">Active Users</p>
+          <p class="text-2xl font-bold text-gray-800" x-text="getActiveUsers()"></p>
+        </div>
+        <i class="fa-solid fa-users text-3xl text-purple-500"></i>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm text-gray-600">Recent Changes</p>
+          <p class="text-2xl font-bold text-gray-800" x-text="getRecentChanges()"></p>
+        </div>
+        <i class="fa-solid fa-clock text-3xl text-orange-500"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⭐ NUEVO: Formulario para agregar administrador -->
+  <div class="bg-white rounded-lg shadow p-6">
+    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+      <i class="fa-solid fa-user-plus text-[#D41736] mr-2"></i>
+      Add New Administrator
+    </h2>
+    
+    <form @submit.prevent="addAdministrator()" class="space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">First Name *</label>
+          <input type="text" x-model="newAdmin.firstName" required
+                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Last Name *</label>
+          <input type="text" x-model="newAdmin.lastName" required
+                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Email *</label>
+          <input type="email" x-model="newAdmin.email" required
+                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
+          <input type="tel" x-model="newAdmin.phone"
+                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Role *</label>
+          <select x-model="newAdmin.role" required
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            <option value="">Select Role</option>
+            <option value="Super Admin">Super Admin</option>
+            <option value="Admin">Admin</option>
+            <option value="Manager">Manager</option>
+          </select>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+          <select x-model="newAdmin.status"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="flex gap-3 pt-4">
+        <button type="submit" class="bg-[#D41736] hover:bg-[#A6192E] text-white px-6 py-2 rounded-lg transition-colors font-semibold">
+          <i class="fa-solid fa-plus mr-2"></i>Add Administrator
+        </button>
+        <button type="button" @click="resetAdminForm()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors">
+          <i class="fa-solid fa-undo mr-2"></i>Clear
+        </button>
+      </div>
+    </form>
+  </div>
+  
+  <!-- ⭐ NUEVO: Lista de administradores -->
+  <div class="bg-white rounded-lg shadow p-6">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">Current Administrators</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Phone</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Role</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          <template x-for="admin in administrators" :key="admin.id">
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-3 text-sm text-gray-900" x-text="`${admin.firstName} ${admin.lastName}`"></td>
+              <td class="px-4 py-3 text-sm text-gray-600" x-text="admin.email"></td>
+              <td class="px-4 py-3 text-sm text-gray-600" x-text="admin.phone"></td>
+              <td class="px-4 py-3 text-sm text-gray-600" x-text="admin.role"></td>
+              <td class="px-4 py-3">
+                <span :class="admin.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                      class="px-2 py-1 text-xs font-semibold rounded-full" x-text="admin.status"></span>
+              </td>
+              <td class="px-4 py-3 text-sm">
+                <button @click="deleteAdmin(admin.id)" class="text-red-600 hover:text-red-800">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="bg-white rounded-lg shadow p-6">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">Filters</h3>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-2">User</label>
+        <select x-model="activityFilters.user" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+          <option value="">All Users</option>
+          <option value="John Doe">John Doe</option>
+          <option value="Jane Smith">Jane Smith</option>
+          <option value="Robert Johnson">Robert Johnson</option>
+        </select>
+      </div>
+      
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-2">Action Type</label>
+        <select x-model="activityFilters.action" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+          <option value="">All Actions</option>
+          <option value="Login">Login</option>
+          <option value="Logout">Logout</option>
+          <option value="Grade Update">Grade Update</option>
+          <option value="Session Assignment">Session Assignment</option>
+          <option value="Teacher Assignment">Teacher Assignment</option>
+          <option value="Student Added">Student Added</option>
+          <option value="Data Import">Data Import</option>
+        </select>
+      </div>
+      
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-2">Date From</label>
+        <input type="date" x-model="activityFilters.dateFrom" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+      </div>
+      
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-2">Date To</label>
+        <input type="date" x-model="activityFilters.dateTo" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+      </div>
+    </div>
+    
+    <div class="flex gap-3 mt-4">
+      <button @click="applyActivityFilters()" class="bg-[#D41736] hover:bg-[#A6192E] text-white px-6 py-2 rounded-lg transition-colors">
+        <i class="fa-solid fa-filter mr-2"></i>Apply Filters
+      </button>
+      <button @click="clearActivityFilters()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors">
+        <i class="fa-solid fa-times mr-2"></i>Clear
+      </button>
+      <button @click="exportActivityLog()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors ml-auto">
+        <i class="fa-solid fa-download mr-2"></i>Export Log
+      </button>
+    </div>
+  </div>
+
+  <!-- Timeline de actividades -->
+  <div class="bg-white rounded-lg shadow p-6">
+    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+      <i class="fa-solid fa-timeline text-[#D41736] mr-2"></i>
+      Activity Timeline
+    </h3>
+    
+    <div class="space-y-4">
+      <template x-for="(activity, index) in filteredActivityLog" :key="activity.id">
+        <div class="relative pl-8 pb-6 border-l-2 border-gray-200 last:border-l-0 last:pb-0">
+          <!-- Icono de tiempo -->
+          <div class="absolute left-0 top-0 -translate-x-1/2 w-8 h-8 rounded-full flex items-center justify-center"
+               :class="{
+                 'bg-green-100': activity.type === 'Login',
+                 'bg-red-100': activity.type === 'Logout',
+                 'bg-blue-100': activity.type === 'Grade Update',
+                 'bg-purple-100': activity.type === 'Session Assignment',
+                 'bg-orange-100': activity.type === 'Teacher Assignment',
+                 'bg-yellow-100': activity.type === 'Student Added',
+                 'bg-indigo-100': activity.type === 'Data Import'
+               }">
+            <i class="fa-solid"
+               :class="{
+                 'fa-right-to-bracket text-green-600': activity.type === 'Login',
+                 'fa-right-from-bracket text-red-600': activity.type === 'Logout',
+                 'fa-pen-to-square text-blue-600': activity.type === 'Grade Update',
+                 'fa-calendar-check text-purple-600': activity.type === 'Session Assignment',
+                 'fa-user-tie text-orange-600': activity.type === 'Teacher Assignment',
+                 'fa-user-plus text-yellow-600': activity.type === 'Student Added',
+                 'fa-file-import text-indigo-600': activity.type === 'Data Import'
+               }"></i>
+          </div>
+          
+          <!-- Contenido de la actividad -->
+          <div class="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-semibold text-gray-800" x-text="activity.user"></span>
+                  <span class="px-2 py-1 text-xs font-semibold rounded-full"
+                        :class="{
+                          'bg-green-100 text-green-800': activity.type === 'Login',
+                          'bg-red-100 text-red-800': activity.type === 'Logout',
+                          'bg-blue-100 text-blue-800': activity.type === 'Grade Update',
+                          'bg-purple-100 text-purple-800': activity.type === 'Session Assignment',
+                          'bg-orange-100 text-orange-800': activity.type === 'Teacher Assignment',
+                          'bg-yellow-100 text-yellow-800': activity.type === 'Student Added',
+                          'bg-indigo-100 text-indigo-800': activity.type === 'Data Import'
+                        }"
+                        x-text="activity.type">
+                  </span>
+                </div>
+                <p class="text-sm text-gray-700" x-text="activity.description"></p>
+                
+                <!-- Detalles adicionales si existen -->
+                <div x-show="activity.details" class="mt-2 text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
+                  <template x-for="(value, key) in activity.details" :key="key">
+                    <div class="flex gap-2">
+                      <span class="font-semibold" x-text="key + ':'"></span>
+                      <span x-text="value"></span>
+                    </div>
+                  </template>
+                </div>
+              </div>
+              
+              <div class="text-right">
+                <p class="text-xs text-gray-500" x-text="activity.date"></p>
+                <p class="text-xs font-semibold text-gray-700" x-text="activity.time"></p>
+                <p class="text-xs text-gray-500 mt-1" x-text="activity.ipAddress"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+      
+      <!-- Mensaje cuando no hay actividades -->
+      <div x-show="filteredActivityLog.length === 0" class="text-center py-12 text-gray-500">
+        <i class="fa-solid fa-inbox text-6xl mb-4"></i>
+        <p class="text-lg font-semibold">No activities found</p>
+        <p class="text-sm">Try adjusting your filters</p>
+      </div>
+    </div>
+    
+    <!-- Paginación -->
+    <div class="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
+      <p class="text-sm text-gray-600">
+        Showing <span class="font-semibold" x-text="Math.min(currentPage * itemsPerPage, filteredActivityLog.length)"></span> 
+        of <span class="font-semibold" x-text="filteredActivityLog.length"></span> activities
+      </p>
+      <div class="flex gap-2">
+        <button @click="currentPage > 1 && currentPage--" 
+                :disabled="currentPage === 1"
+                :class="currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'"
+                class="px-4 py-2 border border-gray-300 rounded-lg transition-colors">
+          Previous
+        </button>
+        <button @click="currentPage < Math.ceil(filteredActivityLog.length / itemsPerPage) && currentPage++" 
+                :disabled="currentPage === Math.ceil(filteredActivityLog.length / itemsPerPage)"
+                :class="currentPage === Math.ceil(filteredActivityLog.length / itemsPerPage) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'"
+                class="px-4 py-2 border border-gray-300 rounded-lg transition-colors">
+          Next
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <!-- TEACHERS TAB -->
+  <div x-show="activeTab === 'teachers'" class="space-y-6">
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+        <i class="fa-solid fa-user-plus text-[#D41736] mr-2"></i>
+        Add New Teacher
+      </h2>
+      
+      <form @submit.prevent="addTeacher()" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">First Name *</label>
+            <input type="text" x-model="newTeacher.firstName" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Last Name *</label>
+            <input type="text" x-model="newTeacher.lastName" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Email *</label>
+            <input type="email" x-model="newTeacher.email" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
+            <input type="tel" x-model="newTeacher.phone"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Department *</label>
+            <input type="text" x-model="newTeacher.department" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Specialization</label>
+            <input type="text" x-model="newTeacher.specialization"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+          </div>
+        </div>
+        
+        <div class="flex gap-3 pt-4">
+          <button type="submit" class="bg-[#D41736] hover:bg-[#A6192E] text-white px-6 py-2 rounded-lg transition-colors font-semibold">
+            <i class="fa-solid fa-plus mr-2"></i>Add Teacher
+          </button>
+          <button type="button" @click="resetTeacherForm()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors">
+            <i class="fa-solid fa-undo mr-2"></i>Clear
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    <!-- Lista de profesores -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-lg font-bold text-gray-800 mb-4">Current Teachers</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Phone</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Department</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Specialization</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            <template x-for="teacher in teachers" :key="teacher.id">
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 text-sm text-gray-900" x-text="`${teacher.firstName} ${teacher.lastName}`"></td>
+                <td class="px-4 py-3 text-sm text-gray-600" x-text="teacher.email"></td>
+                <td class="px-4 py-3 text-sm text-gray-600" x-text="teacher.phone"></td>
+                <td class="px-4 py-3 text-sm text-gray-600" x-text="teacher.department"></td>
+                <td class="px-4 py-3 text-sm text-gray-600" x-text="teacher.specialization"></td>
+                <td class="px-4 py-3 text-sm">
+                  <button @click="deleteTeacher(teacher.id)" class="text-red-600 hover:text-red-800">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROGRAMS TAB -->
+  <div x-show="activeTab === 'programs'" class="space-y-6">
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+        <i class="fa-solid fa-plus text-[#D41736] mr-2"></i>
+        Add New Program
+      </h2>
+      
+      <form @submit.prevent="addProgram()" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Program Name *</label>
+            <input type="text" x-model="newProgram.name" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Program Type *</label>
+            <select x-model="newProgram.type" required
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+              <option value="">Select Type</option>
+              <option value="Bachelor's">Bachelor's</option>
+              <option value="Associate">Associate</option>
+              <option value="Master's">Master's</option>
+              <option value="Doctorate">Doctorate</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Total Units *</label>
+            <input type="number" x-model="newProgram.totalUnits" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Duration (Years) *</label>
+            <input type="number" step="0.5" x-model="newProgram.duration" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+          </div>
+          
+          <div class="col-span-2">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+            <textarea x-model="newProgram.description" rows="3"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent"></textarea>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 pt-4">
+          <button type="submit" class="bg-[#D41736] hover:bg-[#A6192E] text-white px-6 py-2 rounded-lg transition-colors font-semibold">
+            <i class="fa-solid fa-plus mr-2"></i>Add Program
+          </button>
+          <button type="button" @click="resetProgramForm()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors">
+            <i class="fa-solid fa-undo mr-2"></i>Clear
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    <!-- Lista de programas -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-lg font-bold text-gray-800 mb-4">Current Programs</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <template x-for="program in programs" :key="program.id">
+          <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start mb-2">
+              <h4 class="font-bold text-gray-800" x-text="program.name"></h4>
+              <button @click="deleteProgram(program.id)" class="text-red-600 hover:text-red-800">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+            <p class="text-sm text-gray-600 mb-2" x-text="program.type"></p>
+            <div class="flex gap-4 text-sm text-gray-500">
+              <span><i class="fa-solid fa-book mr-1"></i><span x-text="program.totalUnits"></span> units</span>
+              <span><i class="fa-solid fa-clock mr-1"></i><span x-text="program.duration"></span> years</span>
+            </div>
+            <p class="text-sm text-gray-600 mt-2" x-text="program.description"></p>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBJECTS TAB -->
+  <div x-show="activeTab === 'subjects'" class="space-y-6">
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+        <i class="fa-solid fa-plus text-[#D41736] mr-2"></i>
+        Add New Subject
+      </h2>
+      
+      <form @submit.prevent="addSubject()" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Subject Name *</label>
+            <input type="text" x-model="newSubject.name" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Subject Code *</label>
+            <input type="text" x-model="newSubject.code" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Units *</label>
+            <input type="number" x-model="newSubject.units" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Department</label>
+            <input type="text" x-model="newSubject.department"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+          </div>
+          
+          <div class="col-span-2">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+            <textarea x-model="newSubject.description" rows="3"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent"></textarea>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 pt-4">
+          <button type="submit" class="bg-[#D41736] hover:bg-[#A6192E] text-white px-6 py-2 rounded-lg transition-colors font-semibold">
+            <i class="fa-solid fa-plus mr-2"></i>Add Subject
+          </button>
+          <button type="button" @click="resetSubjectForm()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors">
+            <i class="fa-solid fa-undo mr-2"></i>Clear
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    <!-- Lista de materias -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-lg font-bold text-gray-800 mb-4">Current Subjects</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Code</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Units</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Department</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            <template x-for="subject in subjects" :key="subject.id">
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 text-sm font-semibold text-gray-900" x-text="subject.code"></td>
+                <td class="px-4 py-3 text-sm text-gray-900" x-text="subject.name"></td>
+                <td class="px-4 py-3 text-sm text-gray-600" x-text="subject.units"></td>
+                <td class="px-4 py-3 text-sm text-gray-600" x-text="subject.department"></td>
+                <td class="px-4 py-3 text-sm">
+                  <button @click="deleteSubject(subject.id)" class="text-red-600 hover:text-red-800">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- IMPORT DATA TAB -->
+  <div x-show="activeTab === 'import'" class="space-y-6">
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+        <i class="fa-solid fa-file-excel text-[#D41736] mr-2"></i>
+        Import Data from Excel
+      </h2>
+      
+      <div class="space-y-6">
+        <!-- Upload area -->
+        <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#D41736] transition-colors">
+          <input type="file" id="fileUpload" @change="handleFileUpload($event)" accept=".xlsx,.xls" class="hidden">
+          <label for="fileUpload" class="cursor-pointer">
+            <i class="fa-solid fa-cloud-arrow-up text-6xl text-gray-400 mb-4"></i>
+            <p class="text-lg font-semibold text-gray-700 mb-2">Click to upload or drag and drop</p>
+            <p class="text-sm text-gray-500">Excel files only (.xlsx, .xls)</p>
+          </label>
+        </div>
+        
+        <!-- Archivo seleccionado -->
+        <div x-show="selectedFile" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <i class="fa-solid fa-file-excel text-3xl text-green-600"></i>
+              <div>
+                <p class="font-semibold text-gray-800" x-text="selectedFile?.name"></p>
+                <p class="text-sm text-gray-600" x-text="formatFileSize(selectedFile?.size)"></p>
+              </div>
+            </div>
+            <button @click="clearFile()" class="text-red-600 hover:text-red-800">
+              <i class="fa-solid fa-times text-xl"></i>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Tipo de datos a importar -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Data Type *</label>
+          <select x-model="importType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            <option value="">Select data type to import</option>
+            <option value="students">Students</option>
+            <option value="teachers">Teachers</option>
+            <option value="subjects">Subjects</option>
+            <option value="sessions">Sessions</option>
+          </select>
+        </div>
+        
+        <!-- Botones -->
+        <div class="flex gap-3">
+          <button @click="processImport()" :disabled="!selectedFile || !importType"
+                  :class="!selectedFile || !importType ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#A6192E]'"
+                  class="bg-[#D41736] text-white px-6 py-3 rounded-lg transition-colors font-semibold">
+            <i class="fa-solid fa-upload mr-2"></i>Import Data
+          </button>
+          <button @click="downloadTemplate()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-colors">
+           <i class="fa-solid fa-download mr-2"></i>Download Template
+          </button>
+        </div>
+        
+        <!-- Instrucciones -->
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <h4 class="font-semibold text-gray-800 mb-2 flex items-center">
+            <i class="fa-solid fa-circle-info text-yellow-600 mr-2"></i>
+            Important Instructions
+          </h4>
+          <ul class="text-sm text-gray-700 space-y-1 list-disc list-inside">
+            <li>Download the template file before importing data</li>
+            <li>Do not modify column headers in the template</li>
+            <li>All required fields must be filled</li>
+            <li>Maximum file size: 10MB</li>
+            <li>Supported formats: .xlsx, .xls</li>
+          </ul>
+        </div>
+        
+        <!-- Resultado de importación -->
+        <div x-show="importResult" class="border rounded-lg p-4"
+             :class="importResult?.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'">
+          <div class="flex items-start gap-3">
+            <i class="fa-solid text-2xl mt-1" 
+               :class="importResult?.success ? 'fa-circle-check text-green-600' : 'fa-circle-xmark text-red-600'"></i>
+            <div>
+              <h4 class="font-semibold mb-1" 
+                  :class="importResult?.success ? 'text-green-800' : 'text-red-800'" 
+                  x-text="importResult?.message"></h4>
+              <p class="text-sm" 
+                 :class="importResult?.success ? 'text-green-700' : 'text-red-700'" 
+                 x-text="importResult?.details"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Historial de importaciones -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-lg font-bold text-gray-800 mb-4">Import History</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">File Name</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Type</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Records</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            <template x-for="history in importHistory" :key="history.id">
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 text-sm text-gray-900" x-text="history.date"></td>
+                <td class="px-4 py-3 text-sm text-gray-600" x-text="history.fileName"></td>
+                <td class="px-4 py-3 text-sm text-gray-600" x-text="history.type"></td>
+                <td class="px-4 py-3 text-sm text-gray-600" x-text="history.records"></td>
+                <td class="px-4 py-3">
+                  <span :class="history.status === 'Success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                        class="px-2 py-1 text-xs font-semibold rounded-full" x-text="history.status"></span>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+function settingsData() {
+  return {
+    activeTab: 'activity', // Tab por defecto
+    
+    // ⭐ DATOS PARA ADMINISTRATORS (AHORA EN ACTIVITY LOG)
+    newAdmin: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      role: '',
+      status: 'Active'
+    },
+    administrators: [
+      { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@sdgku.edu', phone: '+1 (619) 555-0100', role: 'Super Admin', status: 'Active' },
+      { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@sdgku.edu', phone: '+1 (619) 555-0101', role: 'Admin', status: 'Active' }
+    ],
+    
+    // ⭐ DATOS PARA ACTIVITY LOG
+    activityLog: [
+      {
+        id: 1,
+        user: 'John Doe',
+        type: 'Login',
+        description: 'Logged into the system',
+        date: '2025-01-15',
+        time: '09:15 AM',
+        ipAddress: '192.168.1.100',
+        details: null
+      },
+      {
+        id: 2,
+        user: 'John Doe',
+        type: 'Grade Update',
+        description: 'Updated grades for Mathematics course',
+        date: '2025-01-15',
+        time: '09:30 AM',
+        ipAddress: '192.168.1.100',
+        details: {
+          'Course': 'Mathematics 101',
+          'Students Affected': '25',
+          'Session': 'Fall 2024'
+        }
+      },
+      {
+        id: 3,
+        user: 'Jane Smith',
+        type: 'Login',
+        description: 'Logged into the system',
+        date: '2025-01-15',
+        time: '10:00 AM',
+        ipAddress: '192.168.1.105',
+        details: null
+      },
+      {
+        id: 4,
+        user: 'Jane Smith',
+        type: 'Session Assignment',
+        description: 'Assigned Session 3 to Bachelor\'s program',
+        date: '2025-01-15',
+        time: '10:15 AM',
+        ipAddress: '192.168.1.105',
+        details: {
+          'Session': 'Session 3',
+          'Program': 'Bachelor\'s in Computer Science',
+          'Students': '35',
+          'Start Date': '2025-02-01'
+        }
+      },
+      {
+        id: 5,
+        user: 'John Doe',
+        type: 'Teacher Assignment',
+        description: 'Assigned Dr. Robert Johnson to Data Science course',
+        date: '2025-01-15',
+        time: '11:00 AM',
+        ipAddress: '192.168.1.100',
+        details: {
+          'Teacher': 'Dr. Robert Johnson',
+          'Course': 'Data Science 201',
+          'Session': 'Spring 2025'
+        }
+      },
+      {
+        id: 6,
+        user: 'Jane Smith',
+        type: 'Student Added',
+        description: 'Added new student to the system',
+        date: '2025-01-15',
+        time: '11:30 AM',
+        ipAddress: '192.168.1.105',
+        details: {
+          'Student': 'Michael Anderson',
+          'Student ID': 'SDGKU-2025-015',
+          'Program': 'Bachelor\'s in Engineering'
+        }
+      },
+      {
+        id: 7,
+        user: 'John Doe',
+        type: 'Data Import',
+        description: 'Imported student data from Excel file',
+        date: '2025-01-15',
+        time: '02:00 PM',
+        ipAddress: '192.168.1.100',
+        details: {
+          'File': 'students_spring_2025.xlsx',
+          'Records Imported': '150',
+          'Status': 'Success'
+        }
+      },
+      {
+        id: 8,
+        user: 'Jane Smith',
+        type: 'Grade Update',
+        description: 'Updated grades for Psychology course',
+        date: '2025-01-15',
+        time: '03:15 PM',
+        ipAddress: '192.168.1.105',
+        details: {
+          'Course': 'Psychology 101',
+          'Students Affected': '30',
+          'Session': 'Fall 2024'
+        }
+      },
+      {
+        id: 9,
+        user: 'John Doe',
+        type: 'Logout',
+        description: 'Logged out of the system',
+        date: '2025-01-15',
+        time: '05:00 PM',
+        ipAddress: '192.168.1.100',
+        details: null
+      },
+      {
+        id: 10,
+        user: 'Jane Smith',
+        type: 'Logout',
+        description: 'Logged out of the system',
+        date: '2025-01-15',
+        time: '05:30 PM',
+        ipAddress: '192.168.1.105',
+        details: null
+      }
+    ],
+    
+    activityFilters: {
+      user: '',
+      action: '',
+      dateFrom: '',
+      dateTo: ''
+    },
+    
+    currentPage: 1,
+    itemsPerPage: 10,
+    
+    // ⭐ COMPUTED PROPERTY para actividades filtradas
+    get filteredActivityLog() {
+      let filtered = this.activityLog;
+      
+      if (this.activityFilters.user) {
+        filtered = filtered.filter(a => a.user === this.activityFilters.user);
+      }
+      
+      if (this.activityFilters.action) {
+        filtered = filtered.filter(a => a.type === this.activityFilters.action);
+      }
+      
+      if (this.activityFilters.dateFrom) {
+        filtered = filtered.filter(a => a.date >= this.activityFilters.dateFrom);
+      }
+      
+      if (this.activityFilters.dateTo) {
+        filtered = filtered.filter(a => a.date <= this.activityFilters.dateTo);
+      }
+      
+      // Paginación
+      return filtered.slice((this.currentPage - 1) * this.itemsPerPage, this.currentPage * this.itemsPerPage);
+    },
+    
+    // ⭐ MÉTODOS PARA ADMINISTRATORS
+    addAdministrator() {
+      const newId = this.administrators.length > 0 ? Math.max(...this.administrators.map(a => a.id)) + 1 : 1;
+      this.administrators.push({
+        id: newId,
+        ...this.newAdmin
+      });
+      
+      // Agregar actividad al log
+      this.activityLog.unshift({
+        id: this.activityLog.length + 1,
+        user: 'Current User', // Cambiar por usuario actual
+        type: 'Student Added',
+        description: `Added new administrator: ${this.newAdmin.firstName} ${this.newAdmin.lastName}`,
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        ipAddress: '192.168.1.100',
+        details: {
+          'Name': `${this.newAdmin.firstName} ${this.newAdmin.lastName}`,
+          'Email': this.newAdmin.email,
+          'Role': this.newAdmin.role
+        }
+      });
+      
+      alert('Administrator added successfully!');
+      this.resetAdminForm();
+    },
+    
+    resetAdminForm() {
+      this.newAdmin = {
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        role: '',
+        status: 'Active'
+      };
+    },
+    
+    deleteAdmin(id) {
+      if (confirm('Are you sure you want to delete this administrator?')) {
+        const admin = this.administrators.find(a => a.id === id);
+        this.administrators = this.administrators.filter(a => a.id !== id);
+        
+        // Agregar actividad al log
+        if (admin) {
+          this.activityLog.unshift({
+            id: this.activityLog.length + 1,
+            user: 'Current User',
+            type: 'Student Added',
+            description: `Deleted administrator: ${admin.firstName} ${admin.lastName}`,
+            date: new Date().toISOString().split('T')[0],
+            time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            ipAddress: '192.168.1.100',
+            details: {
+              'Name': `${admin.firstName} ${admin.lastName}`,
+              'Email': admin.email,
+              'Role': admin.role
+            }
+          });
+        }
+      }
+    },
+    
+    // ⭐ MÉTODOS PARA ESTADÍSTICAS
+    getTodayLogins() {
+      const today = new Date().toISOString().split('T')[0];
+      return this.activityLog.filter(a => a.type === 'Login' && a.date === today).length;
+    },
+    
+    getActiveUsers() {
+      const uniqueUsers = [...new Set(this.activityLog.map(a => a.user))];
+      return uniqueUsers.length;
+    },
+    
+    getRecentChanges() {
+      const today = new Date().toISOString().split('T')[0];
+      return this.activityLog.filter(a => a.date === today && a.type !== 'Login' && a.type !== 'Logout').length;
+    },
+    
+    applyActivityFilters() {
+      this.currentPage = 1;
+      console.log('Filters applied:', this.activityFilters);
+    },
+    
+    clearActivityFilters() {
+      this.activityFilters = {
+        user: '',
+        action: '',
+        dateFrom: '',
+        dateTo: ''
+      };
+      this.currentPage = 1;
+    },
+    
+    exportActivityLog() {
+      alert('Exporting activity log to Excel...');
+      // Aquí implementarías la exportación con XLSX
+      console.log('Activity log data:', this.activityLog);
+    },
+    
+    // ⭐ DATOS PARA TEACHERS
+    newTeacher: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      department: '',
+      specialization: ''
+    },
+    teachers: [
+      { id: 1, firstName: 'Robert', lastName: 'Johnson', email: 'r.johnson@sdgku.edu', phone: '+1 (619) 555-0200', department: 'Computer Science', specialization: 'AI & Machine Learning' },
+      { id: 2, firstName: 'Maria', lastName: 'Garcia', email: 'm.garcia@sdgku.edu', phone: '+1 (619) 555-0201', department: 'Mathematics', specialization: 'Statistics' }
+    ],
+    
+    addTeacher() {
+      const newId = this.teachers.length > 0 ? Math.max(...this.teachers.map(t => t.id)) + 1 : 1;
+      this.teachers.push({
+        id: newId,
+        ...this.newTeacher
+      });
+      alert('Teacher added successfully!');
+      this.resetTeacherForm();
+    },
+    
+    resetTeacherForm() {
+      this.newTeacher = {
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        department: '',
+        specialization: ''
+      };
+    },
+    
+    deleteTeacher(id) {
+      if (confirm('Are you sure you want to delete this teacher?')) {
+        this.teachers = this.teachers.filter(t => t.id !== id);
+      }
+    },
+    
+    // ⭐ DATOS PARA PROGRAMS
+    newProgram: {
+      name: '',
+      type: '',
+      totalUnits: '',
+      duration: '',
+      description: ''
+    },
+    programs: [
+      { id: 1, name: 'Computer Science', type: "Bachelor's", totalUnits: 120, duration: 4, description: 'Comprehensive program in computer science and software development' },
+      { id: 2, name: 'Business Administration', type: 'Associate', totalUnits: 60, duration: 2, description: 'Foundational business principles and practices' }
+    ],
+    
+    addProgram() {
+      const newId = this.programs.length > 0 ? Math.max(...this.programs.map(p => p.id)) + 1 : 1;
+      this.programs.push({
+        id: newId,
+        ...this.newProgram
+      });
+      alert('Program added successfully!');
+      this.resetProgramForm();
+    },
+    
+    resetProgramForm() {
+      this.newProgram = {
+        name: '',
+        type: '',
+        totalUnits: '',
+        duration: '',
+        description: ''
+      };
+    },
+    
+    deleteProgram(id) {
+      if (confirm('Are you sure you want to delete this program?')) {
+        this.programs = this.programs.filter(p => p.id !== id);
+      }
+    },
+    
+    // ⭐ DATOS PARA SUBJECTS
+    newSubject: {
+      name: '',
+      code: '',
+      units: '',
+      department: '',
+      description: ''
+    },
+    subjects: [
+      { id: 1, name: 'Introduction to Programming', code: 'CS101', units: 4, department: 'Computer Science' },
+      { id: 2, name: 'Calculus I', code: 'MATH101', units: 4, department: 'Mathematics' }
+    ],
+    
+    addSubject() {
+      const newId = this.subjects.length > 0 ? Math.max(...this.subjects.map(s => s.id)) + 1 : 1;
+      this.subjects.push({
+        id: newId,
+        ...this.newSubject
+      });
+      alert('Subject added successfully!');
+      this.resetSubjectForm();
+    },
+    
+    resetSubjectForm() {
+      this.newSubject = {
+        name: '',
+        code: '',
+        units: '',
+        department: '',
+        description: ''
+      };
+    },
+    
+    deleteSubject(id) {
+      if (confirm('Are you sure you want to delete this subject?')) {
+        this.subjects = this.subjects.filter(s => s.id !== id);
+      }
+    },
+    
+    // ⭐ DATOS PARA IMPORT
+    selectedFile: null,
+    importType: '',
+    importResult: null,
+    importHistory: [
+      { id: 1, date: '2025-01-10', fileName: 'students_fall_2024.xlsx', type: 'Students', records: 150, status: 'Success' },
+      { id: 2, date: '2025-01-05', fileName: 'subjects_2024.xlsx', type: 'Subjects', records: 45, status: 'Success' }
+    ],
+    
+    handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        if (file.size > 10 * 1024 * 1024) { // 10MB
+          alert('File size exceeds 10MB limit');
+          return;
+        }
+        this.selectedFile = file;
+      }
+    },
+    
+    clearFile() {
+      this.selectedFile = null;
+      document.getElementById('fileUpload').value = '';
+    },
+    
+    formatFileSize(bytes) {
+      if (!bytes) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    },
+    
+    processImport() {
+      if (!this.selectedFile || !this.importType) {
+        alert('Please select a file and data type');
+        return;
+      }
+      
+      // Simulación de importación
+      setTimeout(() => {
+        this.importResult = {
+          success: true,
+          message: 'Import Successful!',
+          details: `Successfully imported data from ${this.selectedFile.name}`
+        };
+        
+        // Agregar al historial
+        this.importHistory.unshift({
+          id: this.importHistory.length + 1,
+          date: new Date().toISOString().split('T')[0],
+          fileName: this.selectedFile.name,
+          type: this.importType.charAt(0).toUpperCase() + this.importType.slice(1),
+          records: Math.floor(Math.random() * 100) + 50,
+          status: 'Success'
+        });
+        
+        // Limpiar después de 3 segundos
+        setTimeout(() => {
+          this.clearFile();
+          this.importType = '';
+          this.importResult = null;
+        }, 3000);
+      }, 1500);
+    },
+    
+    downloadTemplate() {
+      alert('Template download feature will be implemented with actual Excel generation');
+    }
+  };
+}
+</script>
+
 </body>
+</html>
