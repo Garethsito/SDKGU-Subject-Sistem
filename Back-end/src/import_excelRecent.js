@@ -53,8 +53,9 @@ async function processStudent(row, programs) {
       return null;
     }
     
-    // Extraer datos
+    // ✅ Extraer datos (incluyendo phone)
     const rgmKey = row['RGM#'] ? String(row['RGM#']).trim() : null;
+    const phone = row['Phone #'] ? String(row['Phone #']).trim() : null;
     const email = row['Email'] ? String(row['Email']).trim() : null;
     const sdgkuEmail = row['SDGKU EMAIL'] ? String(row['SDGKU EMAIL']).trim() : null;
     const status = row['Status'] ? String(row['Status']).trim() : 'Active';
@@ -71,7 +72,7 @@ async function processStudent(row, programs) {
     }
     
     // Unidades
-    const totalUnits = row['Total Units'] ? parseInt(row['Total Units']) : 0;
+    const totalUnits = row['Total Units'] ? parseInt(row['Total Units']) : 126;
     const transferredUnits = row['Transfered Units'] ? parseInt(row['Transfered Units']) : 0;
     const unitQuantity = row['Unit Quantity'] ? parseInt(row['Unit Quantity']) : 0;
     const totalUnitsEarned = row['Total Units Earned'] ? parseInt(row['Total Units Earned']) : 0;
@@ -88,12 +89,14 @@ async function processStudent(row, programs) {
       where: { id: studentId }
     }).catch(() => null);
     
+    // Objeto studentData con todos los campos actualizados
     const studentData = {
       id: studentId,
       studentIdNumber,
       firstName,
       middleName,     
       lastName,
+      phone,
       email,
       sdgkuEmail,
       rgmKey,
@@ -103,6 +106,7 @@ async function processStudent(row, programs) {
       modality,
       cohort,
       language,
+      totalUnits,
       transferredUnits,
       unitQuantity,
       totalUnitsEarned,
@@ -117,13 +121,13 @@ async function processStudent(row, programs) {
         where: { id: studentId },
         data: studentData
       });
-      console.log(`   ✏️  Actualizado: ${firstName} ${lastName} (${programName}) - ID: ${studentId}`);
+      console.log(`   ✏️  Actualizado: ${firstName} ${middleName || ''} ${lastName || ''} (${programName}) - ID: ${studentId}`);
     } else {
       // Crear nuevo estudiante
       student = await prisma.student.create({
         data: studentData
       });
-      console.log(`   ✅ Creado: ${firstName} ${lastName} (${programName}) - ID: ${studentId}`);
+      console.log(`   ✅ Creado: ${firstName} ${middleName || ''} ${lastName || ''} (${programName}) - ID: ${studentId}`);
     }
     
     return student;
