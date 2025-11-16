@@ -4,7 +4,9 @@ import { StudentsService } from './students.service';
 
 @Controller('api/students')
 export class StudentsController {
-  constructor(private readonly studentsService: StudentsService) {}
+  constructor(
+    private readonly studentsService: StudentsService,
+  ) {}
 
   @Get('count')
   async getTotalStudents() {
@@ -17,15 +19,27 @@ export class StudentsController {
     const distribution = await this.studentsService.getDistribution();
     return distribution;
   }
-  @Get('sessions/count')
-  async getTotalSessions() {
-    const totalSessions = await this.studentsService.countSessions();
-    return { totalSessions };
+
+  @Get('enrollment-growth')
+  async getEnrollmentGrowth() {
+    const growth = await this.studentsService.calculateEnrollmentGrowth();
+    return { growth };
   }
 
-  @Get('sessions')
-  async getAllSessions() {
-    const sessions = await this.studentsService.getAllSessions();
-    return sessions;
-}
+  @Get('missing-subjects')
+  async getMissingSubjects() {
+    try {
+      const missingSubjects = await this.studentsService.getMissingSubjectsByStudent();
+      console.log('📊 Missing Subjects Response:', missingSubjects);
+      return { missingSubjects };
+    } catch (error) {
+      console.error('❌ Error in missing-subjects endpoint:', error);
+      return { 
+        missingSubjects: { 
+          labels: [], 
+          data: [] 
+        } 
+      };
+    }
+  }
 }

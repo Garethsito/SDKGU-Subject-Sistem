@@ -1,10 +1,12 @@
-// src/courses/courses.module.ts
+// Back-end/src/courses/courses.module.ts
 import { Module } from '@nestjs/common';
 import { CoursesController } from './courses.controller';
+import { CoursesService } from './courses.service';
 import { PrismaService } from '../prisma/prisma.services';
 
 @Module({
   controllers: [CoursesController],
-  providers: [PrismaService],
+  providers: [CoursesService, PrismaService],
+  exports: [CoursesService]
 })
 export class CoursesModule {}

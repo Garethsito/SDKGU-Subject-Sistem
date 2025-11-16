@@ -37,13 +37,14 @@ function parseStudentId(value) {
 // Procesar estudiante
 async function processStudent(row, programs) {
   try {
-    // ✅ Extraer nombres directamente de las columnas del Excel
+    // Correción de nombres: Uso de 3 campos separados
     const firstName = row['First Name'] ? String(row['First Name']).trim() : 'Unknown';
     const middleName = row['Middle Name'] ? String(row['Middle Name']).trim() : null;
-    const lastName = row['Last Name'] ? String(row['Last Name']).trim() : null;
-    const fullName = `${firstName} ${middleName || ''} ${lastName || ''}`.trim();
-    
-    // Extraer ID del estudiante
+    const lastName = row['Last Name'] ? String(row['Last Name']).trim() : 'Unknown';
+
+    const fullName = `${firstName} ${middleName ? middleName + ' ' : ''}${lastName}`;
+
+    // Extraer ID
     const studentIdNumber = row['Students ID Number'] ? String(row['Students ID Number']).trim() : null;
     const studentId = parseStudentId(studentIdNumber);
     
@@ -83,17 +84,17 @@ async function processStudent(row, programs) {
     
     const enrollmentYear = startDate.getFullYear();
     
-    // Verificar si el estudiante ya existe
+    // Verificar si existe
     let student = await prisma.student.findUnique({
       where: { id: studentId }
     }).catch(() => null);
     
-    // ✅ Objeto studentData con todos los campos actualizados
+    // Objeto studentData con todos los campos actualizados
     const studentData = {
       id: studentId,
       studentIdNumber,
       firstName,
-      middleName,
+      middleName,     
       lastName,
       phone,
       email,
@@ -131,7 +132,7 @@ async function processStudent(row, programs) {
     
     return student;
   } catch (err) {
-    console.error(`   ❌ Error procesando ${row['Full Name']}: ${err.message}`);
+    console.error(`   ❌ Error procesando fila: ${err.message}`);
     console.error(`      Stack: ${err.stack}`);
     return null;
   }
