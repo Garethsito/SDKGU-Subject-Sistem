@@ -1,4 +1,4 @@
-import { PrismaClient } from '../generated/prisma/index.js';
+import { PrismaClient } from '@prisma/client';
 import XLSX from 'xlsx';
 
 const prisma = new PrismaClient();
@@ -34,34 +34,17 @@ function parseStudentId(value) {
   }
 }
 
-// Función para parsear el nombre completo
-function parseFullName(fullName) {
-  if (!fullName) return { firstName: 'Unknown', middleName: null, lastName: 'Unknown' };
-  
-  const parts = fullName.trim().split(' ').filter(p => p);
-  
-  if (parts.length === 0) {
-    return { firstName: 'Unknown', middleName: null, lastName: 'Unknown' };
-  } else if (parts.length === 1) {
-    return { firstName: parts[0], middleName: null, lastName: 'Unknown' };
-  } else if (parts.length === 2) {
-    return { firstName: parts[0], middleName: null, lastName: parts[1] };
-  } else {
-    const firstName = parts[0];
-    const lastName = parts[parts.length - 1];
-    const middleName = parts.slice(1, -1).join(' ');
-    return { firstName, middleName, lastName };
-  }
-}
-
 // Procesar estudiante
 async function processStudent(row, programs) {
   try {
-    // Parsear nombre completo
-    const fullName = row['Full Name'] || '';
-    const { firstName, middleName, lastName } = parseFullName(fullName);
-    
-    // Extraer ID del estudiante
+    // Correción de nombres: Uso de 3 campos separados
+    const firstName = row['First Name'] ? String(row['First Name']).trim() : 'Unknown';
+    const middleName = row['Middle Name'] ? String(row['Middle Name']).trim() : null;
+    const lastName = row['Last Name'] ? String(row['Last Name']).trim() : 'Unknown';
+
+    const fullName = `${firstName} ${middleName ? middleName + ' ' : ''}${lastName}`;
+
+    // Extraer ID
     const studentIdNumber = row['Students ID Number'] ? String(row['Students ID Number']).trim() : null;
     const studentId = parseStudentId(studentIdNumber);
     
@@ -100,7 +83,7 @@ async function processStudent(row, programs) {
     
     const enrollmentYear = startDate.getFullYear();
     
-    // Verificar si el estudiante ya existe
+    // Verificar si existe
     let student = await prisma.student.findUnique({
       where: { id: studentId }
     }).catch(() => null);
@@ -109,6 +92,7 @@ async function processStudent(row, programs) {
       id: studentId,
       studentIdNumber,
       firstName,
+      middleName,     
       lastName,
       email,
       sdgkuEmail,
@@ -144,7 +128,7 @@ async function processStudent(row, programs) {
     
     return student;
   } catch (err) {
-    console.error(`   ❌ Error procesando ${row['Full Name']}: ${err.message}`);
+    console.error(`   ❌ Error procesando fila: ${err.message}`);
     console.error(`      Stack: ${err.stack}`);
     return null;
   }

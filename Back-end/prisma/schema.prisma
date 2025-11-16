@@ -24,6 +24,7 @@ model Teacher {
   id              Int      @id @default(autoincrement())
   teacherIdNumber String   @unique  // Matrícula del profesor
   firstName       String
+  middleName      String?
   lastName        String
   email           String?  @unique
   phone           String?
@@ -39,9 +40,10 @@ model Teacher {
 }
 
 model Student {
-  id                      BigInt   @id  // Cambiado: ahora es BigInt sin autoincrement
-  studentIdNumber         String   @unique  // Nuevo: para almacenar el ID original como string
+  id                      BigInt   @id // Cambiado: ahora es BigInt sin autoincrement
+  studentIdNumber         String   @unique // Nuevo: para almacenar el ID original como string
   firstName               String
+  middleName              String?
   lastName                String
   email                   String?  @unique
   sdgkuEmail              String?  @unique
@@ -56,6 +58,7 @@ model Student {
   transferredUnits        Int      @default(0)
   unitQuantity            Int      @default(0)
   totalUnitsEarned        Int      @default(0)
+  totalUnits              Int      @default(0)
   scheduledCompletionDate DateTime?
   graduationDate          DateTime?
   program                 Program  @relation(fields: [programId], references: [id])
@@ -64,7 +67,7 @@ model Student {
   transfers               Transfer[]
   records                 AcademicRecord[]
   payments                Payment[]
-  
+
   @@unique([firstName, lastName, startDate])
   @@index([programId])
   @@index([lastName])
@@ -110,13 +113,15 @@ model Session {
   sessionName String   @unique
   startDate   DateTime
   endDate     DateTime
+  year        Int
   program     Program  @relation(fields: [programId], references: [id])
   programId   Int
   offerings   CourseOffering[]
   records     AcademicRecord[]
   
+  @@unique([programId, year, sessionName])
   @@index([programId])
-  @@index([sessionName])
+  @@index([year])
 }
 
 model CourseOffering {

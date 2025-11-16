@@ -19,7 +19,9 @@ export class SessionsService {
           }
         }
       },
-      orderBy: { startDate: 'asc' }
+      orderBy: [
+        { id: 'asc' }
+      ]
     });
 
     return sessions.map((session, index) => {
@@ -32,11 +34,16 @@ export class SessionsService {
       
       // Obtener el primer profesor (principal)
       const mainTeacher = session.offerings.find(off => off.teacher)?.teacher;
-
+      
+      // Extraer número de sesión del sessionName (ej: "Session 1" -> 1)
+      const sessionNumberMatch = session.sessionName.match(/\d+/);
+      const displayNumber = sessionNumberMatch ? parseInt(sessionNumberMatch[0]) : index + 1;
+      
       return {
         id: session.id,
-        number: index + 1,
+        number: displayNumber,
         sessionName: session.sessionName,
+        year: session.year,
         month,
         startDate: session.startDate,
         endDate: session.endDate,
@@ -87,9 +94,15 @@ export class SessionsService {
     // Obtener array de códigos de curso
     const subjects = session.offerings.map(off => off.course.courseCode);
 
+    // Extraer número de sesión del sessionName
+    const sessionNumberMatch = session.sessionName.match(/\d+/);
+    const displayNumber = sessionNumberMatch ? parseInt(sessionNumberMatch[0]) : null;
+
     return {
       id: session.id,
+      number: displayNumber,
       sessionName: session.sessionName,
+      year: session.year,
       startDate: session.startDate.toISOString().split('T')[0], // Formato YYYY-MM-DD
       endDate: session.endDate.toISOString().split('T')[0],     // Formato YYYY-MM-DD
       program: session.program.programName,
@@ -118,10 +131,33 @@ export class SessionsService {
       throw new NotFoundException(`Program with ID ${data.programId} not found`);
     }
 
+    // Determinar el año
+    const startDate = new Date(data.startDate);
+    const year = startDate.getFullYear();
+
+    // ✅ Contar TODAS las sesiones globalmente (sin filtros)
+    const totalSessions = await this.prisma.session.count();
+    const sessionNumber = totalSessions + 1;
+
+    // ✅ Validación: máximo 20 sesiones por año (10 por programa × 2 programas)
+    const sessionsThisYear = await this.prisma.session.count({
+      where: { year: year }
+    });
+
+    if (sessionsThisYear >= 20) {
+      throw new BadRequestException(
+        `Maximum of 20 sessions per year reached for ${year}`
+      );
+    }
+
+    // ✅ Generar nombre único global
+    const uniqueSessionName = `Session ${sessionNumber}`;
+
     // Crear la sesión
     const session = await this.prisma.session.create({
       data: {
-        sessionName: data.sessionName,
+        sessionName: uniqueSessionName,
+        year: year,
         startDate: new Date(data.startDate),
         endDate: new Date(data.endDate),
         programId: data.programId,
@@ -176,41 +212,87 @@ export class SessionsService {
       throw new NotFoundException(`Session with ID ${id} not found`);
     }
 
-    // Actualizar información básica de la sesión
+    // Calcular año si cambia la fecha
+    const updateData: any = {
+      sessionName: data.sessionName,
+      programId: data.programId,
+    };
+
+    if (data.startDate) {
+      const startDate = new Date(data.startDate);
+      updateData.startDate = startDate;
+      updateData.year = startDate.getFullYear();
+    }
+
+    if (data.endDate) {
+      updateData.endDate = new Date(data.endDate);
+    }
+
     await this.prisma.session.update({
       where: { id },
-      data: {
-        sessionName: data.sessionName,
-        startDate: data.startDate ? new Date(data.startDate) : undefined,
-        endDate: data.endDate ? new Date(data.endDate) : undefined,
-        programId: data.programId,
-      }
+      data: updateData
     });
 
     // Si se enviaron materias con profesores
     if (data.courses && Array.isArray(data.courses)) {
-      // Eliminar todos los offerings existentes
-      await this.prisma.courseOffering.deleteMany({
-        where: { sessionId: id }
+      // Obtener los offerings actuales
+      const currentOfferings = await this.prisma.courseOffering.findMany({
+        where: { sessionId: id },
+        include: { enrollments: true }
       });
 
-      // Crear los nuevos offerings
+      // IDs de cursos que vienen en el request
+      const newCourseIds = data.courses.map(c => c.courseId);
+      
+      // Eliminar offerings que YA NO están en la lista
+      // ESTO INCLUYE eliminar primero todos sus enrollments
+      for (const offering of currentOfferings) {
+        if (!newCourseIds.includes(offering.courseId)) {
+          // Primero eliminar TODOS los enrollments de este offering
+          await this.prisma.enrollment.deleteMany({
+            where: { offeringId: offering.id }
+          });
+          
+          // Luego eliminar el offering
+          await this.prisma.courseOffering.delete({
+            where: { id: offering.id }
+          });
+          
+          console.log(`Removed course ${offering.courseId} and its ${offering.enrollments.length} enrollments`);
+        }
+      }
+
+      // Actualizar o crear offerings
       for (const courseData of data.courses) {
         const course = await this.prisma.course.findUnique({ 
           where: { id: courseData.courseId } 
         });
         
         if (course) {
-          await this.prisma.courseOffering.create({
-            data: {
-              courseId: courseData.courseId,
-              sessionId: id,
-              teacherId: courseData.teacherId || null,
-              maxStudents: course.maxCapacity || 30
+          // Verificar si ya existe
+          const existing = currentOfferings.find(o => o.courseId === courseData.courseId);
+          
+          if (existing) {
+            // ACTUALIZAR: Solo cambia el profesor, NO toca los estudiantes
+            if (existing.teacherId !== courseData.teacherId) {
+              await this.prisma.courseOffering.update({
+                where: { id: existing.id },
+                data: { teacherId: courseData.teacherId || null }
+              });
             }
-          }).catch((error) => {
-            console.log(`Could not add course ${courseData.courseId} to session ${id}:`, error);
-          });
+          } else {
+            // CREAR NUEVO: Se crea vacío sin estudiantes
+            await this.prisma.courseOffering.create({
+              data: {
+                courseId: courseData.courseId,
+                sessionId: id,
+                teacherId: courseData.teacherId || null,
+                maxStudents: course.maxCapacity || 30
+              }
+            }).catch((error) => {
+              console.log(`Could not add course ${courseData.courseId}:`, error);
+            });
+          }
         }
       }
     }
@@ -441,7 +523,7 @@ export class SessionsService {
       throw new BadRequestException('Student is already enrolled in this course');
     }
 
-    return this.prisma.enrollment.create({
+    const enrollment = await this.prisma.enrollment.create({
       data: {
         studentId,
         offeringId: offering.id,
@@ -456,6 +538,16 @@ export class SessionsService {
         }
       }
     });
+
+    return {
+      id: enrollment.id,
+      status: enrollment.status,
+      student: {
+        id: enrollment.student.id.toString(),
+        name: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
+        email: enrollment.student.email || enrollment.student.sdgkuEmail
+      }
+    };
   }
 
   // Remover estudiante de una materia de la sesión
@@ -468,9 +560,14 @@ export class SessionsService {
       throw new NotFoundException('Enrollment not found');
     }
 
-    return this.prisma.enrollment.delete({
+    await this.prisma.enrollment.delete({
       where: { id: enrollmentId }
     });
+
+    return { 
+      success: true, 
+      message: 'Student removed successfully' 
+    };
   }
 
   // Obtener estudiantes disponibles para agregar a una materia

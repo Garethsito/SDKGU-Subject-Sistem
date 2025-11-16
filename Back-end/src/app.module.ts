@@ -6,14 +6,14 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { StudentsModule } from './students/students.module';
 import { SessionsModule } from './sessions/sessions.module';
-import { ProgramsController } from './programs/programs.controller';
-import { CoursesController } from './courses/courses.controller';
-import { TeachersController } from './teachers/teachers.controller';
+import { CoursesModule } from './courses/courses.module';
+import { ProgramsModule } from './programs/programs.module';
+import { TeachersModule } from './teachers/teachers.module';
 import { PrismaService } from './prisma/prisma.services';
 
 @Module({
-  imports: [AuthModule, StudentsModule, SessionsModule],
-  controllers: [AppController, ProgramsController, CoursesController, TeachersController],
+  imports: [AuthModule, StudentsModule, SessionsModule, CoursesModule, ProgramsModule, TeachersModule],
+  controllers: [AppController],
   providers: [AppService, PrismaService],
 })
 export class AppModule {}

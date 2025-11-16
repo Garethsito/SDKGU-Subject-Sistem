@@ -13,21 +13,21 @@ export class AuthService {
       });
 
       if (!user) {
-        return { success: false, message: 'Usuario no encontrado' };
+        return { success: false, message: 'User not found' };
       }
 
       if (user.password !== password) {
-        return { success: false, message: 'Contraseña incorrecta' };
+        return { success: false, message: 'Incorrect password' };
       }
 
       return {
         success: true,
-        message: 'Login exitoso',
+        message: 'Successful Login',
         user: { id: user.id, username: user.username }
       };
     } catch (error) {
-      console.error('Error en validateUser:', error);
-      return { success: false, message: 'Error en el servidor' };
+      console.error('Error on validateUser:', error);
+      return { success: false, message: 'Server error ):' };
     }
   }
 }
