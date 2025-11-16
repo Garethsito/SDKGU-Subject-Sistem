@@ -20,8 +20,7 @@ export class SessionsService {
         }
       },
       orderBy: [
-        { year: 'desc' },
-        { startDate: 'asc' }
+        { id: 'asc' }
       ]
     });
 
@@ -132,40 +131,38 @@ export class SessionsService {
       throw new NotFoundException(`Program with ID ${data.programId} not found`);
     }
 
-  // Determinar el año
-  const startDate = new Date(data.startDate);
-  const year = startDate.getFullYear();
+    // Determinar el año
+    const startDate = new Date(data.startDate);
+    const year = startDate.getFullYear();
 
-  // Contar sesiones existentes en ese año para ese programa
-  const sessionCount = await this.prisma.session.count({
-    where: {
-      programId: data.programId,
-      year: year
+    // ✅ Contar TODAS las sesiones globalmente (sin filtros)
+    const totalSessions = await this.prisma.session.count();
+    const sessionNumber = totalSessions + 1;
+
+    // ✅ Validación: máximo 20 sesiones por año (10 por programa × 2 programas)
+    const sessionsThisYear = await this.prisma.session.count({
+      where: { year: year }
+    });
+
+    if (sessionsThisYear >= 20) {
+      throw new BadRequestException(
+        `Maximum of 20 sessions per year reached for ${year}`
+      );
     }
-  });
 
-  const sessionNumber = sessionCount + 1;
+    // ✅ Generar nombre único global
+    const uniqueSessionName = `Session ${sessionNumber}`;
 
-  // Validar que no exceda 10 sesiones por año
-  if (sessionNumber > 10) {
-    throw new BadRequestException(
-      `Maximum of 10 sessions per year reached for ${program.programName} in ${year}`
-    );
-  }
-
-  // Generar nombre único: "Session 1", "Session 2", etc.
-  const uniqueSessionName = `Session ${sessionNumber}`;
-
-  // Crear la sesión
-  const session = await this.prisma.session.create({
-    data: {
-      sessionName: uniqueSessionName,
-      year: year,
-      startDate: new Date(data.startDate),
-      endDate: new Date(data.endDate),
-      programId: data.programId,
-    }
-  });
+    // Crear la sesión
+    const session = await this.prisma.session.create({
+      data: {
+        sessionName: uniqueSessionName,
+        year: year,
+        startDate: new Date(data.startDate),
+        endDate: new Date(data.endDate),
+        programId: data.programId,
+      }
+    });
 
     // Crear los CourseOfferings si se enviaron cursos
     if (data.courses && Array.isArray(data.courses) && data.courses.length > 0) {
