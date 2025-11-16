@@ -5,6 +5,7 @@ function dashboard() {
   return {
     open: false,
     showFilters: false,
+    currentSessionId: null,
     searchQuery: '',
     message: '',
     openModalFlag: false,
@@ -16,6 +17,11 @@ function dashboard() {
     notifications: [],
     showDeleteModal: false, 
     showSubjectsModal: false,
+    tempSubject: '',
+    showAddStudentModal: false,
+    availableStudents: [],
+    loadingStudents: false,
+    studentSearchTerm: '',
     subjectsView: 'list',
     selectedSubject: null,
     subjectSearchTerm: '',
@@ -34,6 +40,25 @@ function dashboard() {
           id: course.id,
           name: course.courseName
         }));
+    },
+
+    get availableSubjects() {
+      if (!this.selectedSession.subjects) {
+        return this.filteredSubjectNames;
+      }
+      return this.filteredSubjectNames.filter(course => 
+        !this.selectedSession.subjects.includes(course.code)
+      );
+    },
+
+    get filteredAvailableStudents() {
+      if (!this.studentSearchTerm) return this.availableStudents;
+      const term = this.studentSearchTerm.toLowerCase();
+      return this.availableStudents.filter(student =>
+        student.name.toLowerCase().includes(term) ||
+        student.matricula.toLowerCase().includes(term) ||
+        (student.email && student.email.toLowerCase().includes(term))
+      );
     },
     
     get filteredSubjects() {
@@ -180,8 +205,8 @@ function dashboard() {
         return false;
       }
       
-      if (!this.selectedSession.subject) {
-        this.validationError = 'Please select a subject';
+      if (!this.selectedSession.subjects || this.selectedSession.subjects.length === 0) {
+        this.validationError = 'Please select at least one subject';
         return false;
       }
       
@@ -306,7 +331,7 @@ function dashboard() {
           endDate: formatDate(fiveWeeksLater),
           programId: '',
           program: '',
-          subject: '',
+          subjects: [],
           subjectId: null,
           teacherId: '',
           professor: ''
@@ -332,8 +357,7 @@ function dashboard() {
             endDate: sessionData.endDate,
             programId: sessionData.programId.toString(),
             program: sessionData.program,
-            subject: sessionData.subjects && sessionData.subjects.length > 0 ? sessionData.subjects[0] : '',
-            subjectId: sessionData.subjectId || null,
+            subjects: sessionData.subjects || [],
             teacherId: sessionData.teacherId ? sessionData.teacherId.toString() : '',
             professor: sessionData.professor || 'TBD'
           };
@@ -365,24 +389,27 @@ function dashboard() {
         this.showNotification('error', 'Validation Error', this.validationError);
         return;
       }
+
+      console.log('Validating data:', {
+        subjects: this.selectedSession.subjects,
+        teacherId: this.selectedSession.teacherId,
+        programId: this.selectedSession.programId
+      });
       
       try {
-        // Encontrar el curso seleccionado
-        const selectedCourse = this.availableCourses.find(c => c.courseCode === this.selectedSession.subject);
-        
-        if (!selectedCourse) {
-          throw new Error('Selected course not found');
-        }
-        
         const sessionData = {
           sessionName: this.selectedSession.sessionName || `Session ${this.selectedSession.number}`,
-          startDate: this.selectedSession.startDate,
-          endDate: this.selectedSession.endDate,
+          startDate: new Date(this.selectedSession.startDate).toISOString().split('T')[0],
+          endDate: new Date(this.selectedSession.endDate).toISOString().split('T')[0],
           programId: parseInt(this.selectedSession.programId),
-          courses: [{
-            courseId: selectedCourse.id,
-            teacherId: parseInt(this.selectedSession.teacherId)
-          }]
+          courses: (this.selectedSession.subjects || []).map(subjectCode => {
+            const course = this.availableCourses.find(c => c.courseCode === subjectCode);
+            if (!course) throw new Error(`Course ${subjectCode} not found`);
+            return {
+              courseId: course.id,
+              teacherId: this.selectedSession.teacherId ? parseInt(this.selectedSession.teacherId) : null
+            };
+          })
         };
         
         console.log('Saving session with data:', sessionData);
@@ -497,7 +524,8 @@ function dashboard() {
     
     async openSubjectsModal() {
       if (this.selectedSession.id && this.selectedSession.id !== 'Auto-generated') {
-        await this.loadSessionCourses(this.selectedSession.id);
+        this.currentSessionId = this.selectedSession.id;
+        await this.loadSessionCourses(this.currentSessionId);
       }
       this.showSubjectsModal = true;
       this.subjectsView = 'list';
@@ -524,16 +552,126 @@ function dashboard() {
       this.subjectSearchTerm = '';
     },
     
-    deleteStudent(studentId) {
-      if(confirm('Are you sure you want to delete this student?')) {
-        if(this.selectedSubject) {
-          const index = this.selectedSubject.students.findIndex(s => s.id === studentId);
-          if(index !== -1) {
-            this.selectedSubject.students.splice(index, 1);
-            this.showNotification('success', 'Student Deleted', 'Student has been deleted successfully');
-          }
-        }
+    async deleteStudent(enrollmentId) {
+      if (!confirm('Are you sure you want to remove this student from the course?')) {
+        return;
       }
-    }
+      
+      try {
+        const response = await fetch(
+          `http://localhost:3000/api/sessions/enrollments/${enrollmentId}`,
+          { method: 'DELETE' }
+        );
+
+        if (!response.ok) throw new Error('Failed to remove student');
+
+        this.showNotification('success', 'Student Removed', 'Student removed successfully');
+        
+        await this.loadSessionCourses(this.selectedSession.id);
+        const updatedSubject = this.allSubjects.find(s => s.id === this.selectedSubject.id);
+        if (updatedSubject) {
+          this.selectedSubject = updatedSubject;
+        }
+        // Recargar sesiones para actualizar el porcentaje
+        await this.loadSessions();
+        
+      } catch (error) {
+        console.error('Error removing student:', error);
+        this.showNotification('error', 'Error', 'Failed to remove student');
+      }
+    },
+
+    addSubjectToSession() {
+      if (!this.tempSubject) return;
+      
+      if (!this.selectedSession.subjects) {
+        this.selectedSession.subjects = [];
+      }
+      
+      if (!this.selectedSession.subjects.includes(this.tempSubject)) {
+        this.selectedSession.subjects.push(this.tempSubject);
+      }
+      
+      this.tempSubject = '';
+    },
+
+    removeSubjectFromSession(index) {
+      if (this.selectedSession.subjects) {
+        this.selectedSession.subjects.splice(index, 1);
+      }
+    },
+
+    async openAddStudentModal() {
+      if (!this.currentSessionId) {
+        this.showNotification('error', 'Error', 'No session selected');
+        return;
+      }
+      
+      if (!this.selectedSubject || !this.selectedSubject.id) {
+        this.showNotification('error', 'Error', 'No subject selected');
+        return;
+      }
+      
+      this.showAddStudentModal = true;
+      this.studentSearchTerm = '';
+      this.loadingStudents = true;
+      
+      try {
+        const response = await fetch(
+          `http://localhost:3000/api/sessions/${this.currentSessionId}/courses/${this.selectedSubject.id}/available-students`
+        );
+        
+        if (!response.ok) throw new Error('Failed to fetch available students');
+        
+        this.availableStudents = await response.json();
+      } catch (error) {
+        console.error('Error loading available students:', error);
+        this.showNotification('error', 'Error', 'Failed to load available students');
+        this.availableStudents = [];
+      } finally {
+        this.loadingStudents = false;
+      }
+    },
+
+    closeAddStudentModal() {
+      this.showAddStudentModal = false;
+      this.availableStudents = [];
+      this.studentSearchTerm = '';
+    },
+
+    async addStudentToCourse(studentId) {
+      try {
+        const response = await fetch(
+          `http://localhost:3000/api/sessions/${this.currentSessionId}/courses/${this.selectedSubject.id}/students`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ studentId: studentId })
+          }
+        );
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to add student');
+        }
+
+        this.showNotification('success', 'Success', 'Student added successfully');
+        
+        await this.loadSessionCourses(this.currentSessionId);
+        const updatedSubject = this.allSubjects.find(s => s.id === this.selectedSubject.id);
+        if (updatedSubject) {
+          this.selectedSubject = updatedSubject;
+        }
+        
+        this.availableStudents = this.availableStudents.filter(s => s.id !== studentId);
+        // Recargar sesiones para actualizar el porcentaje
+        await this.loadSessions();
+
+      } catch (error) {
+        console.error('Error adding student:', error);
+        this.showNotification('error', 'Error', error.message);
+      }
+    },
+
   }
 }

@@ -359,44 +359,74 @@
           <div class="grid grid-cols-3 gap-4 items-start">
           <div class="col-span-2">
             <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
-              <i class="fa-solid fa-book-open mr-1 text-xs"></i>Subject<span class="text-[#D41736] ml-1">*</span>
+              <i class="fa-solid fa-book-open mr-1 text-xs"></i>Subjects<span class="text-[#D41736] ml-1">*</span>
             </label>
             
             <!-- 👁️ VISTA PARA DETAILS (SOLO LECTURA CON CHIP) -->
             <template x-if="modalType === 'details'">
               <div class="border border-gray-300 rounded-md w-full p-3 bg-gray-50 min-h-[42px]">
-                <template x-if="selectedSession.subject">
-                  <span class="bg-[#D41736] text-white px-3 py-1 rounded-full text-sm">
-                    <i class="fa-solid fa-book mr-1"></i>
-                    <span x-text="selectedSession.subject"></span>
-                  </span>
+                
+                <template x-if="selectedSession.subjects && selectedSession.subjects.length > 0">
+                  <div class="flex flex-wrap gap-2">
+                    <template x-for="subject in selectedSession.subjects" :key="subject">
+                      <span class="bg-[#D41736] text-white px-3 py-1 rounded-full text-sm">
+                        <i class="fa-solid fa-book mr-1"></i>
+                        <span x-text="subject"></span>
+                      </span>
+                    </template>
+                  </div>
                 </template>
-                <template x-if="!selectedSession.subject">
-                  <p class="text-gray-400 text-sm">No subject assigned</p>
+                <template x-if="!selectedSession.subjects || selectedSession.subjects.length === 0">
+                  <p class="text-gray-400 text-sm">No subjects assigned</p>
                 </template>
+                
               </div>
             </template>
             
             <!-- ✏️ VISTA PARA ADD/EDIT (SELECT SIMPLE) -->
+            <!-- ✏️ VISTA PARA ADD/EDIT (CHIPS + DROPDOWN) -->
             <template x-if="modalType !== 'details'">
-              <select
-                x-model="selectedSession.subject"
-                class="border border-gray-300 rounded-md w-full p-2 focus:outline-none focus:border-[#D41736] text-sm"
-                :disabled="isEditLocked || !selectedSession.programId"
-                :class="{'bg-gray-50 cursor-not-allowed': isEditLocked || !selectedSession.programId}"
-              >
-                <option value="">Select a subject</option>
-                <template x-for="course in filteredSubjectNames" :key="course.code">
-                  <option :value="course.code" x-text="course.name + ' (' + course.code + ')'"></option>
-                </template>
-              </select>
+              <div>
+                <!-- Chips de materias seleccionadas -->
+                <div x-show="selectedSession.subjects && selectedSession.subjects.length > 0" 
+                    class="border border-gray-300 rounded-md w-full p-3 mb-2 bg-white min-h-[42px]">
+                  <div class="flex flex-wrap gap-2">
+                    <template x-for="(subject, index) in selectedSession.subjects" :key="subject">
+                      <span class="bg-[#D41736] text-white px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-book"></i>
+                        <span x-text="subject"></span>
+                        <button 
+                          @click="removeSubjectFromSession(index)"
+                          type="button"
+                          :disabled="isEditLocked"
+                          class="hover:bg-white hover:bg-opacity-20 rounded-full w-4 h-4 flex items-center justify-center disabled:opacity-50">
+                          <i class="fa-solid fa-times text-xs"></i>
+                        </button>
+                      </span>
+                    </template>
+                  </div>
+                </div>
+                
+                <!-- Dropdown para agregar materias -->
+                <select
+                  x-model="tempSubject"
+                  @change="addSubjectToSession()"
+                  class="border border-gray-300 rounded-md w-full p-2 focus:outline-none focus:border-[#D41736] text-sm"
+                  :disabled="isEditLocked || !selectedSession.programId"
+                  :class="{'bg-gray-50 cursor-not-allowed': isEditLocked || !selectedSession.programId}">
+                  <option value="">+ Add a subject</option>
+                  <template x-for="course in availableSubjects" :key="course.code">
+                    <option :value="course.code" x-text="course.name + ' (' + course.code + ')'"></option>
+                  </template>
+                </select>
 
-              <p x-show="!selectedSession.programId" class="text-xs text-[#D41736] mt-1">
-                <i class="fa-solid fa-arrow-up"></i> Please select a program first.
-              </p>
-              <p x-show="selectedSession.programId && filteredSubjectNames.length === 0" class="text-xs text-[#F69A1C] mt-1">
-                <i class="fa-solid fa-exclamation-triangle"></i> No courses available for this program.
-              </p>
+                <p x-show="!selectedSession.programId" class="text-xs text-[#D41736] mt-1">
+                  <i class="fa-solid fa-arrow-up"></i> Please select a program first.
+                </p>
+                <p x-show="selectedSession.programId && filteredSubjectNames.length === 0" class="text-xs text-[#F69A1C] mt-1">
+                  <i class="fa-solid fa-exclamation-triangle"></i> No courses available for this program.
+                </p>
+              </div>
             </template>
           </div>
           
@@ -565,14 +595,23 @@
                   <span x-text="selectedSubject?.students.filter(s => s.status === 'inactive').length"></span> inactive
                 </p>
               </div>
-              <div class="flex items-center gap-4 text-sm">
-                <div class="flex items-center gap-2">
-                  <div class="w-4 h-4 rounded bg-[#D41736]"></div>
-                  <span>Active</span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <div class="w-4 h-4 rounded bg-gray-400"></div>
-                  <span>Inactive</span>
+              <div class="flex items-center gap-3">
+                <!-- NUEVO BOTÓN PARA AGREGAR ESTUDIANTES -->
+                <button 
+                  @click="openAddStudentModal()"
+                  class="bg-[#D41736] hover:bg-[#A6192E] text-white px-4 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
+                  <i class="fa-solid fa-user-plus"></i>
+                  Add Student
+                </button>
+                <div class="flex items-center gap-4 text-sm">
+                  <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 rounded bg-[#D41736]"></div>
+                    <span>Active</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 rounded bg-gray-400"></div>
+                    <span>Inactive</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -624,7 +663,7 @@
                           }`"
                           x-text="student.status === 'active' ? 'ACTIVE' : 'INACTIVE'">
                     </span>
-                    <button @click="deleteStudent(student.id)" 
+                    <button @click="deleteStudent(student.enrollmentId)"
                             class="text-gray-400 hover:text-[#D41736] transition-colors p-1">
                       <i class="fa-solid fa-trash-alt"></i>
                     </button>
@@ -677,6 +716,89 @@
     </div>
   </div>
 
+  <!-- MODAL PARA AGREGAR ESTUDIANTES -->
+  <div x-show="showAddStudentModal"
+      x-cloak
+      x-transition.opacity
+      @click.self="closeAddStudentModal()"
+      class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-[70]">
+    
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+      <div class="bg-gradient-to-r from-[#D41736] to-[#A6192E] h-16 flex items-center justify-between px-6">
+        <h2 class="text-2xl text-white font-bold flex items-center">
+          <i class="fa-solid fa-user-plus mr-2"></i>Add Student to <span class="ml-1" x-text="selectedSubject?.name"></span>
+        </h2>
+        <button @click="closeAddStudentModal()" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
+          <i class="fa-solid fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto" style="max-height: calc(80vh - 64px);">
+        
+        <!-- Búsqueda de estudiantes -->
+        <div class="mb-4">
+          <div class="relative">
+            <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+            <input
+              type="text"
+              x-model="studentSearchTerm"
+              placeholder="Search available students..."
+              class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#D41736]"
+            />
+          </div>
+        </div>
+
+        <!-- Lista de estudiantes disponibles -->
+        <div class="space-y-2 max-h-96 overflow-y-auto">
+          <template x-if="loadingStudents">
+            <div class="text-center py-8">
+              <i class="fa-solid fa-spinner fa-spin text-3xl text-[#D41736]"></i>
+              <p class="text-gray-600 mt-2">Loading students...</p>
+            </div>
+          </template>
+
+          <template x-if="!loadingStudents && filteredAvailableStudents.length === 0">
+            <div class="text-center py-8 text-gray-500">
+              <i class="fa-solid fa-users-slash text-4xl mb-3 text-gray-300"></i>
+              <p>No available students found</p>
+            </div>
+          </template>
+
+          <template x-for="student in filteredAvailableStudents" :key="student.id">
+            <div class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors border border-gray-200 cursor-pointer"
+                @click="selectStudentToAdd(student)">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-[#D41736] flex items-center justify-center text-white font-bold">
+                  <span x-text="student.name.charAt(0)"></span>
+                </div>
+                <div>
+                  <p class="font-medium text-gray-800" x-text="student.name"></p>
+                  <p class="text-sm text-gray-500 flex items-center gap-2">
+                    <i class="fa-solid fa-id-card text-xs"></i>
+                    <span x-text="student.matricula"></span>
+                    <i class="fa-solid fa-envelope text-xs ml-2"></i>
+                    <span x-text="student.email"></span>
+                  </p>
+                </div>
+              </div>
+              <button 
+                @click.stop="addStudentToCourse(student.id)"
+                class="bg-[#D41736] hover:bg-[#A6192E] text-white px-3 py-1 rounded-lg transition-colors text-sm font-medium">
+                <i class="fa-solid fa-plus mr-1"></i>Add
+              </button>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 p-4 bg-gray-50 rounded-b-xl border-t">
+        <button @click="closeAddStudentModal()" 
+                class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
 
   <footer :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'" class="bg-[#2D2828] border-t border-[#A6192E]">
     <div class="max-w-7xl mx-auto px-6 py-4">

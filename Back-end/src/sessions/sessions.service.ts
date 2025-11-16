@@ -238,28 +238,64 @@ export class SessionsService {
 
     // Si se enviaron materias con profesores
     if (data.courses && Array.isArray(data.courses)) {
-      // Eliminar todos los offerings existentes
-      await this.prisma.courseOffering.deleteMany({
-        where: { sessionId: id }
+      // Obtener los offerings actuales
+      const currentOfferings = await this.prisma.courseOffering.findMany({
+        where: { sessionId: id },
+        include: { enrollments: true }
       });
 
-      // Crear los nuevos offerings
+      // IDs de cursos que vienen en el request
+      const newCourseIds = data.courses.map(c => c.courseId);
+      
+      // Eliminar offerings que YA NO están en la lista
+      // ESTO INCLUYE eliminar primero todos sus enrollments
+      for (const offering of currentOfferings) {
+        if (!newCourseIds.includes(offering.courseId)) {
+          // Primero eliminar TODOS los enrollments de este offering
+          await this.prisma.enrollment.deleteMany({
+            where: { offeringId: offering.id }
+          });
+          
+          // Luego eliminar el offering
+          await this.prisma.courseOffering.delete({
+            where: { id: offering.id }
+          });
+          
+          console.log(`Removed course ${offering.courseId} and its ${offering.enrollments.length} enrollments`);
+        }
+      }
+
+      // Actualizar o crear offerings
       for (const courseData of data.courses) {
         const course = await this.prisma.course.findUnique({ 
           where: { id: courseData.courseId } 
         });
         
         if (course) {
-          await this.prisma.courseOffering.create({
-            data: {
-              courseId: courseData.courseId,
-              sessionId: id,
-              teacherId: courseData.teacherId || null,
-              maxStudents: course.maxCapacity || 30
+          // Verificar si ya existe
+          const existing = currentOfferings.find(o => o.courseId === courseData.courseId);
+          
+          if (existing) {
+            // ACTUALIZAR: Solo cambia el profesor, NO toca los estudiantes
+            if (existing.teacherId !== courseData.teacherId) {
+              await this.prisma.courseOffering.update({
+                where: { id: existing.id },
+                data: { teacherId: courseData.teacherId || null }
+              });
             }
-          }).catch((error) => {
-            console.log(`Could not add course ${courseData.courseId} to session ${id}:`, error);
-          });
+          } else {
+            // CREAR NUEVO: Se crea vacío sin estudiantes
+            await this.prisma.courseOffering.create({
+              data: {
+                courseId: courseData.courseId,
+                sessionId: id,
+                teacherId: courseData.teacherId || null,
+                maxStudents: course.maxCapacity || 30
+              }
+            }).catch((error) => {
+              console.log(`Could not add course ${courseData.courseId}:`, error);
+            });
+          }
         }
       }
     }
@@ -490,7 +526,7 @@ export class SessionsService {
       throw new BadRequestException('Student is already enrolled in this course');
     }
 
-    return this.prisma.enrollment.create({
+    const enrollment = await this.prisma.enrollment.create({
       data: {
         studentId,
         offeringId: offering.id,
@@ -505,6 +541,16 @@ export class SessionsService {
         }
       }
     });
+
+    return {
+      id: enrollment.id,
+      status: enrollment.status,
+      student: {
+        id: enrollment.student.id.toString(),
+        name: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
+        email: enrollment.student.email || enrollment.student.sdgkuEmail
+      }
+    };
   }
 
   // Remover estudiante de una materia de la sesión
@@ -517,9 +563,14 @@ export class SessionsService {
       throw new NotFoundException('Enrollment not found');
     }
 
-    return this.prisma.enrollment.delete({
+    await this.prisma.enrollment.delete({
       where: { id: enrollmentId }
     });
+
+    return { 
+      success: true, 
+      message: 'Student removed successfully' 
+    };
   }
 
   // Obtener estudiantes disponibles para agregar a una materia
