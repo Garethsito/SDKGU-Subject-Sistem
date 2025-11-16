@@ -10,7 +10,6 @@
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
   [x-cloak] { display: none !important; }
-  /* Estilos para los botones de filtro del modal */
   .modal-filter-btn {
     @apply px-4 py-2 text-sm font-medium border-b-2 transition-all;
   }
@@ -23,7 +22,7 @@
   </style>
 </head>
 
-<body x-data="subjectsData()" x-init="init()">
+<body x-data="coursesData()" x-init="init()">
 
   <div class="fixed top-20 right-6 z-[9999] space-y-4 max-w-sm">
     <div x-show="toast.show"
@@ -90,43 +89,41 @@
               </div>
 
               <div class="space-y-4">
+                <!-- Program Filter - Dynamic -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Program</label>
                   <select x-model="filters.program" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
                     <option value="all">All Programs</option>
-                    <option value="bachelor">Bachelor's</option>
-                    <option value="associate">Associate</option>
+                    <template x-for="program in availablePrograms" :key="program">
+                      <option :value="program" x-text="program"></option>
+                    </template>
                   </select>
                 </div>
 
+                <!-- Session Filter - Dynamic -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Academic Session</label>
                   <select x-model="filters.session" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
                     <option value="all">All Sessions</option>
-                    <option value="session1">Session 1</option>
-                    <option value="session2">Session 2</option>
-                    <option value="session3">Session 3</option>
-                    <option value="session4">Session 4</option>
-                    <option value="session5">Session 5</option>
-                    <option value="session6">Session 6</option>
-                    <option value="session7">Session 7</option>
-                    <option value="session8">Session 8</option>
-                    <option value="session9">Session 9</option>
-                    <option value="session10">Session 10</option>
+                    <template x-for="session in availableSessions" :key="session">
+                      <option :value="session" x-text="session"></option>
+                    </template>
                   </select>
                 </div>
 
+                <!-- Demand Level Filter -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Demand Level (Missing)</label>
                   <select x-model="filters.occupancy" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
                     <option value="all">All Levels</option>
-                    <option value="critical">Critical (High Demand)</option>
-                    <option value="low">Low (Medium Demand)</option>
-                    <option value="optimal">Optimal (Low Demand)</option>
-                    <option value="full">Met (No Demand)</option>
+                    <option value="critical">Critical (≥75% missing)</option>
+                    <option value="low">High (40-74% missing)</option>
+                    <option value="optimal">Medium (10-39% missing)</option>
+                    <option value="full">Low (<10% missing)</option>
                   </select>
                 </div>
 
+                <!-- Prerequisites Filter -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Prerequisites</label>
                   <select x-model="filters.prerequisites" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
@@ -198,7 +195,7 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20">
-      <template x-for="(subject, index) in subjects" :key="index">
+      <template x-for="(subject, index) in courses" :key="index">
         <div 
           @click="showStudents(subject)"
           class="bg-white border-2 border-gray-200 hover:border-[#A6192E] rounded-xl p-4 cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105">
@@ -251,10 +248,10 @@
               </span>
               <span class="text-sm font-bold flex items-center gap-1"
                     :class="{
-                      'text-[#D41736]': subject.missingPercent >= 75, /* Rojo - Alta demanda */
-                      'text-[#A6192E]': subject.missingPercent >= 40 && subject.missingPercent < 75, /* Naranja - Media */
-                      'text-[#F69A1C]': subject.missingPercent >= 10 && subject.missingPercent < 40, /* Amarillo - Baja */
-                      'text-blue-600': subject.missingPercent < 10   /* Azul - Casi nula */
+                      'text-[#D41736]': subject.missingPercent >= 75,
+                      'text-[#A6192E]': subject.missingPercent >= 40 && subject.missingPercent < 75,
+                      'text-[#F69A1C]': subject.missingPercent >= 10 && subject.missingPercent < 40,
+                      'text-blue-600': subject.missingPercent < 10
                     }">
                 <i class="fa-solid fa-chart-simple text-xs"></i>
                 <span x-text="subject.missingPercent + '% (' + subject.missingCount + ')'"></span>
@@ -278,8 +275,8 @@
     </div>
 
     <div 
-      x-show="selectedSubject !== null"
-      @click.self="selectedSubject = null"
+      x-show="selectedCourse !== null"
+      @click.self="selectedCourse = null"
       x-transition:enter="transition ease-out duration-300"
       x-transition:enter-start="opacity-0"
       x-transition:enter-end="opacity-100"
@@ -290,7 +287,7 @@
       x-cloak>
       
       <div 
-        x-show="selectedSubject !== null"
+        x-show="selectedCourse !== null"
         @click.stop
         x-transition:enter="transition ease-out duration-300"
         x-transition:enter-start="opacity-0 scale-90"
@@ -304,14 +301,14 @@
           <div>
             <h2 class="text-2xl font-bold flex items-center">
               <i class="fa-solid fa-book-open mr-2"></i>
-              <span x-text="selectedSubject?.code"></span>
+              <span x-text="selectedCourse?.code"></span>
             </h2>
             <p class="text-sm opacity-90 flex items-center mt-1">
               <i class="fa-solid fa-calendar mr-1"></i>
-              <span x-text="selectedSubject?.session"></span>
+              <span x-text="selectedCourse?.session"></span>
             </p>
           </div>
-          <button @click="selectedSubject = null" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
+          <button @click="selectedCourse = null" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
             <i class="fa-solid fa-times text-xl"></i>
           </button>
         </div>
@@ -326,18 +323,18 @@
               <div class="flex items-center gap-2">
                 <i class="fa-solid fa-display w-4 text-center text-gray-500"></i>
                 <span class="font-medium text-gray-600">Modality:</span>
-                <span class="text-gray-800 font-semibold" x-text="selectedSubject?.modality"></span>
+                <span class="text-gray-800 font-semibold" x-text="selectedCourse?.modality"></span>
               </div>
               <div class="flex items-center gap-2">
                 <i class="fa-solid fa-user-tie w-4 text-center text-gray-500"></i>
                 <span class="font-medium text-gray-600">Instructor:</span>
-                <span class="text-gray-800 font-semibold" x-text="selectedSubject?.instructor"></span>
+                <span class="text-gray-800 font-semibold" x-text="selectedCourse?.instructor"></span>
               </div>
               <div class="flex items-center gap-2">
                 <i class="fa-solid fa-graduation-cap w-4 text-center text-gray-500"></i>
                 <span class="font-medium text-gray-600">Program:</span>
                 <span class="px-3 py-0.5 bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] text-white text-xs font-semibold rounded-full flex items-center">
-                  <span x-text="selectedSubject?.program"></span>
+                  <span x-text="selectedCourse?.program"></span>
                 </span>
               </div>
             </div>
@@ -353,7 +350,7 @@
                   <i class="fa-solid fa-users mr-1.5"></i>Enrolled (Session)
                 </span>
                 <p class="text-2xl font-bold text-gray-800" 
-                    x-text="selectedSubject?.students.length">
+                    x-text="selectedCourse?.students.length">
                 </p>
               </div>
               <div class="text-center">
@@ -361,7 +358,7 @@
                   <i class="fa-solid fa-user-check mr-1.5"></i>Max Capacity
                 </span>
                 <p class="text-2xl font-bold text-gray-800" 
-                    x-text="selectedSubject?.maxStudents">
+                    x-text="selectedCourse?.maxStudents">
                 </p>
               </div>
               <div class="text-right">
@@ -369,7 +366,7 @@
                   <i class="fa-solid fa-user-plus mr-1.5"></i>Remaining Seats
                 </span>
                 <p class="text-2xl font-bold text-blue-600" 
-                    x-text="selectedSubject?.maxStudents - selectedSubject?.students.length">
+                    x-text="selectedCourse?.maxStudents - selectedCourse?.students.length">
                 </p>
               </div>
             </div>
@@ -380,13 +377,13 @@
                   Remaining Session Capacity:
                 </span>
                 <span class="text-sm font-bold text-blue-600"
-                  x-text="Math.round(((selectedSubject?.maxStudents - selectedSubject?.students.length) / selectedSubject?.maxStudents) * 100) + '%'">
+                  x-text="Math.round(((selectedCourse?.maxStudents - selectedCourse?.students.length) / selectedCourse?.maxStudents) * 100) + '%'">
                 </span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden shadow-inner">
                 <div 
                   class="h-full transition-all duration-500 rounded-full bg-gradient-to-r from-blue-500 to-blue-700"
-                  :style="'width: ' + Math.round(((selectedSubject?.maxStudents - selectedSubject?.students.length) / selectedSubject?.maxStudents) * 100) + '%'">
+                  :style="'width: ' + Math.round(((selectedCourse?.maxStudents - selectedCourse?.students.length) / selectedCourse?.maxStudents) * 100) + '%'">
                 </div>
               </div>
             </div>
@@ -409,28 +406,28 @@
                 :class="modalStudentFilter === 'missing' ? 'active' : 'inactive'"
                 class="modal-filter-btn">
                 <i class="fa-solid fa-user-clock mr-1"></i>
-                Missing Course (<span x-text="selectedSubject?.missingCount"></span>)
+                Missing Course (<span x-text="selectedCourse?.missingCount"></span>)
               </button>
               <button 
                 @click="modalStudentFilter = 'passed'" 
                 :class="modalStudentFilter === 'passed' ? 'active' : 'inactive'"
                 class="modal-filter-btn">
                 <i class="fa-solid fa-user-check mr-1"></i>
-                Already Passed (<span x-text="selectedSubject?.courseData.passedStudents.length"></span>)
+                Already Passed (<span x-text="selectedCourse?.courseData.passedStudents.length"></span>)
               </button>
             </nav>
           </div>
 
           <div x-show="modalStudentFilter === 'current'">
-            <template x-if="selectedSubject?.students.length === 0">
+            <template x-if="selectedCourse?.students.length === 0">
               <div class="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
                 <i class="fa-solid fa-user-slash text-5xl mb-4 text-gray-300"></i>
                 <p class="text-gray-500 font-medium">No students enrolled in this session yet</p>
               </div>
             </template>
-            <template x-if="selectedSubject?.students.length > 0">
+            <template x-if="selectedCourse?.students.length > 0">
               <div class="space-y-2">
-                <template x-for="(student, i) in selectedSubject?.students" :key="i">
+                <template x-for="(student, i) in selectedCourse?.students" :key="i">
                   <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-all hover:border-gray-300">
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-3">
@@ -458,14 +455,14 @@
           </div>
 
           <div x-show="modalStudentFilter === 'passed'" style="display: none;">
-            <template x-if="!selectedSubject?.courseData || selectedSubject?.courseData.passedStudents.length === 0">
+            <template x-if="!selectedCourse?.courseData || selectedCourse?.courseData.passedStudents.length === 0">
               <div class="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
                 <p class="text-gray-500 font-medium">No data for students who passed</p>
               </div>
             </template>
-            <template x-if="selectedSubject?.courseData && selectedSubject?.courseData.passedStudents.length > 0">
+            <template x-if="selectedCourse?.courseData && selectedCourse?.courseData.passedStudents.length > 0">
               <div class="space-y-2">
-                <template x-for="(student, i) in selectedSubject?.courseData.passedStudents" :key="i">
+                <template x-for="(student, i) in selectedCourse?.courseData.passedStudents" :key="i">
                   <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-3">
@@ -493,11 +490,11 @@
           </div>
 
           <div x-show="modalStudentFilter === 'missing'" style="display: none;">
-            <template x-if="selectedSubject?.missingCount > 10">
+            <template x-if="selectedCourse?.missingCount > 10">
               <div class="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 flex items-center justify-between">
                 <div>
                   <p class="font-bold text-yellow-800">High Demand Alert!</p>
-                  <p class="text-sm text-yellow-700">There are <span x-text="selectedSubject?.missingCount"></span> students missing this course.</p>
+                  <p class="text-sm text-yellow-700">There are <span x-text="selectedCourse?.missingCount"></span> students missing this course.</p>
                 </div>
                 <button 
                   @click="openCreateSessionModal()"
@@ -507,15 +504,15 @@
               </div>
             </template>
             
-            <template x-if="!selectedSubject?.courseData || selectedSubject?.courseData.missingStudents.length === 0">
+            <template x-if="!selectedCourse?.courseData || selectedCourse?.courseData.missingStudents.length === 0">
               <div class="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
                 <i class="fa-solid fa-check-circle text-5xl mb-4 text-green-300"></i>
                 <p class="text-gray-500 font-medium">No students are missing this course</p>
               </div>
             </template>
-            <template x-if="selectedSubject?.courseData && selectedSubject?.courseData.missingStudents.length > 0">
+            <template x-if="selectedCourse?.courseData && selectedCourse?.courseData.missingStudents.length > 0">
               <div class="space-y-2">
-                <template x-for="(student, i) in selectedSubject?.courseData.missingStudents" :key="student.id">
+                <template x-for="(student, i) in selectedCourse?.courseData.missingStudents" :key="student.id">
                   <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-all hover:border-gray-300">
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-3">
@@ -542,7 +539,8 @@
             </template>
           </div>
 
-        </div> </div>
+        </div>
+      </div>
     </div>
 
     <div x-show="showCreateSessionModal"
@@ -597,13 +595,13 @@
 
           <div>
             <label for="subjects" class="block text-sm font-medium text-gray-700 mb-1">Subjects (comma-separated)</label>
-            <input type="text" id="subjects" x-model="newSessionSubjectsInput"
-                   @input="updateNewSessionSubjectsArray()"
+            <input type="text" id="subjects" x-model="newSessionCoursesInput"
+                   @input="updateNewSessionCoursesArray()"
                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]"
                    placeholder="e.g., GBUS 404, ACCT 301">
           </div>
-          <div class="flex flex-wrap gap-2" x-show="newSession.subjects.length > 0">
-            <template x-for="subject in newSession.subjects" :key="subject">
+          <div class="flex flex-wrap gap-2" x-show="newSession.courses.length > 0">
+            <template x-for="subject in newSession.courses" :key="subject">
               <span class="px-3 py-1 bg-gray-100 text-gray-700 text-sm font-medium rounded-full border border-gray-200" x-text="subject"></span>
             </template>
           </div>
@@ -622,7 +620,7 @@
         </div>
       </div>
     </div>
-    </main>
+  </main>
 
   <footer :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'" class="bg-[#2D2828] border-t">
     <div class="max-w-7xl mx-auto px-6 py-4">

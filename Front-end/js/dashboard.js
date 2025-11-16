@@ -50,6 +50,14 @@ function dashboardData() {
       console.log('Critical sessions:', this.stats.criticalSessions);
       console.log('Total students cargado:', this.stats.totalStudents);
       console.log('Enrollment Growth:', this.stats.enrollmentGrowth);
+      
+      // Wait for DOM to render before creating charts
+      await this.$nextTick();
+      setTimeout(() => {
+        if (window.createSessionCharts) {
+          window.createSessionCharts();
+        }
+      }, 200);
     },
 
     async fetchData() {
@@ -93,25 +101,89 @@ function dashboardData() {
         }
 
         // 🧠 Obtener sesiones desde el backend
-        const res = await fetch('http://localhost:3000/api/students/sessions');
+        const res = await fetch('http://localhost:3000/api/sessions');
         const data = await res.json();
-        this.allSessions = data;
-        console.log("📡 Sesiones cargadas desde la BD:", data);
+        
+        // ✅ FIX: Validar que sea un array
+        if (Array.isArray(data)) {
+          // Transform backend data to match frontend expectations
+          this.allSessions = data.map(session => ({
+            id: session.id,
+            name: session.sessionName, // Backend uses 'sessionName'
+            program: session.program,
+            month: session.month,
+            occupancy: session.occupancy || session.progress || 0,
+            status: session.status,
+            subjects: session.subjects || [],
+            professor: session.professor,
+            lowEnrollment: (session.occupancy || session.progress || 0) < 60
+          }));
+          console.log("📡 Sesiones cargadas desde la BD:", this.allSessions);
+        } else if (data.error) {
+          console.error("❌ Error del servidor:", data.error);
+          this.allSessions = this.getFallbackSessions();
+        } else {
+          console.error("❌ Respuesta inesperada del servidor:", data);
+          this.allSessions = this.getFallbackSessions();
+        }
 
       } catch (error) {
         console.error('❌ Error obteniendo datos del dashboard:', error);
+        this.allSessions = this.getFallbackSessions();
         this.stats.enrollmentGrowth = this.calculateEnrollmentGrowth();
       }
+    },
+
+    // 🆕 Sesiones de respaldo en caso de error
+    getFallbackSessions() {
+      console.warn('⚠️ Usando sesiones de ejemplo (fallback)');
+      return [
+        {
+          id: 1,
+          name: "Session 1",
+          program: "Bachelor's",
+          month: "January 2025",
+          occupancy: 85,
+          status: "active",
+          subjects: ["Math 101", "English 102"],
+          professor: "Dr. Smith"
+        },
+        {
+          id: 2,
+          name: "Session 2",
+          program: "Associate",
+          month: "February 2025",
+          occupancy: 35,
+          status: "active",
+          subjects: ["Science 201"],
+          professor: "Dr. Johnson"
+        },
+        {
+          id: 3,
+          name: "Session 3",
+          program: "Bachelor's",
+          month: "March 2025",
+          occupancy: 72,
+          status: "active",
+          subjects: ["History 301", "Art 105"],
+          professor: "Dr. Williams"
+        }
+      ];
     },
 
     // Calcular crecimiento de matrícula
     calculateEnrollmentGrowth() {
       if (this.allSessions.length === 0) return 0;
       
-      const activeSessions = this.allSessions.filter(s => s.status === 'active').length;
-      const totalSessions = this.allSessions.length;
+      const totalStudents = this.allSessions.reduce((sum, s) => {
+        const capacity = 30; // Capacidad estándar por sesión
+        return sum + Math.round((s.occupancy / 100) * capacity);
+      }, 0);
       
-      const avgOccupancy = this.allSessions.reduce((sum, s) => sum + s.occupancy, 0) / totalSessions;
+      const totalCapacity = this.allSessions.length * 30;
+      const avgOccupancy = (totalStudents / totalCapacity) * 100;
+      
+      // Simular crecimiento comparando con el 60% como baseline
       const growthRate = ((avgOccupancy - 60) / 60) * 100;
       
       return Math.round(growthRate * 10) / 10;
@@ -241,7 +313,12 @@ function dashboardData() {
     
     // 🔥 FIX: Actualiza estadísticas basadas en upcomingSessions
     updateStats() {
-      this.stats.criticalSessions = this.allSessions.filter(s => s.occupancy < 40).length;
+      // ✅ Validar que allSessions sea un array
+      if (Array.isArray(this.allSessions)) {
+        this.stats.criticalSessions = this.allSessions.filter(s => s.occupancy < 40).length;
+      } else {
+        this.stats.criticalSessions = 0;
+      }
       
       if (this.upcomingSessions.length > 0) {
         this.stats.activeSessions = this.upcomingSessions.filter(s => s.status === 'active').length;
@@ -257,6 +334,12 @@ function dashboardData() {
     },
 
     redirectToCriticalSessions() {
+      // ✅ Validar que allSessions sea un array
+      if (!Array.isArray(this.allSessions)) {
+        console.error('❌ allSessions no es un array');
+        return;
+      }
+      
       const criticalSessions = this.allSessions.filter(s => s.occupancy < 40);
       console.log('Critical sessions found:', criticalSessions);
       sessionStorage.setItem('criticalSessionsFilter', 'true');
@@ -430,7 +513,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Gráficas de Donut para cada sesión
     window.createSessionCharts = function() {
+      console.log('🎨 Creating session charts for', data.upcomingSessions.length, 'sessions');
       
+      // Destruir gráficas anteriores
       Object.keys(chartInstances).forEach(key => {
         if (key.startsWith('sessionChart')) {
           chartInstances[key].destroy();
@@ -439,7 +524,10 @@ document.addEventListener('DOMContentLoaded', function () {
       });
 
       data.upcomingSessions.forEach((session) => {
-        const canvas = document.getElementById('sessionChart' + session.id);
+        const chartId = 'sessionChart' + session.id;
+        const canvas = document.getElementById(chartId);
+        
+        console.log(`Looking for canvas: ${chartId}`, canvas ? '✅ Found' : '❌ Not found');
         
         if (canvas) {
           const ctx = canvas.getContext('2d');
@@ -456,12 +544,14 @@ document.addEventListener('DOMContentLoaded', function () {
             chartColor = '#D41736';
           }
           
-          chartInstances['sessionChart' + session.id] = new Chart(ctx, {
+          console.log(`Creating chart for session ${session.id} with ${progress}% occupancy`);
+          
+          chartInstances[chartId] = new Chart(ctx, {
             type: 'doughnut', 
             data: {
               labels: ['Occupied', 'Available'],
               datasets: [{
-                data: [session.occupancy, 100 - session.occupancy],
+                data: [progress, 100 - progress],
                 backgroundColor: [
                   chartColor,
                   'rgba(210, 210, 210, 0.4)'
@@ -485,6 +575,8 @@ document.addEventListener('DOMContentLoaded', function () {
               }
             }
           });
+          
+          console.log(`✅ Chart created for session ${session.id}`);
         }
       });
     };
