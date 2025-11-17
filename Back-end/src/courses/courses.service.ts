@@ -7,12 +7,17 @@ export class CoursesService {
   constructor(private prisma: PrismaService) {}
 
   async findAll() {
-    // Obtener todos los cursos
+    // Obtener todos los cursos con sus programas a través de ProgramCourse
     const courses = await this.prisma.course.findMany({
       include: {
-        program: {
-          select: {
-            programName: true
+        programCourses: {
+          include: {
+            program: {
+              select: {
+                programName: true,
+                id: true
+              }
+            }
           }
         },
         prerequisites: {
@@ -30,25 +35,29 @@ export class CoursesService {
       }
     });
 
-    // Obtener total de estudiantes activos
     const totalActiveStudents = await this.prisma.student.count({
       where: { status: 'active' }
     });
 
-    // Para cada curso, calcular estudiantes actuales, pasados y faltantes
     const coursesWithData = await Promise.all(
       courses.map(async (course) => {
-        // 1. Estudiantes actualmente inscritos (enrollment activo en sesión activa)
+        // Obtener todos los programIds relacionados con este curso
+        const programIds = course.programCourses.map(pc => pc.programId);
+        
+        // Estudiantes actualmente inscritos
         const currentStudents = await this.prisma.student.findMany({
           where: {
             status: 'active',
+            programId: {
+              in: programIds // Buscar en todos los programas relacionados
+            },
             enrollments: {
               some: {
                 offering: {
                   courseId: course.id,
                   session: {
                     endDate: {
-                      gte: new Date() // Sesiones que no han terminado
+                      gte: new Date()
                     }
                   }
                 },
@@ -64,15 +73,18 @@ export class CoursesService {
           }
         });
 
-        // 2. Estudiantes que ya pasaron el curso (tienen AcademicRecord)
+        // Estudiantes que ya pasaron el curso
         const passedStudents = await this.prisma.student.findMany({
           where: {
             status: 'active',
+            programId: {
+              in: programIds
+            },
             records: {
               some: {
                 courseId: course.id,
                 status: {
-                  in: ['passed', 'completed', 'P'] // Ajusta según tus valores de status
+                  in: ['passed', 'completed', 'P']
                 }
               }
             }
@@ -85,21 +97,21 @@ export class CoursesService {
           }
         });
 
-        // IDs de estudiantes que ya tienen el curso (inscritos o pasados)
         const studentsWithCourseIds = [
           ...currentStudents.map(s => s.id),
           ...passedStudents.map(s => s.id)
         ];
 
-        // 3. Estudiantes que les falta el curso (del mismo programa, activos, sin el curso)
+        // Estudiantes que les falta el curso (de TODOS los programas relacionados)
         const missingStudents = await this.prisma.student.findMany({
           where: {
             status: 'active',
-            programId: course.programId,
+            programId: {
+              in: programIds
+            },
             id: {
               notIn: studentsWithCourseIds
             },
-            // NO tienen enrollment en este curso
             NOT: {
               enrollments: {
                 some: {
@@ -109,7 +121,6 @@ export class CoursesService {
                 }
               }
             },
-            // NO tienen academic record de este curso
             AND: {
               NOT: {
                 records: {
@@ -128,7 +139,6 @@ export class CoursesService {
           }
         });
 
-        // Obtener la sesión más reciente para este curso
         const latestOffering = await this.prisma.courseOffering.findFirst({
           where: {
             courseId: course.id
@@ -149,26 +159,30 @@ export class CoursesService {
           }
         });
 
-        // Formatear prerequisitos
         const prerequisites = course.prerequisites.map(
           p => p.prerequisiteCourse.courseCode
         );
 
-        // Formatear estudiantes
         const formatStudent = (s: any) => ({
           id: s.id.toString(),
           name: `${s.firstName} ${s.lastName}`,
           studentId: s.studentIdNumber || `STU-${s.id.toString().padStart(6, '0')}`
         });
 
+        // Combinar nombres de programas
+        const programNames = course.programCourses
+          .map(pc => pc.program.programName)
+          .join(' & ');
+
         return {
           id: course.id.toString(),
           code: course.courseCode,
           name: course.courseName,
-          program: course.program.programName,
+          program: programNames, // Ahora puede ser "BSGM & ASSD"
+          programIds: programIds, // IDs de programas relacionados
           session: latestOffering?.session.sessionName || 'No active session',
           maxStudents: latestOffering?.maxStudents || course.maxCapacity || 30,
-          modality: 'Online', // Puedes agregar este campo a tu schema si lo necesitas
+          modality: 'Online',
           instructor: latestOffering?.teacher 
             ? `${latestOffering.teacher.firstName} ${latestOffering.teacher.lastName}`
             : 'TBD',
@@ -191,9 +205,14 @@ export class CoursesService {
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
       include: {
-        program: {
-          select: {
-            programName: true
+        programCourses: {
+          include: {
+            program: {
+              select: {
+                programName: true,
+                id: true
+              }
+            }
           }
         },
         prerequisites: {
@@ -212,10 +231,15 @@ export class CoursesService {
       return null;
     }
 
+    const programIds = course.programCourses.map(pc => pc.programId);
+
     // Estudiantes actualmente inscritos
     const currentStudents = await this.prisma.student.findMany({
       where: {
         status: 'active',
+        programId: {
+          in: programIds
+        },
         enrollments: {
           some: {
             offering: {
@@ -242,6 +266,9 @@ export class CoursesService {
     const passedStudents = await this.prisma.student.findMany({
       where: {
         status: 'active',
+        programId: {
+          in: programIds
+        },
         records: {
           some: {
             courseId: course.id,
@@ -268,7 +295,9 @@ export class CoursesService {
     const missingStudents = await this.prisma.student.findMany({
       where: {
         status: 'active',
-        programId: course.programId,
+        programId: {
+          in: programIds
+        },
         id: {
           notIn: studentsWithCourseIds
         },
@@ -329,11 +358,16 @@ export class CoursesService {
       studentId: s.studentIdNumber || `STU-${s.id.toString().padStart(6, '0')}`
     });
 
+    const programNames = course.programCourses
+      .map(pc => pc.program.programName)
+      .join(' & ');
+
     return {
       id: course.id.toString(),
       code: course.courseCode,
       name: course.courseName,
-      program: course.program.programName,
+      program: programNames,
+      programIds: programIds,
       session: latestOffering?.session.sessionName || 'No active session',
       maxStudents: latestOffering?.maxStudents || course.maxCapacity || 30,
       modality: 'Online',

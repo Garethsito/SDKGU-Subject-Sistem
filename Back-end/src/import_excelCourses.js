@@ -9,18 +9,30 @@ async function processCourse(row, programs) {
     const courseCode = row['Course Code']?.trim();
     const courseName = row['Course Name']?.trim();
     const programName = row['Program']?.trim();
-    const programId = programs[programName]?.id;
     const credits = row['Credits'] ? parseInt(row['Credits']) : 3;
     const maxCapacity = row['Max Capacity'] ? parseInt(row['Max Capacity']) : 50;
     const language = row['Language']?.trim() || 'English';
     const isTransferable = row['Transferable']?.toString().toLowerCase() === 'true';
 
-    if (!courseCode || !courseName || !programId) {
+    if (!courseCode || !courseName) {
       console.error(`Datos incompletos para curso: ${courseCode}`);
       return null;
     }
 
-    // Upsert: actualizar si existe, crear si no
+    // Determinar programId: si es General Education, usar BSGM por defecto
+    let programId;
+    if (programName === 'General Education') {
+      programId = programs['BSGM']?.id;
+    } else {
+      programId = programs[programName]?.id;
+    }
+
+    if (!programId) {
+      console.error(`Programa no encontrado para: ${programName} (curso ${courseCode})`);
+      return null;
+    }
+
+    // Crear o actualizar el curso SIN programId
     const course = await prisma.course.upsert({
       where: { courseCode },
       update: {
@@ -28,8 +40,7 @@ async function processCourse(row, programs) {
         credits,
         maxCapacity,
         language,
-        isTransferable,
-        programId
+        isTransferable
       },
       create: {
         courseCode,
@@ -37,15 +48,68 @@ async function processCourse(row, programs) {
         credits,
         maxCapacity,
         language,
-        isTransferable,
-        programId
+        isTransferable
       }
     });
 
-    console.log(`Curso procesado: ${courseCode} - ${courseName}`);
+    // Si es General Education, vincular a AMBOS programas
+    if (programName === 'General Education') {
+      const bsgm = programs['BSGM'];
+      const assd = programs['ASSD'];
+
+      // Vincular a BSGM
+      await prisma.programCourse.upsert({
+        where: {
+          programId_courseId: {
+            programId: bsgm.id,
+            courseId: course.id
+          }
+        },
+        create: {
+          programId: bsgm.id,
+          courseId: course.id
+        },
+        update: {}
+      });
+
+      // Vincular a ASSD
+      await prisma.programCourse.upsert({
+        where: {
+          programId_courseId: {
+            programId: assd.id,
+            courseId: course.id
+          }
+        },
+        create: {
+          programId: assd.id,
+          courseId: course.id
+        },
+        update: {}
+      });
+
+      console.log(`Curso Gen Ed procesado: ${courseCode} -> BSGM & ASSD`);
+    } else {
+      // Vincular solo al programa especificado
+      await prisma.programCourse.upsert({
+        where: {
+          programId_courseId: {
+            programId: programId,
+            courseId: course.id
+          }
+        },
+        create: {
+          programId: programId,
+          courseId: course.id
+        },
+        update: {}
+      });
+
+      console.log(`Curso procesado: ${courseCode} -> ${programName}`);
+    }
+
     return course;
   } catch (err) {
-    console.error(`Error procesando curso: ${err.message}`);
+    console.error(`Error procesando curso ${row['Course Code']}: ${err.message}`);
     return null;
   }
 }
@@ -62,6 +126,9 @@ async function main() {
     const programs = {};
     programsList.forEach(p => programs[p.programName] = p);
 
+    console.log('Programas encontrados:', Object.keys(programs));
+    console.log(`Total de cursos a procesar: ${rows.length}\n`);
+
     let successCount = 0;
     let errorCount = 0;
 
@@ -71,9 +138,19 @@ async function main() {
       else errorCount++;
     }
 
-    console.log('\nImportación de cursos completada!');
+    console.log('\n=================================');
+    console.log('Importacion de cursos completada!');
     console.log(`Exitosos: ${successCount}`);
     console.log(`Errores: ${errorCount}`);
+    console.log('=================================\n');
+
+    // Mostrar resumen de ProgramCourse
+    const bsgmCount = await prisma.programCourse.count({ where: { programId: programs['BSGM'].id } });
+    const assdCount = await prisma.programCourse.count({ where: { programId: programs['ASSD'].id } });
+    
+    console.log('Resumen de cursos por programa:');
+    console.log(`BSGM: ${bsgmCount} cursos`);
+    console.log(`ASSD: ${assdCount} cursos`);
 
   } catch (err) {
     console.error('Error fatal:', err);

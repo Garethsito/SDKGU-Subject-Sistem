@@ -17,18 +17,48 @@ model Program {
   totalUnits   Int?
   students     Student[]
   sessions     Session[]
-  courses      Course[]
+  programCourses ProgramCourse[]
+}
+
+model Course {
+  id             Int      @id @default(autoincrement())
+  courseCode     String   @unique
+  courseName     String
+  credits        Int      @default(3)
+  language       String?
+  isTransferable Boolean  @default(true)
+  maxCapacity    Int?
+  
+  programCourses ProgramCourse[]
+  prerequisites      Prerequisite[] @relation("PrerequisitesForCourse")
+  prerequisiteFor    Prerequisite[] @relation("PrerequisitesForOther")
+  offerings          CourseOffering[]
+  records            AcademicRecord[]
+  transfers          Transfer[]
+  
+  @@index([courseCode])
+}
+
+model ProgramCourse {
+  program   Program @relation(fields: [programId], references: [id])
+  programId Int
+  course    Course  @relation(fields: [courseId], references: [id])
+  courseId  Int
+
+  @@id([programId, courseId])
+  @@index([courseId])
+  @@index([programId])
 }
 
 model Teacher {
   id              Int      @id @default(autoincrement())
-  teacherIdNumber String   @unique  // Matrícula del profesor
+  teacherIdNumber String   @unique
   firstName       String
   middleName      String?
   lastName        String
   email           String?  @unique
   phone           String?
-  status          String   @default("active")  // active, inactive, on_leave
+  status          String   @default("active")
   hireDate        DateTime
   department      String?
   specialization  String?
@@ -40,8 +70,8 @@ model Teacher {
 }
 
 model Student {
-  id                      BigInt   @id // Cambiado: ahora es BigInt sin autoincrement
-  studentIdNumber         String   @unique // Nuevo: para almacenar el ID original como string
+  id                      BigInt   @id
+  studentIdNumber         String   @unique
   firstName               String
   middleName              String?
   lastName                String
@@ -60,7 +90,6 @@ model Student {
   transferredUnits        Int      @default(0)
   unitQuantity            Int      @default(0)
   totalUnitsEarned        Int      @default(0)
-  totalUnits              Int      @default(0)
   scheduledCompletionDate DateTime?
   graduationDate          DateTime?
   program                 Program  @relation(fields: [programId], references: [id])
@@ -77,26 +106,6 @@ model Student {
   @@index([sdgkuEmail])
   @@index([studentIdNumber])
   @@index([status])
-}
-
-model Course {
-  id             Int      @id @default(autoincrement())
-  courseCode     String   @unique
-  courseName     String
-  credits        Int      @default(3)
-  language       String?
-  isTransferable Boolean  @default(true)
-  maxCapacity    Int?
-  program        Program  @relation(fields: [programId], references: [id])
-  programId      Int
-  prerequisites      Prerequisite[] @relation("PrerequisitesForCourse")
-  prerequisiteFor    Prerequisite[] @relation("PrerequisitesForOther")
-  offerings          CourseOffering[]
-  records            AcademicRecord[]
-  transfers          Transfer[]
-  
-  @@index([programId])
-  @@index([courseCode])
 }
 
 model Prerequisite {
@@ -152,7 +161,7 @@ model Enrollment {
   offeringId Int
   status     String          @default("enrolled")
   grade      String?
-  enrolledAt DateTime @default(now())
+  enrolledAt DateTime        @default(now())
   
   @@unique([studentId, offeringId])
   @@index([studentId])
