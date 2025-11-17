@@ -139,17 +139,16 @@ export class StudentsService {
     return Math.round(growthRate * 10) / 10;
   }
 
-  // 🆕 Obtener materias con más estudiantes faltantes
-
   async getMissingSubjectsByStudent() {
     try {
-      // 1. Obtener todos los cursos ACTIVOS del sistema
+      // 1. Obtener todos los cursos del sistema con sus programas
       const allCourses = await this.prisma.course.findMany({
-        select: {
-          id: true,
-          courseName: true,
-          courseCode: true,
-          programId: true,
+        include: {
+          programCourses: {
+            include: {
+              program: true
+            }
+          }
         }
       });
 
@@ -170,13 +169,17 @@ export class StudentsService {
       // 3. Para cada curso, calcular cuántos estudiantes NO lo han tomado
       const missingData = await Promise.all(
         allCourses.map(async (course) => {
-          // Contar estudiantes activos del mismo programa que YA tomaron el curso
+          // Obtener todos los programIds relacionados con este curso
+          const programIds = course.programCourses.map(pc => pc.programId);
+          
+          // Contar estudiantes activos de TODOS los programas relacionados que YA tomaron el curso
           const studentsWithCourse = await this.prisma.student.count({
             where: {
               status: 'active',
-              programId: course.programId, // Solo del mismo programa
+              programId: {
+                in: programIds // Buscar en todos los programas
+              },
               OR: [
-                // Tienen un enrollment activo o pasado
                 {
                   enrollments: {
                     some: {
@@ -186,7 +189,6 @@ export class StudentsService {
                     }
                   }
                 },
-                // Tienen un academic record (ya lo pasaron)
                 {
                   records: {
                     some: {
@@ -194,7 +196,6 @@ export class StudentsService {
                     }
                   }
                 },
-                // Tienen un transfer credit
                 {
                   transfers: {
                     some: {
@@ -206,22 +207,23 @@ export class StudentsService {
             }
           });
 
-          // Total de estudiantes del programa
+          // Total de estudiantes de TODOS los programas relacionados
           const programStudents = await this.prisma.student.count({
             where: {
               status: 'active',
-              programId: course.programId
+              programId: {
+                in: programIds
+              }
             }
           });
 
-          // Estudiantes faltantes = estudiantes del programa - los que ya lo tomaron
           const missingCount = programStudents - studentsWithCourse;
 
           return {
             label: course.courseCode,
             courseName: course.courseName,
             missing: missingCount > 0 ? missingCount : 0,
-            programId: course.programId
+            programIds: programIds
           };
         })
       );
@@ -232,9 +234,9 @@ export class StudentsService {
       const topMissing = missingData
         .filter(item => item.missing > 0)
         .sort((a, b) => b.missing - a.missing)
-        .slice(0, 6); // Top 6
+        .slice(0, 6);
 
-      console.log('🔝 Top 6 missing courses:', topMissing);
+      console.log('🔍 Top 6 missing courses:', topMissing);
 
       if (topMissing.length === 0) {
         console.log('✅ All students have taken all courses!');

@@ -329,18 +329,37 @@ export class SessionsService {
       throw new NotFoundException(`Session with ID ${id} not found`);
     }
 
-    const hasEnrollments = session.offerings.some(off => off.enrollments.length > 0);
-    if (hasEnrollments) {
-      throw new BadRequestException('Cannot delete session with active enrollments');
+    // Contar estudiantes inscritos
+    const totalEnrollments = session.offerings.reduce(
+      (sum, off) => sum + off.enrollments.length, 
+      0
+    );
+
+    // ELIMINAR todos los enrollments primero
+    for (const offering of session.offerings) {
+      if (offering.enrollments.length > 0) {
+        await this.prisma.enrollment.deleteMany({
+          where: { offeringId: offering.id }
+        });
+      }
     }
 
+    // Eliminar los CourseOfferings
     await this.prisma.courseOffering.deleteMany({
       where: { sessionId: id }
     });
 
-    return this.prisma.session.delete({
+    // Eliminar la sesión
+    await this.prisma.session.delete({
       where: { id }
     });
+
+    // Retornar información sobre cuántos estudiantes se eliminaron
+    return {
+      success: true,
+      message: 'Session deleted successfully',
+      studentsRemoved: totalEnrollments
+    };
   }
 
   // Obtener materias disponibles para agregar a una sesión
@@ -358,15 +377,25 @@ export class SessionsService {
 
     const assignedCourseIds = session.offerings.map(off => off.courseId);
 
-    return this.prisma.course.findMany({
+    // Obtener cursos que pertenecen al programa de la sesión a través de ProgramCourse
+    const programCourses = await this.prisma.programCourse.findMany({
       where: {
         programId: session.programId,
-        id: {
+        courseId: {
           notIn: assignedCourseIds
         }
       },
-      orderBy: { courseCode: 'asc' }
+      include: {
+        course: true
+      },
+      orderBy: {
+        course: {
+          courseCode: 'asc'
+        }
+      }
     });
+
+    return programCourses.map(pc => pc.course);
   }
 
   // Obtener todos los profesores activos
@@ -588,7 +617,12 @@ export class SessionsService {
         courseId_sessionId: { courseId, sessionId }
       },
       include: {
-        enrollments: true
+        enrollments: true,
+        course: {
+          include: {
+            programCourses: true
+          }
+        }
       }
     });
 
@@ -598,6 +632,11 @@ export class SessionsService {
 
     const enrolledStudentIds = offering.enrollments.map(enr => enr.studentId);
 
+    // Obtener IDs de programas relacionados con este curso
+    const programIds = offering.course.programCourses.map(pc => pc.programId);
+
+    // Filtrar solo estudiantes del programa de la sesión
+    // (aunque el curso pueda pertenecer a múltiples programas)
     const availableStudents = await this.prisma.student.findMany({
       where: {
         programId: session.programId,

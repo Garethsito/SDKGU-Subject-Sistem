@@ -13,12 +13,20 @@ export class ProgramsController {
     });
   }
 
-  // NUEVO: Obtener cursos de un programa
   @Get(':id/courses')
   async getProgramCourses(@Param('id', ParseIntPipe) id: number) {
-    return this.prisma.course.findMany({
+    const programCourses = await this.prisma.programCourse.findMany({
       where: { programId: id },
-      orderBy: { courseCode: 'asc' }
+      include: {
+        course: true
+      },
+      orderBy: {
+        course: {
+          courseCode: 'asc'
+        }
+      }
     });
+
+    return programCourses.map(pc => pc.course);
   }
 }
