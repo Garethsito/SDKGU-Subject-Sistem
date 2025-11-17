@@ -1,5 +1,5 @@
 // Back-end/src/students/students.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.services';
 
 @Injectable()
@@ -253,4 +253,198 @@ export class StudentsService {
       return { labels: [], data: [] };
     }
   }
+
+  // Obtener todos los estudiantes con detalles
+  async getAllStudents() {
+    const students = await this.prisma.student.findMany({
+      where: { status: 'active' },
+      include: {
+        program: true,
+        enrollments: {
+          include: {
+            offering: {
+              include: {
+                course: true,
+                session: true
+              }
+            }
+          }
+        },
+        records: {
+          include: {
+            course: true
+          }
+        },
+        transfers: {
+          include: {
+            course: true
+          }
+        }
+      },
+      orderBy: [
+        { lastName: 'asc' },
+        { firstName: 'asc' }
+      ]
+    });
+
+    return students.map(student => {
+      // Calcular unidades completadas
+      const completedRecords = student.records.filter(r => 
+        ['passed', 'completed', 'P'].includes(r.status || '')
+      );
+      
+      const unitsEarned = completedRecords.reduce((sum, record) => {
+        const course = record.course;
+        return sum + (course.credits || 3);
+      }, 0) + student.transferredUnits;
+
+      // Obtener cursos completados
+      const completedCourseIds = [
+        ...completedRecords.map(r => r.courseId),
+        ...student.transfers.map(t => t.courseId)
+      ];
+
+      // Obtener cursos requeridos del programa
+      const programCourses = student.program ? [] : []; // Aquí deberías obtener los cursos del programa
+
+      // Construir objeto de calificaciones
+      const grades = {};
+      student.records.forEach(record => {
+        grades[record.courseId] = {
+          grade: this.convertGradeToNumeric(record.grade),
+          letter: record.grade || '-',
+          status: this.getRecordStatus(record.status)
+        };
+      });
+
+      return {
+        id: Number(student.id),
+        studentId: student.studentIdNumber,
+        name: `${student.firstName} ${student.lastName}`,
+        firstName: student.firstName,
+        middleName: student.middleName || '',
+        lastName: student.lastName,
+        phone: student.phone || 'N/A',
+        emailPersonal: student.email || 'N/A',
+        emailSDGKU: student.sdgkuEmail || 'N/A',
+        status: student.status === 'active' ? 'Active' : 'Inactive',
+        program: student.program?.programName || 'Unknown',
+        modality: student.modality || 'Online',
+        cohort: `Fall ${student.enrollmentYear}`,
+        language: student.language || 'English',
+        totalUnits: student.totalUnits,
+        transferredUnits: student.transferredUnits,
+        unitsEarned: unitsEarned,
+        startDate: student.startDate.toISOString().split('T')[0],
+        scheduledCompletion: student.scheduledCompletionDate 
+          ? student.scheduledCompletionDate.toISOString().split('T')[0] 
+          : 'TBD',
+        graduationDate: student.graduationDate 
+          ? student.graduationDate.toISOString().split('T')[0] 
+          : 'TBD',
+        completedSubjects: completedCourseIds,
+        requiredSubjects: programCourses,
+        grades: grades,
+        progress: {}
+      };
+    });
+  }
+
+  // Obtener un estudiante por ID
+  async getStudentById(studentId: bigint) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      include: {
+        program: true,
+        enrollments: {
+          include: {
+            offering: {
+              include: {
+                course: true,
+                session: true
+              }
+            }
+          }
+        },
+        records: {
+          include: {
+            course: true
+          }
+        },
+        transfers: {
+          include: {
+            course: true
+          }
+        }
+      }
+    });
+
+    if (!student) {
+      throw new NotFoundException(`Student with ID ${studentId} not found`);
+    }
+
+    const completedRecords = student.records.filter(r => 
+      ['passed', 'completed', 'P'].includes(r.status || '')
+    );
+    
+    const unitsEarned = completedRecords.reduce((sum, record) => {
+      return sum + (record.course.credits || 3);
+    }, 0) + student.transferredUnits;
+
+    const grades = {};
+    student.records.forEach(record => {
+      grades[record.courseId] = {
+        grade: this.convertGradeToNumeric(record.grade),
+        letter: record.grade || '-',
+        status: this.getRecordStatus(record.status)
+      };
+    });
+
+    return {
+      id: Number(student.id),
+      studentId: student.studentIdNumber,
+      name: `${student.firstName} ${student.lastName}`,
+      firstName: student.firstName,
+      middleName: student.middleName || '',
+      lastName: student.lastName,
+      phone: student.phone || 'N/A',
+      emailPersonal: student.email || 'N/A',
+      emailSDGKU: student.sdgkuEmail || 'N/A',
+      status: student.status === 'active' ? 'Active' : 'Inactive',
+      program: student.program?.programName || 'Unknown',
+      modality: student.modality || 'Online',
+      cohort: `Fall ${student.enrollmentYear}`,
+      language: student.language || 'English',
+      totalUnits: student.totalUnits,
+      transferredUnits: student.transferredUnits,
+      unitsEarned: unitsEarned,
+      startDate: student.startDate.toISOString().split('T')[0],
+      scheduledCompletion: student.scheduledCompletionDate?.toISOString().split('T')[0] || 'TBD',
+      graduationDate: student.graduationDate?.toISOString().split('T')[0] || 'TBD',
+      grades: grades
+    };
+  }
+
+  // Helpers
+  private convertGradeToNumeric(grade: string | null): number | null {
+    if (!grade) return null;
+    
+    const gradeMap: { [key: string]: number } = {
+      'A': 95, 'A-': 92,
+      'B+': 88, 'B': 85, 'B-': 82,
+      'C+': 78, 'C': 75, 'C-': 72,
+      'D+': 68, 'D': 65, 'D-': 62,
+      'F': 50, 'P': 85
+    };
+    
+    return gradeMap[grade] || null;
+  }
+
+  private getRecordStatus(status: string | null): string {
+    if (!status) return 'Not Started';
+    if (['passed', 'completed', 'P'].includes(status)) return 'Completed';
+    if (status === 'enrolled') return 'In Progress';
+    return 'Not Started';
+  }
+
 }

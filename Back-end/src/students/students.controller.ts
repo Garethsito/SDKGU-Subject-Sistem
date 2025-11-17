@@ -1,5 +1,5 @@
 // Back-end/src/students/students.controller.ts
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
 import { StudentsService } from './students.service';
 
 @Controller('api/students')
@@ -42,4 +42,27 @@ export class StudentsController {
       };
     }
   }
+
+  @Get(':id')
+  async getStudentById(@Param('id') id: string) {
+    try {
+      const student = await this.studentsService.getStudentById(BigInt(id));
+      return student;
+    } catch (error) {
+      console.error('Error fetching student:', error);
+      throw new NotFoundException(`Student with ID ${id} not found`);
+    }
+  }
+
+  @Get()
+  async getAllStudents() {
+    try {
+      const students = await this.studentsService.getAllStudents();
+      return students;
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      throw error;
+    }
+  }
+
 }
