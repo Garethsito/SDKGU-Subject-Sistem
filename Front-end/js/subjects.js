@@ -23,6 +23,12 @@ function coursesData() {
 
     toast: { show: false, message: '', type: 'success' },
 
+    programConfig: {
+      'ASSD': { label: 'ASSD', color: 'B34B20' },
+      'BGSM': { label: 'BSGM', color: 'D41736' },
+      'BSGM & ASSD': { label: 'EDU-GEN', color: '4D4E4E' }
+    },
+
     allCourses: [],
     courses: [],
     availablePrograms: [],
@@ -82,7 +88,11 @@ function coursesData() {
         this.allCourses = [];
       }
     },
-
+    
+    getProgramConfig(program) {
+      return this.programConfig[program] || { label: program, color: 'A6192E' };
+    },
+    
     getCardBg(occupancy) {
       if (occupancy >= 70) return 'rgba(255, 255, 255, 0.6)';
       if (occupancy >= 40) return 'rgba(255, 255, 255, 0.4)';

@@ -203,13 +203,14 @@
           <div class="flex justify-between items-start mb-3">
             <div>
               <h3 class="text-xl font-bold text-gray-800 flex items-center">
-                <i class="fa-solid fa-book-open text-[#A6192E] mr-2"></i>
+                <i class="fa-solid fa-book-open text-[#2D2828] mr-2"></i>
                 <span x-text="subject.code"></span>
               </h3>
             </div>
-            <span class="px-3 py-1 bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] text-white text-xs font-semibold rounded-full flex items-center">
+            <span class="px-3 py-1 text-white text-xs font-semibold rounded-full flex items-center"
+              :style="'background: #' + getProgramConfig(subject.program).color">
               <i class="fa-solid fa-graduation-cap mr-1"></i>
-              <span x-text="subject.program"></span>
+              <span x-text="getProgramConfig(subject.program).label"></span>
             </span>
           </div>
 
@@ -297,7 +298,7 @@
         x-transition:leave-end="opacity-0 scale-90"
         class="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         
-        <div class="bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] text-white p-6 flex justify-between items-center">
+        <div class="bg-gradient-to-r from-[#4D4E4E] to-[#252121] text-white p-6 flex justify-between items-center">
           <div>
             <h2 class="text-2xl font-bold flex items-center">
               <i class="fa-solid fa-book-open mr-2"></i>
@@ -317,7 +318,7 @@
           
           <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
-              <i class="fa-solid fa-circle-info text-[#A6192E] mr-2"></i>Session Details
+              <i class="fa-solid fa-circle-info text-gray-600 mr-2"></i>Session Details
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div class="flex items-center gap-2">
@@ -333,21 +334,22 @@
               <div class="flex items-center gap-2">
                 <i class="fa-solid fa-graduation-cap w-4 text-center text-gray-500"></i>
                 <span class="font-medium text-gray-600">Program:</span>
-                <span class="px-3 py-0.5 bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] text-white text-xs font-semibold rounded-full flex items-center">
-                  <span x-text="selectedCourse?.program"></span>
+                <span class="px-3 py-0.5 text-white text-xs font-semibold rounded-full flex items-center"
+                      :style="'background: #' + getProgramConfig(selectedCourse?.program).color">
+                  <span x-text="getProgramConfig(selectedCourse?.program).label"></span>
                 </span>
               </div>
             </div>
           </div>
           
-          <div class="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+          <div class="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-gray-500">
             <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
-              <i class="fa-solid fa-users text-blue-600 mr-2"></i>Session Occupancy
+              <i class="fa-solid fa-users text-gray-600 mr-2"></i>Session Occupancy
             </h3>
             <div class="flex items-center justify-between mb-3">
               <div class="text-left">
                 <span class="text-sm font-medium text-gray-600 flex items-center">
-                  <i class="fa-solid fa-users mr-1.5"></i>Enrolled (Session)
+                  <i class="fa-solid fa-users text-gray-600 mr-1.5"></i>Enrolled (Session)
                 </span>
                 <p class="text-2xl font-bold text-gray-800" 
                     x-text="selectedCourse?.students.length">
@@ -365,7 +367,7 @@
                 <span class="text-sm font-medium text-gray-600 flex items-center justify-end">
                   <i class="fa-solid fa-user-plus mr-1.5"></i>Remaining Seats
                 </span>
-                <p class="text-2xl font-bold text-blue-600" 
+                <p class="text-2xl font-bold text-gray-600" 
                     x-text="selectedCourse?.maxStudents - selectedCourse?.students.length">
                 </p>
               </div>
@@ -376,13 +378,13 @@
                 <span class="text-sm font-medium text-gray-700 flex items-center">
                   Remaining Session Capacity:
                 </span>
-                <span class="text-sm font-bold text-blue-600"
+                <span class="text-sm font-bold text-yellow-600"
                   x-text="Math.round(((selectedCourse?.maxStudents - selectedCourse?.students.length) / selectedCourse?.maxStudents) * 100) + '%'">
                 </span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden shadow-inner">
                 <div 
-                  class="h-full transition-all duration-500 rounded-full bg-gradient-to-r from-blue-500 to-blue-700"
+                  class="h-full transition-all duration-500 rounded-full bg-[#B22E20]"
                   :style="'width: ' + Math.round(((selectedCourse?.maxStudents - selectedCourse?.students.length) / selectedCourse?.maxStudents) * 100) + '%'">
                 </div>
               </div>
@@ -390,7 +392,7 @@
           </div>
 
           <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
-            <i class="fa-solid fa-book-open text-[#A6192E] mr-2"></i>Course Data
+            <i class="fa-solid fa-book-open text-gray-600 mr-2"></i>Course Data
           </h3>
           <div class="mb-4 border-b border-gray-200">
             <nav class="flex -mb-px space-x-6">

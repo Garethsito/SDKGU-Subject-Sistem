@@ -33,13 +33,31 @@ function dashboard() {
       if (!this.selectedSession.programId) {
         return [];
       }
-      return this.availableCourses
-        .filter(course => course.programId === parseInt(this.selectedSession.programId))
-        .map(course => ({
-          code: course.courseCode,
-          id: course.id,
-          name: course.courseName
-        }));
+      
+      const coursesForProgram = this.availableCourses
+        .filter(course => {
+          if (course.programIds && Array.isArray(course.programIds)) {
+            return course.programIds.includes(parseInt(this.selectedSession.programId));
+          }
+          return false;
+        });
+      
+      // Eliminar duplicados por courseCode
+      const uniqueCourses = [];
+      const seenCodes = new Set();
+      
+      for (const course of coursesForProgram) {
+        if (!seenCodes.has(course.code)) {
+          seenCodes.add(course.code);
+          uniqueCourses.push({
+            code: course.code,
+            id: parseInt(course.id),
+            name: course.name
+          });
+        }
+      }
+      
+      return uniqueCourses;
     },
 
     get availableSubjects() {
@@ -220,11 +238,29 @@ function dashboard() {
     
     checkEditLock(sessionDate) {
       if (!sessionDate) return false;
+      
+      // Obtener fecha de hoy en tu zona horaria local
       const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const sessionDateObj = new Date(sessionDate);
-      const diffTime = sessionDateObj - today;
+      const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      
+      // Parsear la fecha de la sesión como YYYY-MM-DD local (no UTC)
+      const [year, month, day] = sessionDate.split('-').map(Number);
+      const sessionDateLocal = new Date(year, month - 1, day); // mes es 0-indexed
+      
+      // Calcular diferencia en días
+      const diffTime = sessionDateLocal.getTime() - todayLocal.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      console.log('Edit lock check:', {
+        today: `${todayLocal.getFullYear()}-${String(todayLocal.getMonth() + 1).padStart(2, '0')}-${String(todayLocal.getDate()).padStart(2, '0')}`,
+        sessionDate: sessionDate,
+        todayTimestamp: todayLocal.getTime(),
+        sessionTimestamp: sessionDateLocal.getTime(),
+        diffDays: diffDays,
+        isLocked: diffDays < 7
+      });
+      
+      // Bloquear si la sesión empieza en menos de 7 días
       return diffDays < 7;
     },
     
@@ -348,7 +384,7 @@ function dashboard() {
           const sessionData = await response.json();
           console.log('Session data from backend:', sessionData);
           
-          // Asignar los datos correctamente - SOLO UNA MATERIA
+          // Asignar los datos correctamente
           this.selectedSession = {
             id: sessionData.id,
             number: session.number,
@@ -369,9 +405,15 @@ function dashboard() {
             await this.loadSessionCourses(session.id);
           }
           
-          if (type === 'edit' && this.checkEditLock(this.selectedSession.startDate)) {
-            this.isEditLocked = true;
-            this.editWarning = 'This session is less than 7 days away and cannot be edited';
+          // Verificar bloqueo de edición SOLO si es modo EDIT
+          if (type === 'edit') {
+            console.log('Checking edit lock for date:', this.selectedSession.startDate);
+            const isLocked = this.checkEditLock(this.selectedSession.startDate);
+            
+            if (isLocked) {
+              this.isEditLocked = true;
+              this.editWarning = 'This session starts in less than 7 days and cannot be edited';
+            }
           }
           
           this.openModalFlag = true;
@@ -403,10 +445,14 @@ function dashboard() {
           endDate: new Date(this.selectedSession.endDate).toISOString().split('T')[0],
           programId: parseInt(this.selectedSession.programId),
           courses: (this.selectedSession.subjects || []).map(subjectCode => {
-            const course = this.availableCourses.find(c => c.courseCode === subjectCode);
-            if (!course) throw new Error(`Course ${subjectCode} not found`);
+            const course = this.availableCourses.find(c => c.code === subjectCode);
+            if (!course) {
+              console.error('Available courses:', this.availableCourses);
+              console.error('Looking for code:', subjectCode);
+              throw new Error(`Course ${subjectCode} not found`);
+            }
             return {
-              courseId: course.id,
+              courseId: parseInt(course.id),
               teacherId: this.selectedSession.teacherId ? parseInt(this.selectedSession.teacherId) : null
             };
           })
@@ -458,20 +504,54 @@ function dashboard() {
           method: 'DELETE'
         });
         
-        if (!response.ok) throw new Error('Failed to delete session');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Failed to delete session');
+        }
         
-        this.showNotification('success', 'Session Deleted', 
-          `Session ${this.selectedSession.number} has been deleted successfully`);
+        const result = await response.json();
+        
+        // Mostrar notificación con información de estudiantes removidos
+        if (result.studentsRemoved > 0) {
+          this.showNotification('success', 'Session Deleted', 
+            `Session ${this.selectedSession.number} and ${result.studentsRemoved} student enrollment(s) have been deleted successfully`);
+        } else {
+          this.showNotification('success', 'Session Deleted', 
+            `Session ${this.selectedSession.number} has been deleted successfully`);
+        }
         
         this.closeModal();
         await this.loadSessions();
         
       } catch (error) {
         console.error('Error deleting session:', error);
-        this.showNotification('error', 'Error', 'Failed to delete session');
+        this.showNotification('error', 'Error', error.message || 'Failed to delete session');
+        this.showDeleteModal = false;
       }
     },
-    
+
+    async requestDelete() {
+      // Verificar si hay estudiantes inscritos
+      try {
+        const response = await fetch(`http://localhost:3000/api/sessions/${this.selectedSession.id}/courses`);
+        if (response.ok) {
+          const courses = await response.json();
+          const totalStudents = courses.reduce((sum, course) => sum + course.currentEnrollment, 0);
+          
+          if (totalStudents > 0) {
+            // Hay estudiantes, mostrar advertencia especial
+            if (!confirm(`⚠️ WARNING: This session has ${totalStudents} student(s) enrolled.\n\nDeleting this session will also remove ALL student enrollments.\n\nAre you sure you want to continue?`)) {
+              return;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error checking enrollments:', error);
+      }
+      
+      this.showDeleteModal = true;
+    },
+
     closeModal() {
       this.openModalFlag = false;
       this.showDeleteModal = false;
@@ -612,6 +692,12 @@ function dashboard() {
         return;
       }
       
+      console.log('Opening add student modal for:', {
+        sessionId: this.currentSessionId,
+        courseId: this.selectedSubject.id,
+        subject: this.selectedSubject
+      });
+      
       this.showAddStudentModal = true;
       this.studentSearchTerm = '';
       this.loadingStudents = true;
@@ -621,9 +707,14 @@ function dashboard() {
           `http://localhost:3000/api/sessions/${this.currentSessionId}/courses/${this.selectedSubject.id}/available-students`
         );
         
-        if (!response.ok) throw new Error('Failed to fetch available students');
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('API Error:', errorText);
+          throw new Error(`Failed to fetch available students: ${errorText}`);
+        }
         
         this.availableStudents = await response.json();
+        console.log('Available students loaded:', this.availableStudents);
       } catch (error) {
         console.error('Error loading available students:', error);
         this.showNotification('error', 'Error', 'Failed to load available students');
