@@ -228,7 +228,7 @@ export class StudentsService {
         })
       );
 
-      console.log('📊 Missing data calculated:', missingData);
+      // console.log('📊 Missing data calculated:', missingData);
 
       // 4. Filtrar solo cursos con estudiantes faltantes y ordenar
       const topMissing = missingData

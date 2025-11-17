@@ -647,10 +647,12 @@ function dashboard() {
 
         this.showNotification('success', 'Student Removed', 'Student removed successfully');
         
-        await this.loadSessionCourses(this.selectedSession.id);
-        const updatedSubject = this.allSubjects.find(s => s.id === this.selectedSubject.id);
-        if (updatedSubject) {
-          this.selectedSubject = updatedSubject;
+        if (this.currentSessionId) {
+          await this.loadSessionCourses(this.currentSessionId);
+          const updatedSubject = this.allSubjects.find(s => s.id === this.selectedSubject.id);
+          if (updatedSubject) {
+            this.selectedSubject = updatedSubject;
+          }
         }
         // Recargar sesiones para actualizar el porcentaje
         await this.loadSessions();

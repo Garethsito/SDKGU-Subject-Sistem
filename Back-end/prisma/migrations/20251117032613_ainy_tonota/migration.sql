@@ -11,10 +11,36 @@ CREATE TABLE `Program` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
+CREATE TABLE `Course` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `courseCode` VARCHAR(191) NOT NULL,
+    `courseName` VARCHAR(191) NOT NULL,
+    `credits` INTEGER NOT NULL DEFAULT 3,
+    `language` VARCHAR(191) NULL,
+    `isTransferable` BOOLEAN NOT NULL DEFAULT true,
+    `maxCapacity` INTEGER NULL,
+
+    UNIQUE INDEX `Course_courseCode_key`(`courseCode`),
+    INDEX `Course_courseCode_idx`(`courseCode`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `ProgramCourse` (
+    `programId` INTEGER NOT NULL,
+    `courseId` INTEGER NOT NULL,
+
+    INDEX `ProgramCourse_courseId_idx`(`courseId`),
+    INDEX `ProgramCourse_programId_idx`(`programId`),
+    PRIMARY KEY (`programId`, `courseId`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
 CREATE TABLE `Teacher` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `teacherIdNumber` VARCHAR(191) NOT NULL,
     `firstName` VARCHAR(191) NOT NULL,
+    `middleName` VARCHAR(191) NULL,
     `lastName` VARCHAR(191) NOT NULL,
     `email` VARCHAR(191) NULL,
     `phone` VARCHAR(191) NULL,
@@ -41,6 +67,7 @@ CREATE TABLE `Student` (
     `email` VARCHAR(191) NULL,
     `sdgkuEmail` VARCHAR(191) NULL,
     `rgmKey` VARCHAR(191) NULL,
+    `phone` VARCHAR(191) NULL,
     `startDate` DATETIME(3) NOT NULL,
     `admissionDate` DATETIME(3) NULL,
     `enrollmentYear` INTEGER NOT NULL,
@@ -48,10 +75,10 @@ CREATE TABLE `Student` (
     `modality` VARCHAR(191) NULL,
     `cohort` VARCHAR(191) NULL,
     `language` VARCHAR(191) NULL,
+    `totalUnits` INTEGER NOT NULL DEFAULT 126,
     `transferredUnits` INTEGER NOT NULL DEFAULT 0,
     `unitQuantity` INTEGER NOT NULL DEFAULT 0,
     `totalUnitsEarned` INTEGER NOT NULL DEFAULT 0,
-    `totalUnits` INTEGER NOT NULL DEFAULT 0,
     `scheduledCompletionDate` DATETIME(3) NULL,
     `graduationDate` DATETIME(3) NULL,
     `programId` INTEGER NOT NULL,
@@ -65,24 +92,8 @@ CREATE TABLE `Student` (
     INDEX `Student_rgmKey_idx`(`rgmKey`),
     INDEX `Student_sdgkuEmail_idx`(`sdgkuEmail`),
     INDEX `Student_studentIdNumber_idx`(`studentIdNumber`),
+    INDEX `Student_status_idx`(`status`),
     UNIQUE INDEX `Student_firstName_lastName_startDate_key`(`firstName`, `lastName`, `startDate`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `Course` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `courseCode` VARCHAR(191) NOT NULL,
-    `courseName` VARCHAR(191) NOT NULL,
-    `credits` INTEGER NOT NULL DEFAULT 3,
-    `language` VARCHAR(191) NULL,
-    `isTransferable` BOOLEAN NOT NULL DEFAULT true,
-    `maxCapacity` INTEGER NULL,
-    `programId` INTEGER NOT NULL,
-
-    UNIQUE INDEX `Course_courseCode_key`(`courseCode`),
-    INDEX `Course_programId_idx`(`programId`),
-    INDEX `Course_courseCode_idx`(`courseCode`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -104,11 +115,13 @@ CREATE TABLE `Session` (
     `sessionName` VARCHAR(191) NOT NULL,
     `startDate` DATETIME(3) NOT NULL,
     `endDate` DATETIME(3) NOT NULL,
+    `year` INTEGER NOT NULL,
     `programId` INTEGER NOT NULL,
 
     UNIQUE INDEX `Session_sessionName_key`(`sessionName`),
     INDEX `Session_programId_idx`(`programId`),
-    INDEX `Session_sessionName_idx`(`sessionName`),
+    INDEX `Session_year_idx`(`year`),
+    UNIQUE INDEX `Session_programId_year_sessionName_key`(`programId`, `year`, `sessionName`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -134,9 +147,11 @@ CREATE TABLE `Enrollment` (
     `offeringId` INTEGER NOT NULL,
     `status` VARCHAR(191) NOT NULL DEFAULT 'enrolled',
     `grade` VARCHAR(191) NULL,
+    `enrolledAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     INDEX `Enrollment_studentId_idx`(`studentId`),
     INDEX `Enrollment_offeringId_idx`(`offeringId`),
+    INDEX `Enrollment_status_idx`(`status`),
     UNIQUE INDEX `Enrollment_studentId_offeringId_key`(`studentId`, `offeringId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
