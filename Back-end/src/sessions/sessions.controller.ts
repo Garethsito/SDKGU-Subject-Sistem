@@ -102,4 +102,11 @@ export class SessionsController {
   ) {
     return this.sessionsService.removeStudentFromCourse(enrollmentId);
   }
+
+  // Enviar notificaciones manualmente para una sesión
+  @Post(':id/send-notifications')
+  async sendNotifications(@Param('id', ParseIntPipe) id: number) {
+    return this.sessionsService.sendSessionNotifications(id);
+  }
+  
 }

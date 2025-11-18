@@ -8,6 +8,8 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://kit.fontawesome.com/337be747ec.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
   <script src="js/reports.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <style>
@@ -151,9 +153,9 @@
         <h1 class="text-3xl font-bold text-gray-800 mb-2">Reports</h1>
         <div class="flex gap-4">
       <button 
-      @click="activeReport = 'general'"
-      :class="activeReport === 'general' ? 'bg-[#A6192E]' : 'bg-[#D41736]'" 
-      class="bg-[#D41736] hover:bg-[#A6192E] text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+        @click="openGeneralReport()"
+        :class="activeReport === 'general' ? 'bg-[#A6192E]' : 'bg-[#D41736]'" 
+        class="bg-[#D41736] hover:bg-[#A6192E] text-white font-semibold py-2 px-4 rounded-lg transition-colors">
         <i class="fa-solid fa-file mr-1"></i>Report General
       </button>
       <button 
@@ -267,14 +269,76 @@
               x-text="session.program"></span>
       </div>
       
-      <div class="grid grid-cols-2 gap-4 mb-3">
-        <div>
-          <p class="text-sm text-gray-600">Number of Students</p>
-          <p class="text-lg font-semibold text-gray-800" x-text="session.cantidadAlumnos"></p>
+      <!-- Badge de estado de la sesión -->
+      <div class="mb-3">
+        <span class="px-3 py-1 rounded-full text-xs font-bold"
+              :class="{
+                'bg-red-100 text-red-700': (() => { const occ = session.capacity > 0 ? Math.round((session.enrolled / session.capacity) * 100) : 0; return occ >= 100; })(),
+                'bg-orange-100 text-orange-700': (() => { const occ = session.capacity > 0 ? Math.round((session.enrolled / session.capacity) * 100) : 0; return occ >= 90 && occ < 100; })(),
+                'bg-yellow-100 text-yellow-700': (() => { const occ = session.capacity > 0 ? Math.round((session.enrolled / session.capacity) * 100) : 0; return occ >= 75 && occ < 90; })(),
+                'bg-green-100 text-green-700': (() => { const occ = session.capacity > 0 ? Math.round((session.enrolled / session.capacity) * 100) : 0; return occ >= 50 && occ < 75; })(),
+                'bg-gray-100 text-gray-700': (() => { const occ = session.capacity > 0 ? Math.round((session.enrolled / session.capacity) * 100) : 0; return occ < 50; })()
+              }">
+          <template x-if="(() => { const occ = session.capacity > 0 ? Math.round((session.enrolled / session.capacity) * 100) : 0; return occ >= 100; })()">
+            <span>🔴 Full</span>
+          </template>
+          <template x-if="(() => { const occ = session.capacity > 0 ? Math.round((session.enrolled / session.capacity) * 100) : 0; return occ >= 90 && occ < 100; })()">
+            <span>🟠 Critical</span>
+          </template>
+          <template x-if="(() => { const occ = session.capacity > 0 ? Math.round((session.enrolled / session.capacity) * 100) : 0; return occ >= 75 && occ < 90; })()">
+            <span>🟡 High</span>
+          </template>
+          <template x-if="(() => { const occ = session.capacity > 0 ? Math.round((session.enrolled / session.capacity) * 100) : 0; return occ >= 50 && occ < 75; })()">
+            <span>🟢 Optimal</span>
+          </template>
+          <template x-if="(() => { const occ = session.capacity > 0 ? Math.round((session.enrolled / session.capacity) * 100) : 0; return occ < 50; })()">
+            <span>⚪ Low</span>
+          </template>
+        </span>
+      </div>
+
+      <!-- Capacidad, Inscritos y Disponibles -->
+      <div class="grid grid-cols-3 gap-4 mb-3">
+        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+          <p class="text-xs text-gray-600">Capacity</p>
+          <p class="text-2xl font-bold text-gray-800" x-text="session.capacity"></p>
         </div>
-        <div>
-          <p class="text-sm text-gray-600">Enrolled Students</p>
-          <p class="text-lg font-semibold text-gray-800" x-text="session.listAlumns.length"></p>
+        <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
+          <p class="text-xs text-gray-600">Enrolled</p>
+          <p class="text-2xl font-bold text-[#D41736]" x-text="session.enrolled"></p>
+        </div>
+        <div class="p-3 rounded-lg border"
+            :class="{
+              'bg-red-50 border-red-200': session.available <= 3,
+              'bg-orange-50 border-orange-200': session.available > 3 && session.available <= 6,
+              'bg-green-50 border-green-200': session.available > 6
+            }">
+          <p class="text-xs text-gray-600">Available</p>
+          <p class="text-2xl font-bold"
+            :class="{
+              'text-red-700': session.available <= 3,
+              'text-orange-700': session.available > 3 && session.available <= 6,
+              'text-green-700': session.available > 6
+            }"
+            x-text="session.available"></p>
+        </div>
+      </div>
+
+      <!-- Barra de ocupación -->
+      <div class="mb-3">
+        <div class="flex justify-between text-xs mb-1">
+          <span class="font-medium text-gray-700">Occupancy</span>
+          <span class="font-bold" x-text="(session.capacity > 0 ? Math.round((session.enrolled / session.capacity) * 100) : 0) + '%'"></span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+          <div class="h-3 rounded-full transition-all"
+              :class="{
+                'bg-red-600': (() => { const occ = session.capacity > 0 ? Math.round((session.enrolled / session.capacity) * 100) : 0; return occ >= 90; })(),
+                'bg-yellow-500': (() => { const occ = session.capacity > 0 ? Math.round((session.enrolled / session.capacity) * 100) : 0; return occ >= 50 && occ < 90; })(),
+                'bg-gray-400': (() => { const occ = session.capacity > 0 ? Math.round((session.enrolled / session.capacity) * 100) : 0; return occ < 50; })()
+              }"
+              :style="`width: ${Math.min((session.capacity > 0 ? (session.enrolled / session.capacity) * 100 : 0), 100)}%`">
+          </div>
         </div>
       </div>
       
@@ -425,33 +489,64 @@
       <p class="text-lg">No se encontraron estudiantes</p>
       <p class="text-sm">Intenta con otro término de búsqueda</p>
     </div>
-  </div>
-  
-  <!-- ========================================
-       MODAL DE DETALLES DEL ESTUDIANTE
-       ======================================== -->
-  <div x-show="selectedStudent" 
-       x-cloak
-       @click.away="selectedStudent = null"
-       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-      <!-- Header - MODIFICADO: Agregado botón "Edit Grades" -->
-      <div class="bg-[#D41736] text-white p-6 rounded-t-lg flex justify-between items-center">
-        <div>
-          <h3 class="text-2xl font-bold" x-text="selectedStudent?.name"></h3>
-          <p class="text-sm opacity-90" x-text="selectedStudent?.studentId"></p>
-        </div>
-        <div class="flex gap-2">
-          <!-- 🆕 NUEVO BOTÓN PARA EDITAR CALIFICACIONES -->
-          <button 
+
+    </div>
+    <!-- Panel de detalles (se muestra cuando se selecciona un estudiante) -->
+<div x-show="selectedStudent" 
+     x-cloak
+     @click.away="selectedStudent = null"
+     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <!-- Header del Modal -->
+    <div class="bg-[#D41736] text-white p-6 rounded-t-lg flex justify-between items-center">
+      <div>
+        <h3 class="text-2xl font-bold" x-text="selectedStudent?.name"></h3>
+        <p class="text-sm opacity-90" x-text="selectedStudent?.studentId"></p>
+      </div>
+      <div class="flex gap-3">
+        <button @click="exportIndividualReport(selectedStudent)" 
+                class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-download"></i>
+          Export PDF
+        </button>
+        <button 
             @click="openGradesEditor(selectedStudent)" 
             class="text-white hover:bg-white hover:bg-opacity-20 rounded-lg px-4 py-2">
             <i class="fa-solid fa-pen-to-square mr-1"></i>
             Edit Grades
           </button>
-          <button @click="selectedStudent = null" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2">
-            <i class="fa-solid fa-times text-xl"></i>
-          </button>
+        <button @click="selectedStudent = null" 
+                class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
+          <i class="fa-solid fa-times text-xl"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Body -->
+    <div class="p-6">
+      <!-- Información Personal -->
+      <div class="mb-6">
+        <h4 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+          <i class="fa-solid fa-user text-[#D41736] mr-2"></i>
+          Personal Information
+        </h4>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <p class="text-gray-600">Full Name</p>
+            <p class="font-semibold" x-text="`${selectedStudent?.firstName} ${selectedStudent?.middleName} ${selectedStudent?.lastName}`"></p>
+          </div>
+          <div>
+            <p class="text-gray-600">Phone</p>
+            <p class="font-semibold" x-text="selectedStudent?.phone"></p>
+          </div>
+          <div>
+            <p class="text-gray-600">Personal Email</p>
+            <p class="font-semibold" x-text="selectedStudent?.emailPersonal"></p>
+          </div>
+          <div>
+            <p class="text-gray-600">SDGKU Email</p>
+            <p class="font-semibold" x-text="selectedStudent?.emailSDGKU"></p>
+          </div>
         </div>
       </div>
       

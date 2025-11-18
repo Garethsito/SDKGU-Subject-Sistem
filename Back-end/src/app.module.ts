@@ -9,11 +9,14 @@ import { SessionsModule } from './sessions/sessions.module';
 import { CoursesModule } from './courses/courses.module';
 import { ProgramsModule } from './programs/programs.module';
 import { TeachersModule } from './teachers/teachers.module';
-import { PrismaService } from './prisma/prisma.services';
+import { PrismaService } from './prisma/prisma.services';git
+import { ScheduleModule } from '@nestjs/schedule';
+import { MailModule } from './mail/mail.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { GradesModule } from './grades/grades.module'; // 🆕 Agregar esta línea
 
 @Module({
-  imports: [AuthModule, StudentsModule, SessionsModule, CoursesModule, ProgramsModule, TeachersModule, GradesModule], // 🆕 Agregar GradesModule aquí
+  imports: [AuthModule, StudentsModule, SessionsModule, CoursesModule, ProgramsModule, TeachersModule, ScheduleModule.forRoot(), MailModule, NotificationsModule,GradesModule],
   controllers: [AppController],
   providers: [AppService, PrismaService],
 })

@@ -61,11 +61,16 @@ function dashboard() {
     },
 
     get availableSubjects() {
-      if (!this.selectedSession.subjects) {
+      if (!this.selectedSession.coursesWithTeachers) {
         return this.filteredSubjectNames;
       }
-      return this.filteredSubjectNames.filter(course => 
-        !this.selectedSession.subjects.includes(course.code)
+      
+      const assignedCodes = this.selectedSession.coursesWithTeachers.map(
+        item => item.courseCode
+      );
+      
+      return this.filteredSubjectNames.filter(
+        course => !assignedCodes.includes(course.code)
       );
     },
 
@@ -223,13 +228,18 @@ function dashboard() {
         return false;
       }
       
-      if (!this.selectedSession.subjects || this.selectedSession.subjects.length === 0) {
+      if (!this.selectedSession.coursesWithTeachers || this.selectedSession.coursesWithTeachers.length === 0) {
         this.validationError = 'Please select at least one subject';
         return false;
       }
-      
-      if (!this.selectedSession.teacherId) {
-        this.validationError = 'Please select a professor';
+
+      // Validar que todas las materias tengan profesor
+      const missingTeacher = this.selectedSession.coursesWithTeachers.some(
+        item => !item.teacherId
+      );
+
+      if (missingTeacher) {
+        this.validationError = 'All subjects must have an assigned professor';
         return false;
       }
       
@@ -367,10 +377,7 @@ function dashboard() {
           endDate: formatDate(fiveWeeksLater),
           programId: '',
           program: '',
-          subjects: [],
-          subjectId: null,
-          teacherId: '',
-          professor: ''
+          coursesWithTeachers: []
         };
         
         this.openModalFlag = true;
@@ -384,7 +391,16 @@ function dashboard() {
           const sessionData = await response.json();
           console.log('Session data from backend:', sessionData);
           
-          // Asignar los datos correctamente
+          // Cargar offerings con sus profesores
+          const coursesWithTeachers = sessionData.offerings 
+            ? sessionData.offerings.map(off => ({
+                courseId: off.courseId,
+                courseCode: off.courseCode,
+                teacherId: off.teacherId ? off.teacherId.toString() : '',
+                teacherName: off.teacher ? `${off.teacher.firstName} ${off.teacher.lastName}` : 'TBD'
+              }))
+            : [];
+
           this.selectedSession = {
             id: sessionData.id,
             number: session.number,
@@ -393,9 +409,7 @@ function dashboard() {
             endDate: sessionData.endDate,
             programId: sessionData.programId.toString(),
             program: sessionData.program,
-            subjects: sessionData.subjects || [],
-            teacherId: sessionData.teacherId ? sessionData.teacherId.toString() : '',
-            professor: sessionData.professor || 'TBD'
+            coursesWithTeachers: coursesWithTeachers
           };
           
           console.log('Selected session prepared:', this.selectedSession);
@@ -433,8 +447,7 @@ function dashboard() {
       }
 
       console.log('Validating data:', {
-        subjects: this.selectedSession.subjects,
-        teacherId: this.selectedSession.teacherId,
+        coursesWithTeachers: this.selectedSession.coursesWithTeachers,
         programId: this.selectedSession.programId
       });
       
@@ -444,16 +457,13 @@ function dashboard() {
           startDate: new Date(this.selectedSession.startDate).toISOString().split('T')[0],
           endDate: new Date(this.selectedSession.endDate).toISOString().split('T')[0],
           programId: parseInt(this.selectedSession.programId),
-          courses: (this.selectedSession.subjects || []).map(subjectCode => {
-            const course = this.availableCourses.find(c => c.code === subjectCode);
-            if (!course) {
-              console.error('Available courses:', this.availableCourses);
-              console.error('Looking for code:', subjectCode);
-              throw new Error(`Course ${subjectCode} not found`);
+          courses: (this.selectedSession.coursesWithTeachers || []).map(item => {
+            if (!item.courseId) {
+              throw new Error(`Course ${item.courseCode} not found`);
             }
             return {
-              courseId: parseInt(course.id),
-              teacherId: this.selectedSession.teacherId ? parseInt(this.selectedSession.teacherId) : null
+              courseId: parseInt(item.courseId),
+              teacherId: item.teacherId ? parseInt(item.teacherId) : null
             };
           })
         };
@@ -663,23 +673,36 @@ function dashboard() {
       }
     },
 
-    addSubjectToSession() {
+    addCourseWithTeacher() {
       if (!this.tempSubject) return;
       
-      if (!this.selectedSession.subjects) {
-        this.selectedSession.subjects = [];
+      if (!this.selectedSession.coursesWithTeachers) {
+        this.selectedSession.coursesWithTeachers = [];
       }
       
-      if (!this.selectedSession.subjects.includes(this.tempSubject)) {
-        this.selectedSession.subjects.push(this.tempSubject);
+      // Verificar que no exista ya
+      const exists = this.selectedSession.coursesWithTeachers.some(
+        item => item.courseCode === this.tempSubject
+      );
+      
+      if (!exists) {
+        // Buscar el curso en availableCourses
+        const course = this.availableCourses.find(c => c.code === this.tempSubject);
+        
+        this.selectedSession.coursesWithTeachers.push({
+          courseId: course ? parseInt(course.id) : null,
+          courseCode: this.tempSubject,
+          teacherId: '',
+          teacherName: ''
+        });
       }
       
       this.tempSubject = '';
     },
 
-    removeSubjectFromSession(index) {
-      if (this.selectedSession.subjects) {
-        this.selectedSession.subjects.splice(index, 1);
+    removeCourseWithTeacher(index) {
+      if (this.selectedSession.coursesWithTeachers) {
+        this.selectedSession.coursesWithTeachers.splice(index, 1);
       }
     },
 
@@ -763,6 +786,29 @@ function dashboard() {
       } catch (error) {
         console.error('Error adding student:', error);
         this.showNotification('error', 'Error', error.message);
+      }
+    },
+
+    async sendNotifications(sessionId) {
+      if (!confirm('Send enrollment notifications to all students in this session?')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `http://localhost:3000/api/sessions/${sessionId}/send-notifications`,
+          { method: 'POST' }
+        );
+
+        if (!response.ok) throw new Error('Failed to send notifications');
+
+        const result = await response.json();
+
+        this.showNotification('success', 'Notifications Sent', 
+          `Successfully sent ${result.emailsSent} email(s)`);
+      } catch (error) {
+        console.error('Error sending notifications:', error);
+        this.showNotification('error', 'Error', 'Failed to send notifications');
       }
     },
 
