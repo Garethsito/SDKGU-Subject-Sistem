@@ -149,20 +149,12 @@ function reports() {
         const response = await fetch(`${this.apiUrl}/sessions`);
         if (!response.ok) throw new Error('Error loading sessions');
         const sessions = await response.json();
-<<<<<<< HEAD
-        
-        this.sessionData = await Promise.all(sessions.map(async (session) => {
-          const coursesResponse = await fetch(`${this.apiUrl}/sessions/${session.id}/courses`);
-          const coursesData = await coursesResponse.json();
-          
-=======
 
         this.sessionData = await Promise.all(sessions.map(async (session) => {
           const coursesResponse = await fetch(`${this.apiUrl}/sessions/${session.id}/courses`);
           const coursesData = await coursesResponse.json();
 
           // IDs únicos de estudiantes inscritos en la sesión (evita duplicados)
->>>>>>> f05c857214214c8010f2defec517c7200512fa61
           const studentIds = new Set();
           coursesData.forEach(course => {
             if (Array.isArray(course.students)) {
@@ -171,9 +163,6 @@ function reports() {
               });
             }
           });
-<<<<<<< HEAD
-          
-=======
 
           // calcular capacidad (intentar leer capacity por course; si no existe usar currentEnrollment)
           let capacitySum = 0;
@@ -188,7 +177,6 @@ function reports() {
           const available = Math.max(0, capacity - enrolled);
 
           // convertir materias (course.code -> subject id)
->>>>>>> f05c857214214c8010f2defec517c7200512fa61
           const materiaIds = coursesData.map(c => {
             const subject = this.subjects.find(s => s.code === c.code);
             return subject ? subject.id : null;

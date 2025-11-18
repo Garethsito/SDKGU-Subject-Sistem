@@ -9,7 +9,7 @@ import { SessionsModule } from './sessions/sessions.module';
 import { CoursesModule } from './courses/courses.module';
 import { ProgramsModule } from './programs/programs.module';
 import { TeachersModule } from './teachers/teachers.module';
-import { PrismaService } from './prisma/prisma.services';git
+import { PrismaService } from './prisma/prisma.services';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MailModule } from './mail/mail.module';
 import { NotificationsModule } from './notifications/notifications.module';
