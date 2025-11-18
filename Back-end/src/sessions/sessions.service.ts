@@ -1,10 +1,14 @@
 // sessions.service.ts
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.services';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class SessionsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+  private prisma: PrismaService, 
+  private mailService: MailService
+) {}
 
   // Obtener todas las sesiones con información completa
   async getAllSessions() {
@@ -658,4 +662,36 @@ export class SessionsService {
       email: student.email || student.sdgkuEmail
     }));
   }
+
+  /**
+   * Enviar notificaciones de una sesión específica
+   */
+  async sendSessionNotifications(sessionId: number) {
+    const session = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+      include: {
+        offerings: {
+          include: {
+            enrollments: true
+          }
+        }
+      }
+    });
+
+    if (!session) {
+      throw new NotFoundException(`Session with ID ${sessionId} not found`);
+    }
+
+    const emailsSent = await this.mailService.sendSessionNotifications(
+      sessionId,
+      this.prisma
+    );
+
+    return {
+      success: true,
+      message: `Successfully sent ${emailsSent} email notification(s)`,
+      emailsSent
+    };
+  }
+
 }
