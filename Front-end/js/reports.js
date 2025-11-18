@@ -1370,7 +1370,10 @@ getFormattedRecommendations() {
     studentCount: course.missingCount,
     students: course.students.map(s => s.fullName)
   }));
-}
+},
+openGeneralReport() {
+  this.activeReport = 'general';
+},
   };
 
 }
