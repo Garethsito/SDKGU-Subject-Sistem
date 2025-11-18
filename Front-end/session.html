@@ -473,6 +473,14 @@
             <i class="fa-solid fa-trash mr-1"></i>Delete
           </button>
 
+          <button x-show="modalType==='details'" 
+                  @click="sendNotifications(selectedSession.id)" 
+                  class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium transition flex items-center gap-2"
+                  x-cloak>
+            <i class="fa-solid fa-envelope"></i>
+            <span>Send Notifications</span>
+          </button>
+
           <button x-show="modalType==='edit' && !isEditLocked || modalType==='add'" 
                   @click="saveSession()" 
                   :disabled="modalType==='edit' && isEditLocked"

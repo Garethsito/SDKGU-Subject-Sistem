@@ -789,5 +789,28 @@ function dashboard() {
       }
     },
 
+    async sendNotifications(sessionId) {
+      if (!confirm('Send enrollment notifications to all students in this session?')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `http://localhost:3000/api/sessions/${sessionId}/send-notifications`,
+          { method: 'POST' }
+        );
+
+        if (!response.ok) throw new Error('Failed to send notifications');
+
+        const result = await response.json();
+
+        this.showNotification('success', 'Notifications Sent', 
+          `Successfully sent ${result.emailsSent} email(s)`);
+      } catch (error) {
+        console.error('Error sending notifications:', error);
+        this.showNotification('error', 'Error', 'Failed to send notifications');
+      }
+    },
+
   }
 }
