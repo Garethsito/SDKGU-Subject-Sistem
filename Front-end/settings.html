@@ -819,6 +819,7 @@
             <option value="teachers">Teachers</option>
             <option value="subjects">Subjects</option>
             <option value="sessions">Sessions</option>
+            <option value="grades">Grades</option>
           </select>
         </div>
         
@@ -903,6 +904,7 @@
 </main>
 
 <script>
+
 function settingsData() {
   return {
     activeTab: 'activity', // Tab por defecto
@@ -1337,39 +1339,118 @@ function settingsData() {
       return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     },
     
-    processImport() {
-      if (!this.selectedFile || !this.importType) {
-        alert('Please select a file and data type');
-        return;
-      }
-      
-      // Simulación de importación
-      setTimeout(() => {
-        this.importResult = {
-          success: true,
-          message: 'Import Successful!',
-          details: `Successfully imported data from ${this.selectedFile.name}`
-        };
-        
-        // Agregar al historial
-        this.importHistory.unshift({
-          id: this.importHistory.length + 1,
-          date: new Date().toISOString().split('T')[0],
-          fileName: this.selectedFile.name,
-          type: this.importType.charAt(0).toUpperCase() + this.importType.slice(1),
-          records: Math.floor(Math.random() * 100) + 50,
-          status: 'Success'
+    async processImport() {
+  if (!this.selectedFile || !this.importType) return;
+
+  const formData = new FormData();
+  formData.append('file', this.selectedFile);
+
+  try {
+    // Para el caso de grades, procesamos el Excel en el frontend
+    if (this.importType === 'grades') {
+      const data = await this.readExcelFile(this.selectedFile);
+      const results = [];
+
+      for (const row of data) {
+        // Mapear columnas del Excel a propiedades del backend
+        const studentId = row['Students ID Number'];
+        const courseCode = row['Course'];
+        const grade = row['Grade'];
+        const status = row['Status'] || 'Completed'; // valor por defecto si no hay status
+
+        if (!studentId || !courseCode || !grade) {
+          console.warn('Fila incompleta, se omite:', row);
+          continue; // saltar filas incompletas
+        }
+
+        // Llamar al endpoint de grades (puedes usar fetch o axios)
+        const res = await fetch(`http://localhost:3000/api/students/${studentId}/grades`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ courseCode, grade, status })
         });
-        
-        // Limpiar después de 3 segundos
-        setTimeout(() => {
-          this.clearFile();
-          this.importType = '';
-          this.importResult = null;
-        }, 3000);
-      }, 1500);
-    },
-    
+       let result = {};
+if (res.ok) {
+  result = await res.json();
+} else {
+  console.error('HTTP error:', res.status, res.statusText);
+  result = { success: false };
+}
+      }
+
+      this.importResult = {
+        success: true,
+        message: 'Grades imported successfully',
+        recordsProcessed: results.length
+      };
+
+      this.importHistory.unshift({
+        id: Date.now(),
+        date: new Date().toLocaleString(),
+        fileName: this.selectedFile.name,
+        type: this.importType,
+        records: results.length,
+        status: 'Success'
+      });
+
+      this.selectedFile = null;
+      this.importType = '';
+
+      return;
+    }
+
+    // Para otros tipos de import (students, teachers, etc.)
+    const url = `${this.apiUrl}/import/${this.importType}`;
+    console.log('📤 Importando archivo...', this.importType);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData
+    });
+
+    const result = await response.json();
+
+    this.importResult = result;
+    this.importHistory.unshift({
+      id: Date.now(),
+      date: new Date().toLocaleString(),
+      fileName: this.selectedFile.name,
+      type: this.importType,
+      records: result?.recordsProcessed || 0,
+      status: result?.success ? 'Success' : 'Failed'
+    });
+
+    if (result.success) {
+      this.selectedFile = null;
+      this.importType = '';
+    }
+
+  } catch (error) {
+    console.error('❌ Error importing file:', error);
+    this.importResult = {
+      success: false,
+      message: 'Error importing file',
+      details: error.message
+    };
+  }
+},
+
+// Método auxiliar para leer Excel en el frontend
+async readExcelFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet);
+      resolve(rows);
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsArrayBuffer(file);
+  });
+},
     downloadTemplate() {
       alert('Template download feature will be implemented with actual Excel generation');
     }

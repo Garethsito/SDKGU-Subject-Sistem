@@ -3,6 +3,16 @@ function reports() {
     activeReport: 'general',
     searchQuery: '',
     selectedStudent: null,
+    
+    // 🆕 NUEVAS VARIABLES PARA EDICIÓN DE CALIFICACIONES
+    editingGrades: false,
+    courseSearchQuery: '',
+    coursesForEditing: [],
+    modifiedCourses: [],
+    savingGrades: false,
+    saveStatus: { type: '', message: '' },
+    editingStudentId: null, // 🆕 Guardar el ID del estudiante siendo editado
+    
     opcionesGeneral: {
       totalAlumnos: false,
       listaAlumnos: false,
@@ -12,7 +22,7 @@ function reports() {
     },
     filters: { program: 'all', session: 'all', occupancy: 'all' },
     
-    // 🆕 Variables para datos de BD
+    // Variables para datos de BD
     students: [],
     sessionData: [],
     subjects: [],
@@ -20,22 +30,22 @@ function reports() {
     loading: true,
     error: null,
     
-    // 🆕 URL de tu API
+    // URL de tu API
     apiUrl: 'http://localhost:3000/api',
     
-    // 🆕 Inicialización
+    // Inicialización
     async init() {
       console.log('🚀 Iniciando carga de datos de reportes...');
       await this.loadAllData();
+      await this.loadRecommendations();
     },
     
-    // 🆕 Cargar todos los datos
+    // Cargar todos los datos
     async loadAllData() {
       this.loading = true;
       this.error = null;
       
       try {
-        // Cargar en paralelo
         await Promise.all([
           this.loadPrograms(),
           this.loadCourses(),
@@ -57,7 +67,7 @@ function reports() {
       }
     },
     
-    // 🆕 Cargar programas
+    // Cargar programas
     async loadPrograms() {
       try {
         const response = await fetch(`${this.apiUrl}/programs`);
@@ -70,7 +80,7 @@ function reports() {
       }
     },
     
-    // 🆕 Cargar cursos
+    // Cargar cursos
     async loadCourses() {
       try {
         const response = await fetch(`${this.apiUrl}/courses`);
@@ -82,7 +92,7 @@ function reports() {
           id: parseInt(course.id),
           name: course.name,
           code: course.code,
-          units: 3 // Por defecto
+          units: 3
         }));
         
         console.log('📖 Cursos cargados:', this.subjects.length);
@@ -92,14 +102,13 @@ function reports() {
       }
     },
     
-    // 🆕 Cargar estudiantes directamente desde el API
+    // Cargar estudiantes
     async loadStudents() {
       try {
         const response = await fetch(`${this.apiUrl}/students`);
         if (!response.ok) throw new Error('Error loading students');
         const studentsData = await response.json();
         
-        // Los datos ya vienen en el formato correcto del backend
         this.students = studentsData.map(student => ({
           id: student.id,
           studentId: student.studentId,
@@ -134,20 +143,17 @@ function reports() {
       }
     },
     
-    // 🆕 Cargar sesiones
+    // Cargar sesiones
     async loadSessions() {
       try {
         const response = await fetch(`${this.apiUrl}/sessions`);
         if (!response.ok) throw new Error('Error loading sessions');
         const sessions = await response.json();
         
-        // Procesar cada sesión y obtener sus estudiantes
         this.sessionData = await Promise.all(sessions.map(async (session) => {
-          // Obtener cursos de la sesión
           const coursesResponse = await fetch(`${this.apiUrl}/sessions/${session.id}/courses`);
           const coursesData = await coursesResponse.json();
           
-          // Extraer IDs únicos de estudiantes
           const studentIds = new Set();
           coursesData.forEach(course => {
             course.students.forEach(student => {
@@ -155,7 +161,6 @@ function reports() {
             });
           });
           
-          // Convertir materias (courseCode) a IDs de subjects
           const materiaIds = coursesData.map(c => {
             const subject = this.subjects.find(s => s.code === c.code);
             return subject ? subject.id : null;
@@ -178,8 +183,168 @@ function reports() {
         throw error;
       }
     },
+
+    // ========================================
+    // 🆕 NUEVAS FUNCIONES PARA EDITAR CALIFICACIONES
+    // ========================================
     
-    // Métodos originales
+    // Abrir modal de edición de calificaciones
+    async openGradesEditor(student) {
+      this.selectedStudent = student;
+      this.editingStudentId = student.id; // 🆕 Guardar el ID
+      this.editingGrades = true;
+      this.courseSearchQuery = '';
+      this.modifiedCourses = [];
+      this.saveStatus = { type: '', message: '' };
+      
+      await this.loadCoursesForEditing(student.id);
+    },
+    
+    // Cargar cursos para editar
+    async loadCoursesForEditing(studentId) {
+      try {
+        const gradesResponse = await fetch(`${this.apiUrl}/students/${studentId}/grades`);
+        const existingGrades = await gradesResponse.json();
+        
+        const gradesMap = {};
+        existingGrades.forEach(record => {
+          gradesMap[record.course.courseCode] = {
+            grade: record.grade || '--',
+            sessionId: record.sessionId
+          };
+        });
+        
+        this.coursesForEditing = this.subjects.map(subject => ({
+          code: subject.code,
+          name: subject.name,
+          grade: gradesMap[subject.code]?.grade || '--',
+          sessionId: gradesMap[subject.code]?.sessionId || null,
+          modified: false
+        }));
+        
+        console.log('📝 Cursos cargados para edición:', this.coursesForEditing.length);
+      } catch (error) {
+        console.error('Error loading courses for editing:', error);
+        this.saveStatus = {
+          type: 'error',
+          message: 'Error al cargar los cursos'
+        };
+      }
+    },
+    
+    // Filtrar cursos para mostrar en el editor
+    get filteredCoursesForEditing() {
+      if (!this.courseSearchQuery || this.courseSearchQuery.trim() === '') {
+        return this.coursesForEditing;
+      }
+      
+      const query = this.courseSearchQuery.toLowerCase().trim();
+      return this.coursesForEditing.filter(course => 
+        course.code.toLowerCase().includes(query) || 
+        course.name.toLowerCase().includes(query)
+      );
+    },
+    
+    // Marcar curso como modificado
+    markAsModified(courseCode) {
+      const course = this.coursesForEditing.find(c => c.code === courseCode);
+      if (course) {
+        course.modified = true;
+        if (!this.modifiedCourses.includes(courseCode)) {
+          this.modifiedCourses.push(courseCode);
+        }
+      }
+    },
+    
+    // Obtener texto de status
+    getStatusText(grade) {
+      if (grade === '--') return 'Not Taken';
+      if (grade === 'IP') return 'In Progress';
+      return 'Completed';
+    },
+    
+    // Resetear cambios
+    resetGrades() {
+      if (confirm('¿Estás seguro de resetear todos los cambios?')) {
+        this.loadCoursesForEditing(this.editingStudentId); // 🆕 Usar editingStudentId
+        this.modifiedCourses = [];
+        this.saveStatus = { type: '', message: '' };
+      }
+    },
+    
+    // Guardar calificaciones
+    async saveGrades() {
+      if (this.modifiedCourses.length === 0) return;
+      
+      // 🆕 Verificar que tengamos el ID
+      if (!this.editingStudentId) {
+        this.saveStatus = {
+          type: 'error',
+          message: 'Error: No se encontró el ID del estudiante'
+        };
+        return;
+      }
+      
+      this.savingGrades = true;
+      this.saveStatus = { type: 'info', message: 'Saving changes...' };
+      
+      try {
+        const gradesToSave = this.coursesForEditing
+          .filter(course => course.modified)
+          .map(course => ({
+            courseCode: course.code,
+            grade: course.grade,
+            sessionId: course.sessionId
+          }));
+        
+        console.log('💾 Guardando calificaciones:', gradesToSave);
+        
+        const response = await fetch(
+          `${this.apiUrl}/students/${this.editingStudentId}/grades/batch`, // 🆕 Usar editingStudentId
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ grades: gradesToSave })
+          }
+        );
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          this.saveStatus = {
+            type: 'success',
+            message: `✅ ${result.successful} calificaciones guardadas exitosamente`
+          };
+          
+          this.modifiedCourses = [];
+          this.coursesForEditing.forEach(course => course.modified = false);
+          
+          await this.loadStudents();
+          
+          setTimeout(() => {
+            this.editingGrades = false;
+            this.saveStatus = { type: '', message: '' };
+          }, 2000);
+          
+        } else {
+          throw new Error(result.error || 'Error al guardar');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error guardando calificaciones:', error);
+        this.saveStatus = {
+          type: 'error',
+          message: `Error: ${error.message}`
+        };
+      } finally {
+        this.savingGrades = false;
+      }
+    },
+
+    // ========================================
+    // FUNCIONES ORIGINALES
+    // ========================================
+    
     clearFilters() {
       this.filters = { program: 'all', session: 'all', occupancy: 'all' };
     },
@@ -238,9 +403,7 @@ function reports() {
       const student = this.students.find(s => s.id === studentId);
       if (!student) return [];
       
-      // Si no tiene requiredSubjects, obtener todos los cursos del programa
       if (!student.requiredSubjects || student.requiredSubjects.length === 0) {
-        // Todos los cursos menos los completados
         return this.subjects
           .map(s => s.id)
           .filter(id => !student.completedSubjects.includes(id));
@@ -348,7 +511,6 @@ function reports() {
       const student = this.students.find(s => s.id === studentId);
       if (!student) return [];
       
-      // Si no tiene materias requeridas, mostrar todas las materias con su estado
       const subjectsToShow = student.requiredSubjects && student.requiredSubjects.length > 0
         ? student.requiredSubjects
         : this.subjects.map(s => s.id);
@@ -366,6 +528,33 @@ function reports() {
           status: gradeInfo?.status || 'Not Started'
         };
       });
-    }
+    },
+    async loadRecommendations() {
+  try {
+    const response = await fetch(`${this.apiUrl}/recommendations`);
+    if (!response.ok) throw new Error('Error loading recommendations');
+
+    const data = await response.json();
+
+    // ⚡ Asegúrate de que sea un array
+    this.recommendations = Array.isArray(data) ? data : (data.missingSubjects || []);
+
+    console.log('📊 Recomendaciones cargadas:', this.recommendations);
+  } catch (error) {
+    console.error('❌ Error cargando recomendaciones:', error);
+    this.recommendations = [];
+  }
+},
+getFormattedRecommendations() {
+  if (!this.recommendations || this.recommendations.length === 0) return [];
+
+  return this.recommendations.map(course => ({
+    subject: course.courseName,
+    subjectId: course.courseId,
+    studentCount: course.missingCount,
+    students: course.students.map(s => s.fullName)
+  }));
+}
   };
+
 }
