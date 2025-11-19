@@ -37,7 +37,6 @@ export class StudentsService {
     return await this.prisma.session.count();
   }
 
-  // 🆕 Obtener todas las sesiones con datos reales
   async getAllSessions() {
     const sessions = await this.prisma.session.findMany({
       include: {
@@ -54,12 +53,10 @@ export class StudentsService {
     });
 
     return sessions.map(s => {
-      // Calcular estudiantes totales en la sesión
       const totalEnrolled = s.offerings.reduce((sum, offering) => 
         sum + offering._count.enrollments, 0
       );
 
-      // Calcular capacidad máxima de la sesión
       const totalCapacity = s.offerings.reduce((sum, offering) => 
         sum + (offering.maxStudents || 30), 0
       );
@@ -68,13 +65,11 @@ export class StudentsService {
         ? Math.round((totalEnrolled / totalCapacity) * 100) 
         : 0;
 
-      // Obtener profesor (del primer offering)
       const firstTeacher = s.offerings[0]?.teacher;
       const professorName = firstTeacher 
         ? `${firstTeacher.firstName} ${firstTeacher.lastName}`
         : 'N/A';
 
-      // Obtener materias únicas
       const subjects = [...new Set(s.offerings.map(o => o.course.courseCode))];
 
       return {
@@ -95,12 +90,10 @@ export class StudentsService {
     });
   }
 
-  // 🆕 Calcular crecimiento de matrícula REAL (año actual vs año anterior)
   async calculateEnrollmentGrowth() {
     const currentYear = new Date().getFullYear();
     const lastYear = currentYear - 1;
 
-    // Estudiantes inscritos este año
     const currentYearEnrollments = await this.prisma.enrollment.count({
       where: {
         offering: {
@@ -114,7 +107,6 @@ export class StudentsService {
       }
     });
 
-    // Estudiantes inscritos el año pasado
     const lastYearEnrollments = await this.prisma.enrollment.count({
       where: {
         offering: {
@@ -129,11 +121,9 @@ export class StudentsService {
     });
 
     if (lastYearEnrollments === 0) {
-      // Si no hay datos del año anterior, retornar 0
       return 0;
     }
 
-    // Calcular crecimiento porcentual
     const growthRate = ((currentYearEnrollments - lastYearEnrollments) / lastYearEnrollments) * 100;
     
     return Math.round(growthRate * 10) / 10;
@@ -141,7 +131,6 @@ export class StudentsService {
 
   async getMissingSubjectsByStudent() {
     try {
-      // 1. Obtener todos los cursos del sistema con sus programas
       const allCourses = await this.prisma.course.findMany({
         include: {
           programCourses: {
@@ -154,7 +143,6 @@ export class StudentsService {
 
       console.log(`📚 Total courses in system: ${allCourses.length}`);
 
-      // 2. Obtener total de estudiantes activos
       const totalStudents = await this.prisma.student.count({
         where: { status: 'active' }
       });
@@ -166,18 +154,15 @@ export class StudentsService {
         return { labels: [], data: [] };
       }
 
-      // 3. Para cada curso, calcular cuántos estudiantes NO lo han tomado
       const missingData = await Promise.all(
         allCourses.map(async (course) => {
-          // Obtener todos los programIds relacionados con este curso
           const programIds = course.programCourses.map(pc => pc.programId);
           
-          // Contar estudiantes activos de TODOS los programas relacionados que YA tomaron el curso
           const studentsWithCourse = await this.prisma.student.count({
             where: {
               status: 'active',
               programId: {
-                in: programIds // Buscar en todos los programas
+                in: programIds
               },
               OR: [
                 {
@@ -207,7 +192,6 @@ export class StudentsService {
             }
           });
 
-          // Total de estudiantes de TODOS los programas relacionados
           const programStudents = await this.prisma.student.count({
             where: {
               status: 'active',
@@ -228,9 +212,6 @@ export class StudentsService {
         })
       );
 
-      // console.log('📊 Missing data calculated:', missingData);
-
-      // 4. Filtrar solo cursos con estudiantes faltantes y ordenar
       const topMissing = missingData
         .filter(item => item.missing > 0)
         .sort((a, b) => b.missing - a.missing)
@@ -254,65 +235,143 @@ export class StudentsService {
     }
   }
 
-  // Obtener todos los estudiantes con detalles
-  // students.service.ts - Función getAllStudents()
-
-async getAllStudents() {
-  const students = await this.prisma.student.findMany({
-    where: { status: 'active' },
-    include: {
-      program: true,
-      enrollments: {
-        include: {
-          offering: {
-            include: {
-              course: true,
-              session: true
+  async getAllStudents() {
+    const students = await this.prisma.student.findMany({
+      where: { status: 'active' },
+      include: {
+        program: true,
+        enrollments: {
+          include: {
+            offering: {
+              include: {
+                course: true,
+                session: true
+              }
             }
+          }
+        },
+        records: {
+          include: {
+            course: true
+          }
+        },
+        transfers: {
+          include: {
+            course: true
           }
         }
       },
-      records: {
-        include: {
-          course: true
-        }
-      },
-      transfers: {
-        include: {
-          course: true
+      orderBy: [
+        { lastName: 'asc' },
+        { firstName: 'asc' }
+      ]
+    });
+
+    return students.map(student => {
+      const completedRecords = student.records.filter(r => 
+        ['passed', 'completed', 'P', 'completado'].includes(r.status || '')
+      );
+      
+      const unitsEarned = completedRecords.reduce((sum, record) => {
+        const course = record.course;
+        return sum + (course.credits || 3);
+      }, 0) + student.transferredUnits;
+
+      const completedCourseIds = [
+        ...completedRecords.map(r => r.courseId),
+        ...student.transfers.map(t => t.courseId)
+      ];
+
+      const programCourses = student.program ? [] : [];
+
+      const grades = {};
+      student.records.forEach(record => {
+        grades[record.courseId] = {
+          grade: this.convertGradeToNumeric(record.grade),
+          letter: record.grade || '-',
+          status: this.mapStatus(record.status)
+        };
+      });
+
+      return {
+        id: Number(student.id),
+        studentId: student.studentIdNumber,
+        name: `${student.firstName} ${student.lastName}`,
+        firstName: student.firstName,
+        middleName: student.middleName || '',
+        lastName: student.lastName,
+        phone: student.phone || 'N/A',
+        emailPersonal: student.email || 'N/A',
+        emailSDGKU: student.sdgkuEmail || 'N/A',
+        status: student.status === 'active' ? 'Active' : 'Inactive',
+        program: student.program?.programName || 'Unknown',
+        modality: student.modality || 'Online',
+        cohort: `Fall ${student.enrollmentYear}`,
+        language: student.language || 'English',
+        totalUnits: student.totalUnits,
+        transferredUnits: student.transferredUnits,
+        unitsEarned: unitsEarned,
+        startDate: student.startDate.toISOString().split('T')[0],
+        scheduledCompletion: student.scheduledCompletionDate 
+          ? student.scheduledCompletionDate.toISOString().split('T')[0] 
+          : 'TBD',
+        graduationDate: student.graduationDate 
+          ? student.graduationDate.toISOString().split('T')[0] 
+          : 'TBD',
+        completedSubjects: completedCourseIds,
+        requiredSubjects: programCourses,
+        grades: grades,
+        progress: {}
+      };
+    });
+  }
+
+  async getStudentById(studentId: bigint) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      include: {
+        program: true,
+        enrollments: {
+          include: {
+            offering: {
+              include: {
+                course: true,
+                session: true
+              }
+            }
+          }
+        },
+        records: {
+          include: {
+            course: true
+          }
+        },
+        transfers: {
+          include: {
+            course: true
+          }
         }
       }
-    },
-    orderBy: [
-      { lastName: 'asc' },
-      { firstName: 'asc' }
-    ]
-  });
+    });
 
-  return students.map(student => {
+    if (!student) {
+      throw new NotFoundException(`Student with ID ${studentId} not found`);
+    }
+
     const completedRecords = student.records.filter(r => 
-      ['passed', 'completed', 'P', 'completado'].includes(r.status || '')  // 🔥 AGREGAR 'completado'
+      ['passed', 'completed', 'P', 'completado'].includes(r.status || '')
     );
     
     const unitsEarned = completedRecords.reduce((sum, record) => {
-      const course = record.course;
-      return sum + (course.credits || 3);
+      return sum + (record.course.credits || 3);
     }, 0) + student.transferredUnits;
 
-    const completedCourseIds = [
-      ...completedRecords.map(r => r.courseId),
-      ...student.transfers.map(t => t.courseId)
-    ];
-
-    const programCourses = student.program ? [] : [];
-
-    // 🎯 CONSTRUIR GRADES CON EL STATUS CORRECTO
     const grades = {};
     student.records.forEach(record => {
       grades[record.courseId] = {
         grade: this.convertGradeToNumeric(record.grade),
         letter: record.grade || '-',
-        status: this.mapStatus(record.status)  // 🔥 USAR NUEVA FUNCIÓN
+        status: this.mapStatus(record.status)
       };
     });
 
@@ -335,114 +394,12 @@ async getAllStudents() {
       transferredUnits: student.transferredUnits,
       unitsEarned: unitsEarned,
       startDate: student.startDate.toISOString().split('T')[0],
-      scheduledCompletion: student.scheduledCompletionDate 
-        ? student.scheduledCompletionDate.toISOString().split('T')[0] 
-        : 'TBD',
-      graduationDate: student.graduationDate 
-        ? student.graduationDate.toISOString().split('T')[0] 
-        : 'TBD',
-      completedSubjects: completedCourseIds,
-      requiredSubjects: programCourses,
-      grades: grades,
-      progress: {}
+      scheduledCompletion: student.scheduledCompletionDate?.toISOString().split('T')[0] || 'TBD',
+      graduationDate: student.graduationDate?.toISOString().split('T')[0] || 'TBD',
+      grades: grades
     };
-  });
-}
-
-// 🆕 NUEVA FUNCIÓN PARA MAPEAR STATUS
-private mapStatus(status: string | null): string {
-  if (!status) return 'Not Started';
-  
-  const statusLower = status.toLowerCase();
-  
-  // Mapear desde la BD al frontend
-  if (statusLower === 'completado') return 'Completed';
-  if (statusLower === 'pendiente') return 'In Progress';
-  if (statusLower === 'reprobado') return 'Failed';
-  if (statusLower === 'completed') return 'Completed';
-  if (statusLower === 'in progress') return 'In Progress';
-  if (statusLower === 'failed') return 'Failed';
-  
-  return 'Not Started';
-}
-
-
-  // Obtener un estudiante por ID
-  async getStudentById(studentId: bigint) {
-  const student = await this.prisma.student.findUnique({
-    where: { id: studentId },
-    include: {
-      program: true,
-      enrollments: {
-        include: {
-          offering: {
-            include: {
-              course: true,
-              session: true
-            }
-          }
-        }
-      },
-      records: {
-        include: {
-          course: true
-        }
-      },
-      transfers: {
-        include: {
-          course: true
-        }
-      }
-    }
-  });
-
-  if (!student) {
-    throw new NotFoundException(`Student with ID ${studentId} not found`);
   }
 
-  const completedRecords = student.records.filter(r => 
-    ['passed', 'completed', 'P', 'completado'].includes(r.status || '')  // 🔥 AGREGAR 'completado'
-  );
-  
-  const unitsEarned = completedRecords.reduce((sum, record) => {
-    return sum + (record.course.credits || 3);
-  }, 0) + student.transferredUnits;
-
-  const grades = {};
-  student.records.forEach(record => {
-    grades[record.courseId] = {
-      grade: this.convertGradeToNumeric(record.grade),
-      letter: record.grade || '-',
-      status: this.mapStatus(record.status)  // 🔥 USAR mapStatus
-    };
-  });
-
-  return {
-    id: Number(student.id),
-    studentId: student.studentIdNumber,
-    name: `${student.firstName} ${student.lastName}`,
-    firstName: student.firstName,
-    middleName: student.middleName || '',
-    lastName: student.lastName,
-    phone: student.phone || 'N/A',
-    emailPersonal: student.email || 'N/A',
-    emailSDGKU: student.sdgkuEmail || 'N/A',
-    status: student.status === 'active' ? 'Active' : 'Inactive',
-    program: student.program?.programName || 'Unknown',
-    modality: student.modality || 'Online',
-    cohort: `Fall ${student.enrollmentYear}`,
-    language: student.language || 'English',
-    totalUnits: student.totalUnits,
-    transferredUnits: student.transferredUnits,
-    unitsEarned: unitsEarned,
-    startDate: student.startDate.toISOString().split('T')[0],
-    scheduledCompletion: student.scheduledCompletionDate?.toISOString().split('T')[0] || 'TBD',
-    graduationDate: student.graduationDate?.toISOString().split('T')[0] || 'TBD',
-    grades: grades
-  };
-}
-
-  // Helpers
   private convertGradeToNumeric(grade: string | null): number | null {
     if (!grade) return null;
     
@@ -457,11 +414,18 @@ private mapStatus(status: string | null): string {
     return gradeMap[grade] || null;
   }
 
-  private getRecordStatus(status: string | null): string {
+  private mapStatus(status: string | null): string {
     if (!status) return 'Not Started';
-    if (['passed', 'completed', 'P'].includes(status)) return 'Completed';
-    if (status === 'enrolled') return 'In Progress';
+    
+    const statusLower = status.toLowerCase();
+    
+    if (statusLower === 'completado') return 'Completed';
+    if (statusLower === 'pendiente') return 'In Progress';
+    if (statusLower === 'reprobado') return 'Failed';
+    if (statusLower === 'completed') return 'Completed';
+    if (statusLower === 'in progress') return 'In Progress';
+    if (statusLower === 'failed') return 'Failed';
+    
     return 'Not Started';
   }
-
 }

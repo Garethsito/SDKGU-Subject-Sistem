@@ -180,6 +180,7 @@ function academicData() {
 },
 
     gradeStatusToProgressStatus(status, letter) {
+
   // 🔥 ACTUALIZAR: Usar los status que devuelve tu backend
   if (!status || status === 'Not Started') return 0;
   if (status === 'In Progress') return 1;
@@ -309,18 +310,11 @@ function academicData() {
       }
     },
 
-    // ✅ NEW: Helper function to determine if we should show icon or grade
-    shouldShowIcon(status, letter) {
-      // Show icon for: Not Started, In Progress, Transferred
-      // Also show icon for Completed with 'P' (transferred)
-      return status === 0 || status === 1 || status === 4 || (status === 2 && letter === 'P');
+    getStatusColorWithGrade(status, grade) {
+      return this.getStatusColor(status);
     },
 
-    // ✅ NEW: Get the correct icon (handle P as transfer)
-    getDisplayIcon(status, letter) {
-      if (status === 2 && letter === 'P') {
-        return this.getStatusIcon(4); // Transfer icon
-      }
+    getStatusIconWithGrade(status, grade) {
       return this.getStatusIcon(status);
     },
 
