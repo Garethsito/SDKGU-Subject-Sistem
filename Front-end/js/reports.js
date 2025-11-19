@@ -109,7 +109,10 @@ function reports() {
         if (!response.ok) throw new Error('Error loading students');
         const studentsData = await response.json();
         
-        this.students = studentsData.map(student => ({
+        this.students = studentsData.map(student => {
+          // 🔍 DEBUG: Ver qué trae student.grades
+      console.log(`📥 Grades para ${student.name}:`, student.grades);
+      return{
           id: student.id,
           studentId: student.studentId,
           name: student.name,
@@ -134,7 +137,8 @@ function reports() {
           requiredSubjects: student.requiredSubjects || [],
           grades: student.grades || {},
           progress: {}
-        }));
+        };
+      });
         
         console.log('👥 Estudiantes cargados:', this.students.length);
       } catch (error) {
@@ -1017,36 +1021,45 @@ function reports() {
     },
     
     // Cargar cursos para editar
-    async loadCoursesForEditing(studentId) {
-      try {
-        const gradesResponse = await fetch(`${this.apiUrl}/students/${studentId}/grades`);
-        const existingGrades = await gradesResponse.json();
-        
-        const gradesMap = {};
-        existingGrades.forEach(record => {
-          gradesMap[record.course.courseCode] = {
-            grade: record.grade || '--',
-            sessionId: record.sessionId
-          };
-        });
-        
-        this.coursesForEditing = this.subjects.map(subject => ({
-          code: subject.code,
-          name: subject.name,
-          grade: gradesMap[subject.code]?.grade || '--',
-          sessionId: gradesMap[subject.code]?.sessionId || null,
-          modified: false
-        }));
-        
-        console.log('📝 Cursos cargados para edición:', this.coursesForEditing.length);
-      } catch (error) {
-        console.error('Error loading courses for editing:', error);
-        this.saveStatus = {
-          type: 'error',
-          message: 'Error al cargar los cursos'
-        };
-      }
-    },
+   async loadCoursesForEditing(studentId) {
+  try {
+    const gradesResponse = await fetch(`${this.apiUrl}/students/${studentId}/grades`);
+    const existingGrades = await gradesResponse.json();
+    
+    // 🔍 AGREGA ESTE CONSOLE.LOG
+    console.log('📥 DATOS RECIBIDOS DE LA BD:', existingGrades);
+    console.log('📥 PRIMER REGISTRO COMPLETO:', existingGrades[0]);
+    
+    const gradesMap = {};
+    existingGrades.forEach(record => {
+      console.log('🔍 Procesando registro:', {
+        courseCode: record.course.courseCode,
+        grade: record.grade,
+        sessionId: record.sessionId,
+        status: record.status  // 🔥 ¿APARECE AQUÍ?
+      });
+      
+      gradesMap[record.course.courseCode] = {
+        grade: record.grade || '--',
+        sessionId: record.sessionId,
+        status: record.status  // 🆕 AGREGAR STATUS AQUÍ
+      };
+    });
+    
+    this.coursesForEditing = this.subjects.map(subject => ({
+      code: subject.code,
+      name: subject.name,
+      grade: gradesMap[subject.code]?.grade || '--',
+      sessionId: gradesMap[subject.code]?.sessionId || null,
+      status: gradesMap[subject.code]?.status || 'Not Started',  // 🆕 AGREGAR
+      modified: false
+    }));
+    
+    console.log('📝 Cursos cargados para edición:', this.coursesForEditing);
+  } catch (error) {
+    console.error('Error loading courses for editing:', error);
+  }
+},
     
     // Filtrar cursos para mostrar en el editor
     get filteredCoursesForEditing() {
@@ -1072,13 +1085,33 @@ function reports() {
       }
     },
     
-    // Obtener texto de status
-    getStatusText(grade) {
-      if (grade === '--') return 'Not Taken';
-      if (grade === 'IP') return 'In Progress';
-      return 'Completed';
-    },
-    
+    getStatus(grade, sessionId = null) {
+  // 1. No iniciado
+  if (!grade || grade === '--') return 'Not Started';
+  
+  // 2. En progreso explícito
+  if (grade === 'IP') return 'In Progress';
+  
+  // 3. 🔥 PRIMERO verificar si reprobó (independiente del sessionId)
+  if (grade === 'F') return 'Failed';
+  
+  // 4. Si tiene sessionId y NO ha reprobado → En progreso
+  if (sessionId) return 'In Progress';
+  
+  // 5. Si aprobó
+  if (['A','A-','B+','B','B-','C+','C','C-','D+','D','D-'].includes(grade)) {
+    return 'Completed';
+  }
+  
+  // 6. Fallback
+  return 'Not Started';
+},
+
+getStatusText(grade, sessionId = null) {
+  return this.getStatus(grade, sessionId);
+},
+
+ 
     // Resetear cambios
     resetGrades() {
       if (confirm('¿Estás seguro de resetear todos los cambios?')) {
@@ -1090,72 +1123,80 @@ function reports() {
     
     // Guardar calificaciones
     async saveGrades() {
-      if (this.modifiedCourses.length === 0) return;
-      
-      // 🆕 Verificar que tengamos el ID
-      if (!this.editingStudentId) {
-        this.saveStatus = {
-          type: 'error',
-          message: 'Error: No se encontró el ID del estudiante'
+  if (this.modifiedCourses.length === 0) return;
+  
+  if (!this.editingStudentId) {
+    this.saveStatus = {
+      type: 'error',
+      message: 'Error: No se encontró el ID del estudiante'
+    };
+    return;
+  }
+  
+  this.savingGrades = true;
+  this.saveStatus = { type: 'info', message: 'Saving changes...' };
+  
+  try {
+    const gradesToSave = this.coursesForEditing
+      .filter(course => course.modified)
+      .map(course => {
+        // 🔥 USAR LA FUNCIÓN getStatus DIRECTAMENTE
+        const calculatedStatus = this.getStatus(course.grade, course.sessionId);
+        
+        // 🔍 DEBUG
+        console.log(`📤 Curso: ${course.code}, Grade: ${course.grade}, SessionId: ${course.sessionId}, Status: ${calculatedStatus}`);
+        
+        return {
+          courseCode: course.code,
+          grade: course.grade,
+          sessionId: course.sessionId,
+          status: calculatedStatus
         };
-        return;
+      });
+    
+    console.log('💾 Guardando calificaciones:', gradesToSave);
+    
+    const response = await fetch(
+      `${this.apiUrl}/students/${this.editingStudentId}/grades/batch`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ grades: gradesToSave })
       }
+    );
+    
+    const result = await response.json();
+    
+    if (response.ok && result.success) {
+      this.saveStatus = {
+        type: 'success',
+        message: `✅ ${result.successful} calificaciones guardadas exitosamente`
+      };
       
-      this.savingGrades = true;
-      this.saveStatus = { type: 'info', message: 'Saving changes...' };
+      this.modifiedCourses = [];
+      this.coursesForEditing.forEach(course => course.modified = false);
       
-      try {
-        const gradesToSave = this.coursesForEditing
-          .filter(course => course.modified)
-          .map(course => ({
-            courseCode: course.code,
-            grade: course.grade,
-            sessionId: course.sessionId
-          }));
-        
-        console.log('💾 Guardando calificaciones:', gradesToSave);
-        
-        const response = await fetch(
-          `${this.apiUrl}/students/${this.editingStudentId}/grades/batch`, // 🆕 Usar editingStudentId
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ grades: gradesToSave })
-          }
-        );
-        
-        const result = await response.json();
-        
-        if (response.ok && result.success) {
-          this.saveStatus = {
-            type: 'success',
-            message: `✅ ${result.successful} calificaciones guardadas exitosamente`
-          };
-          
-          this.modifiedCourses = [];
-          this.coursesForEditing.forEach(course => course.modified = false);
-          
-          await this.loadStudents();
-          
-          setTimeout(() => {
-            this.editingGrades = false;
-            this.saveStatus = { type: '', message: '' };
-          }, 2000);
-          
-        } else {
-          throw new Error(result.error || 'Error al guardar');
-        }
-        
-      } catch (error) {
-        console.error('❌ Error guardando calificaciones:', error);
-        this.saveStatus = {
-          type: 'error',
-          message: `Error: ${error.message}`
-        };
-      } finally {
-        this.savingGrades = false;
-      }
-    },
+      await this.loadStudents();
+      
+      setTimeout(() => {
+        this.editingGrades = false;
+        this.saveStatus = { type: '', message: '' };
+      }, 2000);
+      
+    } else {
+      throw new Error(result.error || 'Error al guardar');
+    }
+    
+  } catch (error) {
+    console.error('❌ Error guardando calificaciones:', error);
+    this.saveStatus = {
+      type: 'error',
+      message: `Error: ${error.message}`
+    };
+  } finally {
+    this.savingGrades = false;
+  }
+},
 
     // ========================================
     // FUNCIONES ORIGINALES
@@ -1230,58 +1271,6 @@ function reports() {
       );
       
       return missing;
-    },
-    
-    generateRecommendations() {
-      const recommendations = {};
-      
-      this.students.forEach(student => {
-        const missingIds = this.getMissingSubjects(student.id);
-        
-        missingIds.forEach(subjectId => {
-          const subjectName = this.getSubjectName(subjectId);
-          
-          if (!recommendations[subjectName]) {
-            recommendations[subjectName] = {
-              subjectId: subjectId,
-              students: [],
-              count: 0
-            };
-          }
-          
-          recommendations[subjectName].students.push(student.name);
-          recommendations[subjectName].count++;
-        });
-      });
-      
-      return recommendations;
-    },
-    
-    getFormattedRecommendations() {
-      const recs = this.generateRecommendations();
-      const result = [];
-      
-      Object.keys(recs).forEach(subject => {
-        const MAX = 10;
-        const students = recs[subject].students;
-
-    const formattedStudents =
-      students.length > MAX
-        ? [
-            ...students.slice(0, MAX),
-            `... (${students.length - MAX} more)`
-          ]
-        : students;
-
-        result.push({
-          subject: subject,
-          subjectId: recs[subject].subjectId,
-          studentCount: recs[subject].count,
-          students: formattedStudents
-        });
-      });
-      
-      return result.sort((a, b) => b.studentCount - a.studentCount);
     },
     
     get filteredStudents() {
