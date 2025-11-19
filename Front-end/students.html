@@ -273,7 +273,7 @@
             x-ref="topScroll"
             @scroll="$refs.bottomScroll.scrollLeft = $refs.topScroll.scrollLeft"
             class="overflow-x-auto mb-4 pb-2 border-b-2 border-gray-200">
-            <div :style="'width: ' + (192 + (getFilteredSubjects().length * 52) + 96) + 'px'" ></div>
+            <div :style="'width: ' + (192 + (getFilteredSubjects().length * 52) + 96) + 'px'"></div>
           </div>
 
           <!-- Main content area -->
@@ -288,11 +288,17 @@
                 <div class="w-48 flex-shrink-0 font-bold text-gray-700">Student Name</div>
                 <template x-for="subject in getFilteredSubjects()" :key="subject.id">
                   <div class="w-12 flex-shrink-0 mx-0.5">
-                    <div class="text-[10px] text-center font-semibold text-[#A6192E] mb-1" 
+                    <!-- Missing count -->
+                    <div class="text-[10px] text-center font-semibold text-[#A6192E] mb-1 h-4" 
                         x-text="missingCounts[subject.id] || 0"></div>
-                    <div class="text-[10px] text-center font-medium text-gray-600 writing-mode-vertical transform -rotate-45 origin-center h-16 flex items-end justify-center whitespace-nowrap" 
-                         x-text="subject.courseCode"
-                         :title="subject.name"></div>
+                    <!-- Course code - rotated -->
+                    <div class="relative h-20 flex items-end justify-center overflow-visible">
+                      <span 
+                        class="absolute text-[10px] font-medium text-gray-600 whitespace-nowrap origin-bottom-left"
+                        style="transform: rotate(-45deg) translateX(-50%); transform-origin: 0 100%;"
+                        x-text="subject.courseCode"
+                        :title="subject.name"></span>
+                    </div>
                   </div>
                 </template>
                 <div class="w-24 flex-shrink-0 ml-4 text-center font-bold text-gray-700">Progress</div>
@@ -319,15 +325,15 @@
                         class="h-12 rounded-lg flex items-center justify-center transition-all hover:scale-110 hover:shadow-lg cursor-pointer"
                         :title="subject.courseCode + ': ' + (student.grades[subject.id]?.letter || getStatusText(student.progress[subject.id]))">
                         
-                        <!-- Mostrar letra de calificación SOLO para completados (no transferidos) y fallidos -->
-                        <template x-if="(student.progress[subject.id] === 2 && student.grades[subject.id]?.letter !== 'P') || (student.progress[subject.id] === 3)">
-                          <span class="text-white text-xs font-bold" x-text="student.grades[subject.id]?.letter || '-'"></span>
+                        <!-- Show ICON for: Not Started (0), In Progress (1), Transferred (4), or Completed with P -->
+                        <template x-if="shouldShowIcon(student.progress[subject.id], student.grades[subject.id]?.letter)">
+                          <i :class="getDisplayIcon(student.progress[subject.id], student.grades[subject.id]?.letter)" 
+                            class="text-white text-sm"></i>
                         </template>
                         
-                        <!-- Mostrar iconos para: Not Started (0), In Progress (1), Transferred (4), o Completed con P -->
-                        <template x-if="student.progress[subject.id] === 0 || student.progress[subject.id] === 1 || student.progress[subject.id] === 4 || (student.progress[subject.id] === 2 && student.grades[subject.id]?.letter === 'P')">
-                          <i :class="getStatusIcon(student.progress[subject.id] === 2 && student.grades[subject.id]?.letter === 'P' ? 4 : student.progress[subject.id])" 
-                            class="text-white text-sm"></i>
+                        <!-- Show GRADE LETTER for: Completed (2) without P, and Failed (3) -->
+                        <template x-if="!shouldShowIcon(student.progress[subject.id], student.grades[subject.id]?.letter)">
+                          <span class="text-white text-xs font-bold" x-text="student.grades[subject.id]?.letter || '-'"></span>
                         </template>
                       </div>
                     </div>

@@ -1,5 +1,9 @@
 import XLSX from "xlsx";
 import { PrismaClient } from "@prisma/client";
+import dotenv from "dotenv";
+
+// Cargar variables de entorno desde .env
+dotenv.config();
 
 const prisma = new PrismaClient();
 
@@ -17,16 +21,15 @@ async function main() {
   let errors = 0;
   let studentsNotFound = new Set();
   let coursesNotFound = new Set();
-  let studentsUpdated = 0; // --- LÍNEA NUEVA ---
+  let studentsUpdated = 0;
+  let transfersFixed = 0; // ✅ NUEVO
 
   for (const row of rows) {
     const studentIdNumber = row["Students ID Number"]?.toString().trim();
     const courseCode = row["Course"]?.toString().trim().toUpperCase();
-    const grade = row["Grade"]?.toString().trim();
-    const status = row["Status"]?.toString().trim().toLowerCase();
+    let grade = row["Grade"]?.toString().trim(); // ✅ Cambié const por let
+    let status = row["Status"]?.toString().trim().toLowerCase(); // ✅ Cambié const por let
 
-    // --- LÍNEA NUEVA ---
-    // Leemos el ID del programa desde el Excel
     const programIdFromExcel = row["Program"] ? parseInt(row["Program"], 10) : null;
 
     if (!studentIdNumber || !courseCode) continue;
@@ -41,10 +44,8 @@ async function main() {
       continue;
     }
 
-    // --- BLOQUE NUEVO ---
-    // Una vez que encontramos al estudiante, verificamos y actualizamos su programa si es necesario.
-    // Usamos programIdFromExcel (asumiendo que 1 = BSGM, 2 = ASSD, etc.)
-    if (programIdFromExcel && [1, 2].includes(programIdFromExcel)) { // Asegúrate de que 1 y 2 sean los IDs correctos
+    // Actualizar programa si es necesario
+    if (programIdFromExcel && [1, 2].includes(programIdFromExcel)) {
       if (student.programId !== programIdFromExcel) {
         try {
           await prisma.student.update({
@@ -58,7 +59,6 @@ async function main() {
         }
       }
     }
-    // --- FIN BLOQUE NUEVO ---
 
     // Buscar curso
     const course = await prisma.course.findUnique({
@@ -70,6 +70,16 @@ async function main() {
       continue;
     }
 
+    // ✅ NUEVO: Si es transferred, asignar grade = "T"
+    if (status === "transferred") {
+      grade = "T";
+    }
+
+    // ✅ NUEVO: Normalizar status "completed" a "passed"
+    if (status === "completed") {
+      status = "passed";
+    }
+
     // Ver si ya existe
     const existing = await prisma.academicRecord.findFirst({
       where: {
@@ -79,6 +89,20 @@ async function main() {
     });
 
     if (existing) {
+      // ✅ NUEVO: Si ya existe y es transferred pero no tiene grade "T", actualizarlo
+      if (status === "transferred" && (!existing.grade || existing.grade === '')) {
+        try {
+          await prisma.academicRecord.update({
+            where: { id: existing.id },
+            data: { grade: "T", status: "transferred" }
+          });
+          console.log(`  🔧 Transfer actualizado: ${studentIdNumber} - ${courseCode} (grade -> T)`);
+          transfersFixed++;
+        } catch (err) {
+          console.error(`  ❌ Error actualizando transfer: ${err.message}`);
+        }
+      }
+      
       duplicates++;
       continue;
     }
@@ -93,16 +117,19 @@ async function main() {
       });
 
       if (!existingTransfer) {
-        await prisma.transfer.create({
-          data: {
-            studentId: student.id,
-            courseId: course.id,
-            transferType: "external",
-            approvalDate: new Date()
-          }
-        });
-
-        console.log(`  🔄 Transfer registrado para ${studentIdNumber} - ${courseCode}`);
+        try {
+          await prisma.transfer.create({
+            data: {
+              studentId: student.id,
+              courseId: course.id,
+              transferType: "external",
+              approvalDate: new Date()
+            }
+          });
+          console.log(`  🔄 Transfer registrado para ${studentIdNumber} - ${courseCode}`);
+        } catch (err) {
+          console.error(`  ❌ Error registrando transfer: ${err.message}`);
+        }
       }
     }
 
@@ -113,7 +140,7 @@ async function main() {
           studentId: student.id,
           courseId: course.id,
           grade: grade || null,
-          status, // viene tal cual del Excel
+          status,
         },
       });
 
@@ -127,7 +154,8 @@ async function main() {
   console.log("\n🎉 IMPORTACIÓN COMPLETADA");
   console.log("-------------------------------");
   console.log(`   ✅ Registros insertados: ${inserted}`);
-  console.log(`   🔄 Estudiantes actualizados (programa): ${studentsUpdated}`); // --- LÍNEA NUEVA ---
+  console.log(`   🔄 Estudiantes actualizados (programa): ${studentsUpdated}`);
+  console.log(`   🔧 Transfers actualizados (grade -> T): ${transfersFixed}`); // ✅ NUEVO
   console.log(`   🔁 Duplicados (registros): ${duplicates}`);
   console.log(`   ❌ Errores (registros): ${errors}`);
   console.log(`   🚫 Estudiantes no encontrados: ${studentsNotFound.size}`);
