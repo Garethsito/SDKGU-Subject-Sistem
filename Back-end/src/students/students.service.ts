@@ -37,7 +37,6 @@ export class StudentsService {
     return await this.prisma.session.count();
   }
 
-  // 🆕 Obtener todas las sesiones con datos reales
   async getAllSessions() {
     const sessions = await this.prisma.session.findMany({
       include: {
@@ -54,12 +53,10 @@ export class StudentsService {
     });
 
     return sessions.map(s => {
-      // Calcular estudiantes totales en la sesión
       const totalEnrolled = s.offerings.reduce((sum, offering) => 
         sum + offering._count.enrollments, 0
       );
 
-      // Calcular capacidad máxima de la sesión
       const totalCapacity = s.offerings.reduce((sum, offering) => 
         sum + (offering.maxStudents || 30), 0
       );
@@ -68,13 +65,11 @@ export class StudentsService {
         ? Math.round((totalEnrolled / totalCapacity) * 100) 
         : 0;
 
-      // Obtener profesor (del primer offering)
       const firstTeacher = s.offerings[0]?.teacher;
       const professorName = firstTeacher 
         ? `${firstTeacher.firstName} ${firstTeacher.lastName}`
         : 'N/A';
 
-      // Obtener materias únicas
       const subjects = [...new Set(s.offerings.map(o => o.course.courseCode))];
 
       return {
@@ -95,12 +90,10 @@ export class StudentsService {
     });
   }
 
-  // 🆕 Calcular crecimiento de matrícula REAL (año actual vs año anterior)
   async calculateEnrollmentGrowth() {
     const currentYear = new Date().getFullYear();
     const lastYear = currentYear - 1;
 
-    // Estudiantes inscritos este año
     const currentYearEnrollments = await this.prisma.enrollment.count({
       where: {
         offering: {
@@ -114,7 +107,6 @@ export class StudentsService {
       }
     });
 
-    // Estudiantes inscritos el año pasado
     const lastYearEnrollments = await this.prisma.enrollment.count({
       where: {
         offering: {
@@ -129,11 +121,9 @@ export class StudentsService {
     });
 
     if (lastYearEnrollments === 0) {
-      // Si no hay datos del año anterior, retornar 0
       return 0;
     }
 
-    // Calcular crecimiento porcentual
     const growthRate = ((currentYearEnrollments - lastYearEnrollments) / lastYearEnrollments) * 100;
     
     return Math.round(growthRate * 10) / 10;
@@ -141,7 +131,6 @@ export class StudentsService {
 
   async getMissingSubjectsByStudent() {
     try {
-      // 1. Obtener todos los cursos del sistema con sus programas
       const allCourses = await this.prisma.course.findMany({
         include: {
           programCourses: {
@@ -154,7 +143,6 @@ export class StudentsService {
 
       console.log(`📚 Total courses in system: ${allCourses.length}`);
 
-      // 2. Obtener total de estudiantes activos
       const totalStudents = await this.prisma.student.count({
         where: { status: 'active' }
       });
@@ -166,18 +154,15 @@ export class StudentsService {
         return { labels: [], data: [] };
       }
 
-      // 3. Para cada curso, calcular cuántos estudiantes NO lo han tomado
       const missingData = await Promise.all(
         allCourses.map(async (course) => {
-          // Obtener todos los programIds relacionados con este curso
           const programIds = course.programCourses.map(pc => pc.programId);
           
-          // Contar estudiantes activos de TODOS los programas relacionados que YA tomaron el curso
           const studentsWithCourse = await this.prisma.student.count({
             where: {
               status: 'active',
               programId: {
-                in: programIds // Buscar en todos los programas
+                in: programIds
               },
               OR: [
                 {
@@ -207,7 +192,6 @@ export class StudentsService {
             }
           });
 
-          // Total de estudiantes de TODOS los programas relacionados
           const programStudents = await this.prisma.student.count({
             where: {
               status: 'active',
@@ -228,9 +212,6 @@ export class StudentsService {
         })
       );
 
-      // console.log('📊 Missing data calculated:', missingData);
-
-      // 4. Filtrar solo cursos con estudiantes faltantes y ordenar
       const topMissing = missingData
         .filter(item => item.missing > 0)
         .sort((a, b) => b.missing - a.missing)
@@ -254,7 +235,6 @@ export class StudentsService {
     }
   }
 
-  // Obtener todos los estudiantes con detalles
   async getAllStudents() {
     const students = await this.prisma.student.findMany({
       where: { status: 'active' },
@@ -288,7 +268,7 @@ export class StudentsService {
     });
 
     return students.map(student => {
-      // Calcular unidades completadas
+      // ✅ MEJORADO: Calcular unidades completadas (solo passed/completed, NO transferred)
       const completedRecords = student.records.filter(r => 
         ['passed', 'completed', 'P'].includes(r.status || '')
       );
@@ -298,23 +278,61 @@ export class StudentsService {
         return sum + (course.credits || 3);
       }, 0) + student.transferredUnits;
 
-      // Obtener cursos completados
-      const completedCourseIds = [
-        ...completedRecords.map(r => r.courseId),
-        ...student.transfers.map(t => t.courseId)
-      ];
-
-      // Obtener cursos requeridos del programa
-      const programCourses = student.program ? [] : []; // Aquí deberías obtener los cursos del programa
-
-      // Construir objeto de calificaciones
+      // ✅ MEJORADO: Construir objeto de calificaciones con mejor lógica
       const grades = {};
+      
+      // 1. Primero procesar records académicos
       student.records.forEach(record => {
-        grades[record.courseId] = {
-          grade: this.convertGradeToNumeric(record.grade),
-          letter: record.grade || '-',
-          status: this.getRecordStatus(record.status)
+        const courseId = record.courseId;
+        const grade = record.grade || '-';
+        const status = record.status || 'not_started';
+        
+        // ✅ Determinar el status correcto
+        let displayStatus = 'Not Started';
+        
+        if (grade === 'T' || status === 'transferred') {
+          displayStatus = 'Transferred';
+        } else if (['passed', 'completed', 'P'].includes(status)) {
+          displayStatus = 'Completed';
+        } else if (status === 'failed' || grade === 'F') {
+          displayStatus = 'Failed';
+        } else if (status === 'enrolled') {
+          displayStatus = 'In Progress';
+        }
+        
+        grades[courseId] = {
+          grade: this.convertGradeToNumeric(grade),
+          letter: grade,
+          status: displayStatus
         };
+      });
+      
+      // 2. Luego procesar enrollments (In Progress)
+      student.enrollments.forEach(enrollment => {
+        const courseId = enrollment.offering.courseId;
+        
+        // Solo marcar como In Progress si no hay record previo
+        if (!grades[courseId]) {
+          grades[courseId] = {
+            grade: null,
+            letter: '-',
+            status: 'In Progress'
+          };
+        }
+      });
+      
+      // 3. Finalmente procesar transfers
+      student.transfers.forEach(transfer => {
+        const courseId = transfer.courseId;
+        
+        // Marcar como Transferred solo si no hay record
+        if (!grades[courseId]) {
+          grades[courseId] = {
+            grade: null,
+            letter: 'T',
+            status: 'Transferred'
+          };
+        }
       });
 
       return {
@@ -342,15 +360,11 @@ export class StudentsService {
         graduationDate: student.graduationDate 
           ? student.graduationDate.toISOString().split('T')[0] 
           : 'TBD',
-        completedSubjects: completedCourseIds,
-        requiredSubjects: programCourses,
-        grades: grades,
-        progress: {}
+        grades: grades
       };
     });
   }
 
-  // Obtener un estudiante por ID
   async getStudentById(studentId: bigint) {
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
@@ -392,12 +406,54 @@ export class StudentsService {
     }, 0) + student.transferredUnits;
 
     const grades = {};
+    
+    // Process records
     student.records.forEach(record => {
-      grades[record.courseId] = {
-        grade: this.convertGradeToNumeric(record.grade),
-        letter: record.grade || '-',
-        status: this.getRecordStatus(record.status)
+      const courseId = record.courseId;
+      const grade = record.grade || '-';
+      const status = record.status || 'not_started';
+      
+      let displayStatus = 'Not Started';
+      
+      if (grade === 'T' || status === 'transferred') {
+        displayStatus = 'Transferred';
+      } else if (['passed', 'completed', 'P'].includes(status)) {
+        displayStatus = 'Completed';
+      } else if (status === 'failed' || grade === 'F') {
+        displayStatus = 'Failed';
+      } else if (status === 'enrolled') {
+        displayStatus = 'In Progress';
+      }
+      
+      grades[courseId] = {
+        grade: this.convertGradeToNumeric(grade),
+        letter: grade,
+        status: displayStatus
       };
+    });
+    
+    // Process enrollments
+    student.enrollments.forEach(enrollment => {
+      const courseId = enrollment.offering.courseId;
+      if (!grades[courseId]) {
+        grades[courseId] = {
+          grade: null,
+          letter: '-',
+          status: 'In Progress'
+        };
+      }
+    });
+    
+    // Process transfers
+    student.transfers.forEach(transfer => {
+      const courseId = transfer.courseId;
+      if (!grades[courseId]) {
+        grades[courseId] = {
+          grade: null,
+          letter: 'T',
+          status: 'Transferred'
+        };
+      }
     });
 
     return {
@@ -425,12 +481,15 @@ export class StudentsService {
     };
   }
 
-  // Helpers
+  // ✅ MEJORADO: Función que NO considera "T" como calificación numérica
   private convertGradeToNumeric(grade: string | null): number | null {
     if (!grade) return null;
     
+    // ✅ Si es "T" (transferred), retornar null para que no cuente en GPA
+    if (grade === 'T') return null;
+    
     const gradeMap: { [key: string]: number } = {
-      'A': 95, 'A-': 92,
+      'A+': 97, 'A': 95, 'A-': 92,
       'B+': 88, 'B': 85, 'B-': 82,
       'C+': 78, 'C': 75, 'C-': 72,
       'D+': 68, 'D': 65, 'D-': 62,
@@ -440,11 +499,27 @@ export class StudentsService {
     return gradeMap[grade] || null;
   }
 
-  private getRecordStatus(status: string | null): string {
-    if (!status) return 'Not Started';
-    if (['passed', 'completed', 'P'].includes(status)) return 'Completed';
-    if (status === 'enrolled') return 'In Progress';
-    return 'Not Started';
-  }
+  // ✅ ELIMINADO: Ya no usamos esta función
+  // private getRecordStatus(status: string | null): string { ... }
 
+  // ✅ NUEVO: Método para actualizar el status de un estudiante
+  async updateStudentStatus(studentId: bigint, newStatus: string) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId }
+    });
+
+    if (!student) {
+      throw new NotFoundException(`Student with ID ${studentId} not found`);
+    }
+
+    const updatedStudent = await this.prisma.student.update({
+      where: { id: studentId },
+      data: { status: newStatus }
+    });
+
+    return {
+      id: Number(updatedStudent.id),
+      status: updatedStudent.status
+    };
+  }
 }
