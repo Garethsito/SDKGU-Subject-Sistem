@@ -249,16 +249,6 @@ export class StudentsService {
               }
             }
           }
-        },
-        records: {
-          include: {
-            course: true
-          }
-        },
-        transfers: {
-          include: {
-            course: true
-          }
         }
       },
       orderBy: [
@@ -391,20 +381,31 @@ export class StudentsService {
           }
         }
       }
-    });
+    },
+    orderBy: [
+      { lastName: 'asc' },
+      { firstName: 'asc' }
+    ]
+  });
 
-    if (!student) {
-      throw new NotFoundException(`Student with ID ${studentId} not found`);
-    }
-
+  return students.map(student => {
     const completedRecords = student.records.filter(r => 
-      ['passed', 'completed', 'P'].includes(r.status || '')
+      ['passed', 'completed', 'P', 'completado'].includes(r.status || '')  // 🔥 AGREGAR 'completado'
     );
     
     const unitsEarned = completedRecords.reduce((sum, record) => {
-      return sum + (record.course.credits || 3);
+      const course = record.course;
+      return sum + (course.credits || 3);
     }, 0) + student.transferredUnits;
 
+    const completedCourseIds = [
+      ...completedRecords.map(r => r.courseId),
+      ...student.transfers.map(t => t.courseId)
+    ];
+
+    const programCourses = student.program ? [] : [];
+
+    // 🎯 CONSTRUIR GRADES CON EL STATUS CORRECTO
     const grades = {};
     
     // Process records
@@ -475,10 +476,69 @@ export class StudentsService {
       transferredUnits: student.transferredUnits,
       unitsEarned: unitsEarned,
       startDate: student.startDate.toISOString().split('T')[0],
-      scheduledCompletion: student.scheduledCompletionDate?.toISOString().split('T')[0] || 'TBD',
-      graduationDate: student.graduationDate?.toISOString().split('T')[0] || 'TBD',
-      grades: grades
+      scheduledCompletion: student.scheduledCompletionDate 
+        ? student.scheduledCompletionDate.toISOString().split('T')[0] 
+        : 'TBD',
+      graduationDate: student.graduationDate 
+        ? student.graduationDate.toISOString().split('T')[0] 
+        : 'TBD',
+      completedSubjects: completedCourseIds,
+      requiredSubjects: programCourses,
+      grades: grades,
+      progress: {}
     };
+  });
+}
+
+// 🆕 NUEVA FUNCIÓN PARA MAPEAR STATUS
+private mapStatus(status: string | null): string {
+  if (!status) return 'Not Started';
+  
+  const statusLower = status.toLowerCase();
+  
+  // Mapear desde la BD al frontend
+  if (statusLower === 'completado') return 'Completed';
+  if (statusLower === 'pendiente') return 'In Progress';
+  if (statusLower === 'reprobado') return 'Failed';
+  if (statusLower === 'completed') return 'Completed';
+  if (statusLower === 'in progress') return 'In Progress';
+  if (statusLower === 'failed') return 'Failed';
+  
+  return 'Not Started';
+}
+
+
+  // Obtener un estudiante por ID
+  async getStudentById(studentId: bigint) {
+  const student = await this.prisma.student.findUnique({
+    where: { id: studentId },
+    include: {
+      program: true,
+      enrollments: {
+        include: {
+          offering: {
+            include: {
+              course: true,
+              session: true
+            }
+          }
+        }
+      },
+      records: {
+        include: {
+          course: true
+        }
+      },
+      transfers: {
+        include: {
+          course: true
+        }
+      }
+    }
+  });
+
+  if (!student) {
+    throw new NotFoundException(`Student with ID ${studentId} not found`);
   }
 
   // ✅ MEJORADO: Función que NO considera "T" como calificación numérica

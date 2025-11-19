@@ -48,141 +48,151 @@ export class GradesService {
   }
 
   // Actualizar o crear una calificación
-  async updateGrade(
-    studentId: bigint,
-    courseCode: string,
-    grade: string,
-    sessionId?: number
-  ) {
-    // Buscar el curso por código
-    const course = await this.prisma.course.findUnique({
-      where: { courseCode }
-    });
+  // grades.service.ts
+async updateGrade(
+  studentId: bigint,
+  courseCode: string,
+  grade: string,
+  sessionId?: number
+) {
+  const course = await this.prisma.course.findUnique({
+    where: { courseCode }
+  });
 
-    if (!course) {
-      throw new NotFoundException(`Curso ${courseCode} no encontrado`);
+  if (!course) {
+    throw new NotFoundException(`Curso ${courseCode} no encontrado`);
+  }
+
+  // 🔥 MEJORAR LA LÓGICA DEL STATUS
+  let status = 'pendiente';
+  
+  if (!grade || grade === '--' || grade === 'IP') {
+    status = 'pendiente';
+  } else if (grade === 'F') {
+    status = 'reprobado';  // 🎯 IMPORTANTE: Reprobado si es F
+  } else {
+    status = 'completado';
+  }
+
+  const existingRecord = await this.prisma.academicRecord.findFirst({
+    where: {
+      studentId,
+      courseId: course.id,
+      sessionId: sessionId ?? null
     }
+  });
 
-    // Determinar el status basado en la calificación
-    const status = (grade === '--' || grade === 'IP') ? 'pendiente' : 'completado';
-
-    // Buscar si ya existe un registro
-    const existingRecord = await this.prisma.academicRecord.findFirst({
-      where: {
-        studentId,
-        courseId: course.id,
+  let record;
+  if (existingRecord) {
+    record = await this.prisma.academicRecord.update({
+      where: { id: existingRecord.id },
+      data: {
+        grade,
+        status,
         sessionId: sessionId ?? null
+      },
+      include: {
+        course: true
       }
     });
-
-    let record;
-    if (existingRecord) {
-      // Actualizar
-      record = await this.prisma.academicRecord.update({
-        where: { id: existingRecord.id },
-        data: {
-          grade,
-          status,
-          sessionId: sessionId ?? null
-        },
-        include: {
-          course: true
-        }
-      });
-    } else {
-      // Crear
-      record = await this.prisma.academicRecord.create({
-        data: {
-          studentId,
-          courseId: course.id,
-          sessionId: sessionId ?? null,
-          grade,
-          status
-        },
-        include: {
-          course: true
-        }
-      });
-    }
-
-    return {
-      success: true,
-      message: `Calificación actualizada: ${courseCode} - ${grade}`,
-      record
-    };
+  } else {
+    record = await this.prisma.academicRecord.create({
+      data: {
+        studentId,
+        courseId: course.id,
+        sessionId: sessionId ?? null,
+        grade,
+        status
+      },
+      include: {
+        course: true
+      }
+    });
   }
+
+  return {
+    success: true,
+    message: `Calificación actualizada: ${courseCode} - ${grade}`,
+    record
+  };
+}
 
   // Actualizar múltiples calificaciones
   async batchUpdateGrades(
-    studentId: bigint,
-    grades: Array<{ courseCode: string; grade: string; sessionId?: number }>
-  ): Promise<BatchUpdateResult> {
-    const results: GradeResult[] = []; // Tipar explícitamente
-    const errors: string[] = []; // Tipar explícitamente
+  studentId: bigint,
+  grades: Array<{ courseCode: string; grade: string; sessionId?: number; status?: string }>
+): Promise<BatchUpdateResult> {
+  const results: GradeResult[] = [];
+  const errors: string[] = [];
 
-    for (const gradeData of grades) {
-      try {
-        const { courseCode, grade, sessionId } = gradeData;
+  for (const gradeData of grades) {
+    try {
+      const { courseCode, grade, sessionId } = gradeData;
 
-        // Buscar curso
-        const course = await this.prisma.course.findUnique({
-          where: { courseCode }
-        });
+      const course = await this.prisma.course.findUnique({
+        where: { courseCode }
+      });
 
-        if (!course) {
-          errors.push(`Curso ${courseCode} no encontrado`); // Sin acento grave
-          continue;
+      if (!course) {
+        errors.push(`Curso ${courseCode} no encontrado`);
+        continue;
+      }
+
+      // 🔥 MEJORAR LA LÓGICA DEL STATUS
+      let status = 'pendiente';
+      
+      if (!grade || grade === '--' || grade === 'IP') {
+        status = 'pendiente';
+      } else if (grade === 'F') {
+        status = 'reprobado';  // 🎯 Reprobado si es F
+      } else {
+        status = 'completado';
+      }
+
+      const existingRecord = await this.prisma.academicRecord.findFirst({
+        where: {
+          studentId,
+          courseId: course.id,
+          sessionId: sessionId ?? null
         }
+      });
 
-        const status = (grade === '--' || grade === 'IP') ? 'pendiente' : 'completado';
-
-        // Buscar si ya existe un registro
-        const existingRecord = await this.prisma.academicRecord.findFirst({
-          where: {
-            studentId,
-            courseId: course.id,
+      if (existingRecord) {
+        await this.prisma.academicRecord.update({
+          where: { id: existingRecord.id },
+          data: {
+            grade,
+            status,
             sessionId: sessionId ?? null
           }
         });
-
-        if (existingRecord) {
-          // Actualizar
-          await this.prisma.academicRecord.update({
-            where: { id: existingRecord.id },
-            data: {
-              grade,
-              status,
-              sessionId: sessionId ?? null
-            }
-          });
-        } else {
-          // Crear
-          await this.prisma.academicRecord.create({
-            data: {
-              studentId,
-              courseId: course.id,
-              sessionId: sessionId ?? null,
-              grade,
-              status
-            }
-          });
-        }
-
-        results.push({ courseCode, grade, success: true });
-
-      } catch (error: any) {
-        errors.push(`Error en ${gradeData.courseCode}: ${error.message}`); // Sin acento grave
+      } else {
+        await this.prisma.academicRecord.create({
+          data: {
+            studentId,
+            courseId: course.id,
+            sessionId: sessionId ?? null,
+            grade,
+            status
+          }
+        });
       }
-    }
 
-    return {
-      success: true,
-      totalProcessed: grades.length,
-      successful: results.length,
-      results,
-      errors: errors.length > 0 ? errors : undefined
-    };
+      results.push({ courseCode, grade, success: true });
+
+    } catch (error: any) {
+      errors.push(`Error en ${gradeData.courseCode}: ${error.message}`);
+    }
   }
+
+  return {
+    success: true,
+    totalProcessed: grades.length,
+    successful: results.length,
+    results,
+    errors: errors.length > 0 ? errors : undefined
+  };
+}
 
   // Eliminar una calificación
   async deleteGrade(studentId: bigint, courseCode: string) {
