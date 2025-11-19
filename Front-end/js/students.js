@@ -167,8 +167,7 @@ function academicData() {
     gradeStatusToProgressStatus(status, letter) {
       if (!status || status === 'Not Started') return 0;
       if (status === 'In Progress') return 1;
-      // ✅ MEJORADO: Detectar transferred por letra "T" o status
-      if (letter === 'T' || letter === 'P' || status === 'Transferred') return 4;
+      if (status === 'Completed' && letter === 'P') return 4; // Transfer
       if (status === 'Completed' && letter !== 'F') return 2;
       if (letter === 'F' || status === 'Failed') return 3;
       return 0;
@@ -289,18 +288,11 @@ function academicData() {
       }
     },
 
-    // ✅ NEW: Helper function to determine if we should show icon or grade
-    shouldShowIcon(status, letter) {
-      // Show icon for: Not Started, In Progress, Transferred
-      // Also show icon for Completed with 'P' (transferred)
-      return status === 0 || status === 1 || status === 4 || (status === 2 && letter === 'P');
+    getStatusColorWithGrade(status, grade) {
+      return this.getStatusColor(status);
     },
 
-    // ✅ NEW: Get the correct icon (handle P as transfer)
-    getDisplayIcon(status, letter) {
-      if (status === 2 && letter === 'P') {
-        return this.getStatusIcon(4); // Transfer icon
-      }
+    getStatusIconWithGrade(status, grade) {
       return this.getStatusIcon(status);
     },
 
