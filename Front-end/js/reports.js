@@ -201,7 +201,7 @@ function reports() {
       }
     },
         // Generar y descargar PDF del reporte general
-        async openGeneralReport() {
+        async openGeneralReportPDF() {
           try {
             console.log('🔄 Generando PDF...');
             
@@ -1262,11 +1262,22 @@ function reports() {
       const result = [];
       
       Object.keys(recs).forEach(subject => {
+        const MAX = 10;
+        const students = recs[subject].students;
+
+    const formattedStudents =
+      students.length > MAX
+        ? [
+            ...students.slice(0, MAX),
+            `... (${students.length - MAX} more)`
+          ]
+        : students;
+
         result.push({
           subject: subject,
           subjectId: recs[subject].subjectId,
           studentCount: recs[subject].count,
-          students: recs[subject].students
+          students: formattedStudents
         });
       });
       
@@ -1362,18 +1373,55 @@ function reports() {
   }
 },
 getFormattedRecommendations() {
-  if (!this.recommendations || this.recommendations.length === 0) return [];
+   // Si no hay datos aún, retornar lista vacía
+  if (!this.recommendations || this.recommendations.length === 0) {
+    return [];
+  }
 
-  return this.recommendations.map(course => ({
-    subject: course.courseName,
-    subjectId: course.courseId,
-    studentCount: course.missingCount,
-    students: course.students.map(s => s.fullName)
-  }));
+  return this.recommendations.map(rec => {
+    const MAX = 10;
+
+    // Extraer nombres desde la API
+    const studentNames = rec.students.map(s => s.fullName);
+
+    // Si hay más de 10, recortamos y agregamos "... (X more)"
+    const formattedStudents =
+      studentNames.length > MAX
+        ? [
+            ...studentNames.slice(0, MAX),
+            `... (${studentNames.length - MAX} more)`
+          ]
+        : studentNames;
+
+    return {
+      subject: rec.courseName,
+      subjectId: rec.courseId,
+      studentCount: rec.missingCount,
+      students: formattedStudents
+    };
+  })
+  // Orden descendente por cantidad de estudiantes faltantes
+  .sort((a, b) => b.studentCount - a.studentCount);
 },
 openGeneralReport() {
   this.activeReport = 'general';
 },
+clickTimer: null,
+clickDelay: 50,
+
+handleClick() {
+    clearTimeout(this.clickTimer);
+
+    this.clickTimer = setTimeout(() => {
+        this.openGeneralReport();
+    }, this.clickDelay);
+},
+
+handleDoubleClick() {
+    clearTimeout(this.clickTimer);
+    this.openGeneralReportPDF();
+},
+
   };
 
 }
