@@ -219,3 +219,47 @@ model Login {
   username  String  @unique
   password  String
 }
+
+model EntityType {
+  id    Int     @id @default(autoincrement())
+  code  String  @unique
+  label String
+
+  // relacion con activity_log
+  activities ActivityLog[]
+
+  @@map("entity_type") // nombre real de la tabla
+}
+
+model ActivityType {
+  id    Int     @id @default(autoincrement())
+  code  String  @unique
+  label String
+
+  activities ActivityLog[]
+
+  @@map("activity_type")
+}
+
+model ActivityLog {
+  id            BigInt       @id @default(autoincrement())
+  occurredAt    DateTime     @default(now()) @map("occurred_at")
+  userId        Int?         @map("user_id")
+
+  entityTypeId  Int          @map("entity_type_id")
+  entityId      Int?         @map("entity_id")
+  activityTypeId Int         @map("activity_type_id")
+
+  description   String?      
+
+  oldData        Json?        @map("old_data")    // columna old_data
+  newData       Json?        @map("new_data")   // columna new_data
+
+  isImportant   Boolean      @default(false) @map("is_important")
+
+  // Relaciones
+  entityType    EntityType   @relation(fields: [entityTypeId], references: [id])
+  activityType  ActivityType @relation(fields: [activityTypeId], references: [id])
+
+  @@map("activity_log")
+}
