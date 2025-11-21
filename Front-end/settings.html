@@ -405,7 +405,7 @@
       </button>
     </div>
   </div>
-
+<!--*********************************************************************************************************************************************************-->
   <!-- Timeline de actividades -->
   <div class="bg-white rounded-lg shadow p-6">
     <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
@@ -418,25 +418,25 @@
         <div class="relative pl-8 pb-6 border-l-2 border-gray-200 last:border-l-0 last:pb-0">
           <!-- Icono de tiempo -->
           <div class="absolute left-0 top-0 -translate-x-1/2 w-8 h-8 rounded-full flex items-center justify-center"
-               :class="{
-                 'bg-green-100': activity.type === 'Login',
-                 'bg-red-100': activity.type === 'Logout',
-                 'bg-blue-100': activity.type === 'Grade Update',
-                 'bg-purple-100': activity.type === 'Session Assignment',
-                 'bg-orange-100': activity.type === 'Teacher Assignment',
-                 'bg-yellow-100': activity.type === 'Student Added',
-                 'bg-indigo-100': activity.type === 'Data Import'
-               }">
+              :class="{
+                'bg-green-100': activity.type === 'Login',
+                'bg-red-100': activity.type === 'Logout',
+                'bg-blue-100': activity.type === 'Grade Update',
+                'bg-purple-100': activity.type === 'Session Assignment',
+                'bg-orange-100': activity.type === 'Teacher Assignment',
+                'bg-yellow-100': activity.type === 'Student Added',
+                'bg-indigo-100': activity.type === 'Data Import'
+              }">
             <i class="fa-solid"
-               :class="{
-                 'fa-right-to-bracket text-green-600': activity.type === 'Login',
-                 'fa-right-from-bracket text-red-600': activity.type === 'Logout',
-                 'fa-pen-to-square text-blue-600': activity.type === 'Grade Update',
-                 'fa-calendar-check text-purple-600': activity.type === 'Session Assignment',
-                 'fa-user-tie text-orange-600': activity.type === 'Teacher Assignment',
-                 'fa-user-plus text-yellow-600': activity.type === 'Student Added',
-                 'fa-file-import text-indigo-600': activity.type === 'Data Import'
-               }"></i>
+              :class="{
+                'fa-right-to-bracket text-green-600': activity.type === 'Login',
+                'fa-right-from-bracket text-red-600': activity.type === 'Logout',
+                'fa-pen-to-square text-blue-600': activity.type === 'Grade Update',
+                'fa-calendar-check text-purple-600': activity.type === 'Session Assignment',
+                'fa-user-tie text-orange-600': activity.type === 'Teacher Assignment',
+                'fa-user-plus text-yellow-600': activity.type === 'Student Added',
+                'fa-file-import text-indigo-600': activity.type === 'Data Import'
+              }"></i>
           </div>
           
           <!-- Contenido de la actividad -->
@@ -512,7 +512,7 @@
     </div>
   </div>
 </div>
-
+<!--*********************************************************************************************************************************************************-->
   <!-- TEACHERS TAB -->
   <div x-show="activeTab === 'teachers'" class="space-y-6">
     <div class="bg-white rounded-lg shadow p-6">
@@ -526,37 +526,37 @@
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">First Name *</label>
             <input type="text" x-model="newTeacher.firstName" required
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
           </div>
           
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">Last Name *</label>
             <input type="text" x-model="newTeacher.lastName" required
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
           </div>
           
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">Email *</label>
             <input type="email" x-model="newTeacher.email" required
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
           </div>
           
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
             <input type="tel" x-model="newTeacher.phone"
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
           </div>
           
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">Department *</label>
             <input type="text" x-model="newTeacher.department" required
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
           </div>
           
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">Specialization</label>
             <input type="text" x-model="newTeacher.specialization"
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
           </div>
         </div>
         
