@@ -153,12 +153,12 @@
         <h1 class="text-3xl font-bold text-gray-800 mb-2">Reports</h1>
         <div class="flex gap-4">
       <button 
-        @click="handleClick"
-        @dblclick="handleDoubleClick"
-        :class="activeReport === 'general' ? 'bg-[#A6192E]' : 'bg-[#D41736]'" 
-        class="bg-[#D41736] hover:bg-[#A6192E] text-white font-semibold py-2 px-4 rounded-lg transition-colors">
-        <i class="fa-solid fa-file mr-1"></i>Report General
-      </button>
+        @click="activeReport = 'general'" 
+        @dblclick="openGeneralReport()" 
+        :class="activeReport === 'general' ? 'bg-[#A6192E]' : 'bg-[#D41736]'" 
+        class="bg-[#D41736] hover:bg-[#A6192E] text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+        <i class="fa-solid fa-file mr-1"></i>Report General
+      </button>
       <button 
       @click="activeReport = 'individual'"
       :class="activeReport === 'individual' ? 'bg-[#A6192E]' : 'bg-[#D41736]'"  
