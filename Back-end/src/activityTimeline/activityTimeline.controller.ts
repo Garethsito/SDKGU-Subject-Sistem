@@ -1,6 +1,6 @@
 // src/activity-log/activity-timeline.controller.ts
 import { Controller, Get } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.services';
 
 @Controller('activity-timeline') // base: /activity-timeline
 export class ActivityTimelineController {

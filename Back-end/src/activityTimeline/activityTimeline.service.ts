@@ -1,8 +1,8 @@
 
-// src/activity-log/activity-log.service.ts
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service'; 
-import { Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.services';
+import { Prisma } from '@prisma/client'; 
+
 
 export interface LogActivityParams {
   userId?: number | null;
@@ -37,8 +37,8 @@ export class ActivityLogService {
           userId,
           entityId,
           description,
-          oldDat: oldData ?? null,
-          newData: newData ?? null,
+          oldData: oldData ?? undefined,
+          newData: newData ?? undefined,
           isImportant,
 
           // conectamos por code porque en EntityType y ActivityType lo marcaste @unique

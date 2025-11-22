@@ -9,8 +9,7 @@ export class SessionsService {
   constructor(
   private prisma: PrismaService, 
   private mailService: MailService,
-  private readonly activityLog: ActivityLogService,
-) {}
+  private readonly activityLog: ActivityLogService) {}
 
   // Obtener todas las sesiones con información completa
   async getAllSessions() {
@@ -171,7 +170,7 @@ export class SessionsService {
     });
 
     // 🔍 AUDITORIA: creación de la sesión
-    await this.activityTimeline.logActivity({
+    await this.activityLog.logActivity({
       userId: null, // luego puedes pasar el id del usuario autenticado
       entityCode: 'SESSION',
       entityId: Number(session.id),
@@ -182,8 +181,8 @@ export class SessionsService {
         id:        Number(session.id),
         sessionName: session.sessionName,
         year:      session.year,
-        startDate: session.startDate,
-        endDate:   session.endDate,
+        startDate: session.startDate.toISOString(),
+        endDate: session.endDate.toISOString(),
         programId: session.programId,
       },
       isImportant: true,
@@ -207,7 +206,7 @@ export class SessionsService {
           });
 
           // 🔍 AUDITORIA: creación de cada courseOffering
-          await this.activityTimeline.logActivity({
+          await this.activityLog.logActivity({
             userId: null,
             entityCode: 'COURSE_OFFERING',
             entityId: Number(offering.id),
@@ -262,8 +261,8 @@ export class SessionsService {
       id: session.id,
       sessionName: session.sessionName,
       year: session.year,
-      startDate: session.startDate,
-      endDate: session.endDate,
+      startDate: session.startDate?.toISOString() ?? null,
+      endDate: session.endDate?.toISOString() ?? null,
       programId: session.programId,
     };
 
@@ -291,8 +290,12 @@ export class SessionsService {
 
     // Log de actualización de sesión
     const newSessionCore = {
-      ...oldSessionCore,
-      ...updateData,
+      id: id,
+      sessionName: updateData.sessionName ?? session.sessionName,
+      year: updateData.year ?? session.year,
+      startDate: (updateData.startDate ?? session.startDate)?.toISOString() ?? null,
+      endDate: (updateData.endDate ?? session.endDate)?.toISOString() ?? null,
+      programId: updateData.programId ?? session.programId,
     };
 
     await this.activityLog.logActivity({
@@ -491,8 +494,8 @@ export class SessionsService {
       id:        session.id,
       sessionName: session.sessionName,
       year:      session.year,
-      startDate: session.startDate,
-      endDate:   session.endDate,
+      startDate: session.startDate?.toISOString() ?? null,
+      endDate: session.endDate?.toISOString() ?? null,
       programId: session.programId,
     };
 

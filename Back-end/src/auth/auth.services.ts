@@ -5,8 +5,9 @@ import { ActivityLogService } from '../activityTimeline/activityTimeline.service
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService,
-  private readonly activityLog: ActivityLogService
+  constructor(
+    private prisma: PrismaService,
+    private readonly activityLog: ActivityLogService,
   ) {}
 
   async validateUser(username: string, password: string) {
