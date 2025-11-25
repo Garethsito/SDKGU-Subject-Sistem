@@ -2,19 +2,19 @@
 import { Controller, Get } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.services';
 
-@Controller('activity-timeline') // base: /activity-timeline
+@Controller('activityTimeline') // base: /activity-timeline
 export class ActivityTimelineController {
     constructor(private readonly prisma: PrismaService) {}
 
     @Get('recent') // GET /activity-timeline/recent
     async getRecentActivities() {
         const logs = await this.prisma.activityLog.findMany({
-        take: 100,
-        orderBy: { occurredAt: 'desc' },
-        include: {
-            entityType: true,
-            activityType: true,
-        },
+            take: 100,
+            orderBy: { occurredAt: 'desc' },
+            include: {
+                entityType: true,
+                activityType: true,
+            },
         });
 
         // Transformar los registros de BD al formato que espera el HTML
