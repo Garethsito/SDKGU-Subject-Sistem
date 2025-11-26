@@ -432,6 +432,7 @@
               'bg-rose-100':   activity.type === 'Student Removed',
               'bg-indigo-100': activity.type === 'Data Import',
               'bg-teal-100':   activity.type === 'Report Request',
+              'bg-cyan-100':   activity.type === 'Student Update',
               'bg-gray-200':   activity.type === 'Other'
             }"
           >
@@ -449,6 +450,7 @@
                 'fa-user-minus text-rose-600':            activity.type === 'Student Removed',
                 'fa-file-import text-indigo-600':         activity.type === 'Data Import',
                 'fa-file-circle-question text-teal-600':  activity.type === 'Report Request',
+                'fa-user-pen text-cyan-600':              activity.type === 'Student Update',
                 'fa-circle-question text-gray-500':       activity.type === 'Other'
               }"
             ></i>
@@ -479,6 +481,7 @@
                       'bg-rose-100 text-rose-800':     activity.type === 'Student Removed',
                       'bg-indigo-100 text-indigo-800': activity.type === 'Data Import',
                       'bg-teal-100 text-teal-800':     activity.type === 'Report Request',
+                      'bg-cyan-100 text-cyan-800':     activity.type === 'Student Update',
                       'bg-gray-200 text-gray-800':     activity.type === 'Other'
                     }"
                     x-text="activity.type"
@@ -534,10 +537,7 @@
       </template>
       
       <!-- Mensaje cuando no hay actividades -->
-      <div
-        x-show="filteredActivityLog.length === 0"
-        class="text-center py-12 text-gray-500"
-      >
+      <div x-show="filteredActivityCount === 0" class="text-center py-12 text-gray-500">
         <i class="fa-solid fa-inbox text-6xl mb-4"></i>
         <p class="text-lg font-semibold">No activities found</p>
         <p class="text-sm">Try adjusting your filters</p>
@@ -548,23 +548,29 @@
     <div class="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
       <p class="text-sm text-gray-600">
         Showing
-        <span class="font-semibold" x-text="filteredActivityLog.length"></span>
+        <span class="font-semibold"
+              x-text="filteredActivityCount === 0 ? 0 : Math.min(currentPage * itemsPerPage, filteredActivityCount)">
+        </span>
+        of
+        <span class="font-semibold" x-text="filteredActivityCount"></span>
         activities
       </p>
+
       <!-- Si ya no quieres paginación, puedes esconder estos botones -->
-      <div class="flex gap-2" x-show="false">
+      <div class="flex gap-2">
         <button
-          @click="currentPage > 1 && currentPage--" 
+          @click="currentPage > 1 && currentPage--"
           :disabled="currentPage === 1"
           :class="currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'"
           class="px-4 py-2 border border-gray-300 rounded-lg transition-colors"
         >
           Previous
         </button>
+
         <button
-          @click="currentPage < Math.ceil(filteredActivityLog.length / itemsPerPage) && currentPage++" 
-          :disabled="currentPage === Math.ceil(filteredActivityLog.length / itemsPerPage)"
-          :class="currentPage === Math.ceil(filteredActivityLog.length / itemsPerPage) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'"
+          @click="currentPage < Math.ceil(filteredActivityCount / itemsPerPage) && currentPage++"
+          :disabled="currentPage >= Math.ceil(filteredActivityCount / itemsPerPage)"
+          :class="currentPage >= Math.ceil(filteredActivityCount / itemsPerPage) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'"
           class="px-4 py-2 border border-gray-300 rounded-lg transition-colors"
         >
           Next

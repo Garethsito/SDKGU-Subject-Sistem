@@ -18,7 +18,7 @@ function settingsData() {
     ],
     
     // ⭐ DATOS PARA ACTIVITY LOG
-    activityLog: [], // 👈 antes tenías la lista hardcodeada, aquí la vaciamos
+    activityLog: [],
 
     activityFilters: {
       user: '',
@@ -28,7 +28,7 @@ function settingsData() {
     },
 
     currentPage: 1,
-    itemsPerPage: 100,
+    itemsPerPage: 10, // o 100 si quieres, pero 10 es más usable
 
     isLoadingActivity: false,
     activityError: null,
@@ -40,6 +40,7 @@ function settingsData() {
 
       try {
         console.log('🔄 Loading activity timeline...');
+        // OJO: el controller es 'activity-timeline', con guión
         const res = await fetch('http://localhost:3000/activityTimeline/recent');
         console.log('Status:', res.status);
 
@@ -61,8 +62,8 @@ function settingsData() {
       }
     },
 
-    // COMPUTED: actividades filtradas + paginadas
-    get filteredActivityLog() {
+    // 🔹 LISTA FILTRADA COMPLETA (sin paginar)
+    get filteredActivityLogAll() {
       let filtered = this.activityLog;
 
       if (this.activityFilters.user) {
@@ -81,10 +82,19 @@ function settingsData() {
         filtered = filtered.filter(a => a.date <= this.activityFilters.dateTo);
       }
 
-      // Paginación sobre el resultado filtrado
+      return filtered;
+    },
+
+    // 🔹 LISTA FILTRADA + PAGINADA (esta es la que usa el x-for)
+    get filteredActivityLog() {
       const start = (this.currentPage - 1) * this.itemsPerPage;
       const end   = this.currentPage * this.itemsPerPage;
-      return filtered //.slice(start, end);
+      return this.filteredActivityLogAll.slice(start, end);
+    },
+
+    // 🔹 Cantidad total filtrada (para "Showing X of Y")
+    get filteredActivityCount() {
+      return this.filteredActivityLogAll.length;
     },
 
     applyActivityFilters() {
@@ -106,30 +116,7 @@ function settingsData() {
       alert('Exporting activity log to Excel...');
       console.log('Activity log data:', this.activityLog);
     },
-    
-    // ⭐ COMPUTED PROPERTY para actividades filtradas
-    get filteredActivityLog() {
-      let filtered = this.activityLog;
-      
-      if (this.activityFilters.user) {
-        filtered = filtered.filter(a => a.user === this.activityFilters.user);
-      }
-      
-      if (this.activityFilters.action) {
-        filtered = filtered.filter(a => a.type === this.activityFilters.action);
-      }
-      
-      if (this.activityFilters.dateFrom) {
-        filtered = filtered.filter(a => a.date >= this.activityFilters.dateFrom);
-      }
-      
-      if (this.activityFilters.dateTo) {
-        filtered = filtered.filter(a => a.date <= this.activityFilters.dateTo);
-      }
-      
-      // Paginación
-      return filtered.slice((this.currentPage - 1) * this.itemsPerPage, this.currentPage * this.itemsPerPage);
-    },
+
     
     // ⭐ MÉTODOS PARA ADMINISTRATORS
     addAdministrator() {

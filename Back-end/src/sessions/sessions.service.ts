@@ -401,7 +401,7 @@ export class SessionsService {
                 data: { teacherId: courseData.teacherId || null }
               });
 
-              // 🔍 Log de UPDATE en COURSE_OFFERING (cambio de profesor)
+              // Log de UPDATE en COURSE_OFFERING (cambio de profesor)
               await this.activityLog.logActivity({
                 userId: null,
                 entityCode: 'COURSE_OFFERING',
@@ -431,7 +431,7 @@ export class SessionsService {
                 }
               });
 
-              // 🔍 Log de CREATE en COURSE_OFFERING
+              // Log de CREATE en COURSE_OFFERING
               await this.activityLog.logActivity({
                 userId: null,
                 entityCode: 'COURSE_OFFERING',
@@ -509,7 +509,7 @@ export class SessionsService {
     for (const offering of session.offerings) {
       if (offering.enrollments.length > 0) {
         for (const enrollment of offering.enrollments) {
-          // 🔍 Log de delete de ENROLLMENT
+          // Log de delete de ENROLLMENT
           await this.activityLog.logActivity({
             userId: null,
             entityCode: 'ENROLLMENT',
@@ -535,7 +535,7 @@ export class SessionsService {
 
     // 2) Loguear y eliminar los CourseOfferings
     for (const offering of session.offerings) {
-      // 🔍 Log de delete de COURSE_OFFERING
+      // Log de delete de COURSE_OFFERING
       await this.activityLog.logActivity({
         userId: null,
         entityCode: 'COURSE_OFFERING',
@@ -667,7 +667,7 @@ export class SessionsService {
       }
     });
 
-    // 🔍 Registrar en activity_log
+    // Registrar en activity_log
     await this.activityLog.logActivity({
       userId: null, // luego puedes pasar el id del usuario autenticado
       entityCode: 'COURSE_OFFERING',
@@ -708,7 +708,7 @@ export class SessionsService {
       throw new BadRequestException('Cannot remove course with active enrollments');
     }
 
-    // 🔍 Registrar en activity_log antes de borrar
+    // Registrar en activity_log antes de borrar
     await this.activityLog.logActivity({
       userId: null, // cuando tengas auth, aquí metes el id del usuario
       entityCode: 'COURSE_OFFERING',
@@ -831,7 +831,7 @@ export class SessionsService {
       }
     });
 
-    // 🔍 Registrar en activity_log la inscripción (ENROLLMENT / CREATE)
+    // Registrar en activity_log la inscripción (ENROLLMENT / CREATE)
     await this.activityLog.logActivity({
       userId: null, // cuando tengas auth, aquí puedes meter el id del usuario logueado
       entityCode: 'ENROLLMENT',
@@ -851,7 +851,7 @@ export class SessionsService {
       isImportant: true,
     });
 
-    // 👇 Dejas intacto lo que tu frontend espera
+    // Dejas intacto lo que tu frontend espera
     return {
       id: enrollment.id,
       status: enrollment.status,

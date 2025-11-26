@@ -47,31 +47,37 @@ function mapActivityType(activityCode: string, entityCode: string): string {
     if (activityCode === 'LOGIN_FAILED') return 'Login Failed';
     if (activityCode === 'LOGOUT')       return 'Logout';
 
-    // arranque de sesión académica
+    // Estudiambres
+    if (entityCode === 'STUDENT') {
+        if (activityCode === 'CREATE') return 'Student Added';
+        if (activityCode === 'UPDATE') return 'Student Update';
+        if (activityCode === 'DELETE') return 'Student Removed';
+        return 'Student Change';
+    }
+
+    // Sesiones
     if (activityCode === 'START_SESSION' || (activityCode === 'CREATE' && entityCode === 'SESSION')) {
         return 'Session Start';
     }
-
-    // cambios de calificaciones
-    if (entityCode === 'ACADEMIC_RECORD') return 'Grade Update';
-
-    // sesiones
     if (entityCode === 'SESSION') return 'Session Update';
 
-    // asignaciones de materia / maestro
+    // Calificaciones
+    if (entityCode === 'ACADEMIC_RECORD') return 'Grade Update';
+
+    // Asignación de curso/profe
     if (entityCode === 'COURSE_OFFERING') return 'Teacher Assignment';
 
-    // altas/bajas en curso
+    // Inscripciones a curso
     if (entityCode === 'ENROLLMENT') {
         if (activityCode === 'CREATE') return 'Student Added';
         if (activityCode === 'DELETE') return 'Student Removed';
         return 'Enrollment Change';
     }
 
-    // importaciones
+    // Import
     if (entityCode === 'IMPORT' || activityCode === 'IMPORT') return 'Data Import';
 
-    // reportes
+    // Reportes
     if (entityCode === 'REPORT' || activityCode === 'REQUEST_REPORT') return 'Report Request';
 
     return 'Other';
