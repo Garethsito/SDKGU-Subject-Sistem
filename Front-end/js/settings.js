@@ -28,7 +28,7 @@ function settingsData() {
     },
 
     currentPage: 1,
-    itemsPerPage: 10,
+    itemsPerPage: 100,
 
     isLoadingActivity: false,
     activityError: null,
@@ -52,6 +52,7 @@ function settingsData() {
 
         this.activityLog = data;
         this.currentPage = 1;
+
       } catch (e) {
         console.error('❌ Error loading activity timeline:', e);
         this.activityError = 'Could not load activity timeline';
@@ -83,7 +84,7 @@ function settingsData() {
       // Paginación sobre el resultado filtrado
       const start = (this.currentPage - 1) * this.itemsPerPage;
       const end   = this.currentPage * this.itemsPerPage;
-      return filtered.slice(start, end);
+      return filtered //.slice(start, end);
     },
 
     applyActivityFilters() {

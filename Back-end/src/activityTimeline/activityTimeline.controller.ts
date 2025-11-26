@@ -1,12 +1,12 @@
-// src/activity-log/activity-timeline.controller.ts
+// src/activityTimeline/activityTimeline.controller.ts
 import { Controller, Get } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.services';
 
-@Controller('activityTimeline') // base: /activity-timeline
+@Controller('activityTimeline')
 export class ActivityTimelineController {
     constructor(private readonly prisma: PrismaService) {}
 
-    @Get('recent') // GET /activity-timeline/recent
+    @Get('recent')
     async getRecentActivities() {
         const logs = await this.prisma.activityLog.findMany({
             take: 100,
@@ -17,47 +17,62 @@ export class ActivityTimelineController {
             },
         });
 
-        // Transformar los registros de BD al formato que espera el HTML
-        return logs.map((log) => {
-        const occurred = log.occurredAt as unknown as Date;
+        return logs.map((log: any) => {
+            const occurred = new Date(log.occurredAt);
 
-        // mapear codes a los "type" del HTML
-        const type = mapActivityType(log.activityType.code, log.entityType.code);
+            const activityCode = log.activityType?.code ?? 'UNKNOWN';
+            const entityCode   = log.entityType?.code ?? 'UNKNOWN';
 
-        return {
-            id: Number(log.id),
-            type, // 'Login', 'Logout', 'Grade Update', etc.
-            user: log.userId ? `User #${log.userId}` : 'System',
-            description: log.description ?? '',
-            details: log.newData ?? null,   // puedes combinar old/new si quieres
-            date: occurred.toISOString().slice(0, 10),    // YYYY-MM-DD
-            time: occurred.toTimeString().slice(0, 5),    // HH:MM
-            ipAddress: '', // si no tienes IP, déjalo vacío o '-'
-        };
+            const typeLabel = mapActivityType(activityCode, entityCode);
+
+            return {
+                id: Number(log.id),
+                type: typeLabel,              // lo que usa el HTML para colores / íconos
+                activityCode,                 // por si luego quieres filtros avanzados
+                entityCode,
+                user: log.userId ? `User #${log.userId}` : 'System',
+                description: log.description ?? '',
+                details: log.newData ?? null,
+                date: occurred.toISOString().slice(0, 10),
+                time: occurred.toTimeString().slice(0, 5),
+                isImportant: !!log.isImportant,
+            };
         });
     }
 }
 
-// helper para traducir codes a los labels que usa el HTML
 function mapActivityType(activityCode: string, entityCode: string): string {
-  // 🔐 login/logout
-    if (activityCode === 'LOGIN') return 'Login';
-    if (activityCode === 'LOGOUT') return 'Logout';
+    // login/logout
+    if (activityCode === 'LOGIN')        return 'Login';
+    if (activityCode === 'LOGIN_FAILED') return 'Login Failed';
+    if (activityCode === 'LOGOUT')       return 'Logout';
 
-    // 📊 calificaciones
+    // arranque de sesión académica
+    if (activityCode === 'START_SESSION' || (activityCode === 'CREATE' && entityCode === 'SESSION')) {
+        return 'Session Start';
+    }
+
+    // cambios de calificaciones
     if (entityCode === 'ACADEMIC_RECORD') return 'Grade Update';
 
-    // 🗓 sesiones
-    if (entityCode === 'SESSION') return 'Session Assignment';
+    // sesiones
+    if (entityCode === 'SESSION') return 'Session Update';
 
-    // 👨‍🏫 asignación de profesor / course offering
+    // asignaciones de materia / maestro
     if (entityCode === 'COURSE_OFFERING') return 'Teacher Assignment';
 
-    // 👨‍🎓 altas/bajas de estudiantes en curso
-    if (entityCode === 'ENROLLMENT') return 'Student Added';
+    // altas/bajas en curso
+    if (entityCode === 'ENROLLMENT') {
+        if (activityCode === 'CREATE') return 'Student Added';
+        if (activityCode === 'DELETE') return 'Student Removed';
+        return 'Enrollment Change';
+    }
 
-    // 📁 importaciones
-    if (entityCode === 'IMPORT') return 'Data Import';
+    // importaciones
+    if (entityCode === 'IMPORT' || activityCode === 'IMPORT') return 'Data Import';
+
+    // reportes
+    if (entityCode === 'REPORT' || activityCode === 'REQUEST_REPORT') return 'Report Request';
 
     return 'Other';
 }
