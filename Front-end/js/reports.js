@@ -503,6 +503,7 @@ function reports() {
     getStatusText(grade) {
       if (grade === '--') return 'Not Taken';
       if (grade === 'IP') return 'In Progress';
+      if (grade === 'T') return 'Transferred'
       return 'Completed';
     },
     
