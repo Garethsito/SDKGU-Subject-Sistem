@@ -503,9 +503,12 @@ function reports() {
     getStatusText(grade) {
       if (grade === '--') return 'Not Taken';
       if (grade === 'IP') return 'In Progress';
-      if (grade === 'T') return 'Transferred'
+      if (grade === 'T') return 'Transferred';
+      if (grade === 'F') return 'Failed';
       return 'Completed';
     },
+
+    
     
     resetGrades() {
       if (confirm('¿Estás seguro de resetear todos los cambios?')) {
@@ -513,6 +516,14 @@ function reports() {
         this.modifiedCourses = [];
         this.saveStatus = { type: '', message: '' };
       }
+    },
+     // Agregar la función auxiliar como método
+    getStatusFromGrade(grade) {
+      if (!grade || grade === '--') return 'pending';
+      if (grade === 'IP') return 'pending';
+      if (grade === 'T' || grade === 'P') return 'transferred';
+      if (grade === 'F') return 'failed';
+      return 'completed';
     },
     
     async saveGrades() {
@@ -535,7 +546,8 @@ function reports() {
           .map(course => ({
             courseCode: course.code,
             grade: course.grade,
-            sessionId: course.sessionId
+            sessionId: course.sessionId,
+             status: this.getStatusFromGrade(course.grade)
           }));
         
         console.log('💾 Guardando calificaciones:', gradesToSave);

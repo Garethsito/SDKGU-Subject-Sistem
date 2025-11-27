@@ -1,32 +1,28 @@
-// src/programs/programs.controller.ts
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.services';
+import { Controller, Get, Post, Delete, Param, Body, ParseIntPipe } from '@nestjs/common';
+import { ProgramsService } from './programs.service';
 
 @Controller('api/programs')
 export class ProgramsController {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly programsService: ProgramsService) {}
 
   @Get()
-  async getAllPrograms() {
-    return this.prisma.program.findMany({
-      orderBy: { programName: 'asc' }
-    });
+  getAllPrograms() {
+    return this.programsService.getAllPrograms();
   }
 
-  @Get(':id/courses')
-  async getProgramCourses(@Param('id', ParseIntPipe) id: number) {
-    const programCourses = await this.prisma.programCourse.findMany({
-      where: { programId: id },
-      include: {
-        course: true
-      },
-      orderBy: {
-        course: {
-          courseCode: 'asc'
-        }
-      }
-    });
+  @Post()
+  createProgram(@Body() body: {
+    programName: string;
+    programType: string;
+    totalUnits: number;
+    totalCourses: number;
+    description?: string;
+  }) {
+    return this.programsService.create(body);
+  }
 
-    return programCourses.map(pc => pc.course);
+  @Delete(':id')
+  deleteProgram(@Param('id', ParseIntPipe) id: number) {
+    return this.programsService.delete(id);
   }
 }

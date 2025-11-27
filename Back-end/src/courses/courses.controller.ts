@@ -1,5 +1,14 @@
-// Back-end/src/courses/courses.controller.ts
-import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  NotFoundException,
+  Post,
+  Body,
+  Patch,
+  Delete,
+  ParseIntPipe
+} from '@nestjs/common';
 import { CoursesService } from './courses.service';
 
 @Controller('api/courses')
@@ -8,28 +17,37 @@ export class CoursesController {
 
   @Get()
   async findAll() {
-    try {
-      const courses = await this.coursesService.findAll();
-      return courses;
-    } catch (error) {
-      console.error('Error fetching courses:', error);
-      throw error;
-    }
+    return this.coursesService.findAll();
   }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    try {
-      const course = await this.coursesService.findById(id);
-      
-      if (!course) {
-        throw new NotFoundException(`Course with ID ${id} not found`);
-      }
-      
-      return course;
-    } catch (error) {
-      console.error(`Error fetching course ${id}:`, error);
-      throw error;
-    }
+    const course = await this.coursesService.findById(id);
+    if (!course) throw new NotFoundException(`Course ${id} not found`);
+    return course;
+  }
+
+  // ---------------------
+  //     🟢 CREATE
+  // ---------------------
+  @Post()
+  async create(@Body() data: any) {
+    return this.coursesService.createCourse(data);
+  }
+
+  // ---------------------
+  //     🟡 UPDATE
+  // ---------------------
+  @Patch(':id')
+  async update(@Param('id', ParseIntPipe) id: number, @Body() data: any) {
+    return this.coursesService.updateCourse(id, data);
+  }
+
+  // ---------------------
+  //     🔴 DELETE
+  // ---------------------
+  @Delete(':id')
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    return this.coursesService.deleteCourse(id);
   }
 }
