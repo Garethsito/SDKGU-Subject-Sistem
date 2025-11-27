@@ -36,11 +36,10 @@ function academicData() {
         this.filteredStudents = [...this.students];
         this.missingCounts = await this.countMissingStudentsByCourse();
         
-        // 🔍 DEBUG: Ver qué datos llegaron
-    console.log('📊 Datos cargados:');
-    console.log('- Subjects:', this.subjects.length);
-    console.log('- Students:', this.students.length);
-    console.log('- Sample student grades:', this.students[0]?.grades);
+        console.log('📊 Datos cargados:');
+        console.log('- Subjects:', this.subjects.length);
+        console.log('- Students:', this.students.length);
+        console.log('- Sample student grades:', this.students[0]?.grades);
 
         this.loading = false;
       } catch (error) {
@@ -51,149 +50,170 @@ function academicData() {
     },
 
     async loadCourses() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/courses`);
-    if (!response.ok) throw new Error('Failed to fetch courses');
-    
-    const courses = await response.json();
-    
-    this.subjects = courses.map(course => {
-      // 🔥 ACTUALIZAR: Tu backend devuelve 'program' como string
-      let program = 'BSGM';
-      
-      // Si el backend devuelve el objeto completo de program
-      const programName = course.program?.programName || course.program || '';
-      
-      if (programName.includes('Associate') || programName.includes('ASSD')) {
-        program = 'ASSD';
+      try {
+        const response = await fetch(`${API_BASE_URL}/courses`);
+        if (!response.ok) throw new Error('Failed to fetch courses');
+        
+        const courses = await response.json();
+        
+        this.subjects = courses.map(course => {
+          let program = 'BSGM';
+          
+          const programName = course.program?.programName || course.program || '';
+          
+          if (programName.includes('Associate') || programName.includes('ASSD')) {
+            program = 'ASSD';
+          }
+          
+          return {
+            id: parseInt(course.id),
+            name: course.courseName || course.name,
+            program: program,
+            courseCode: course.courseCode || course.code
+          };
+        });
+        
+        console.log(`✅ Loaded ${this.subjects.length} courses`);
+      } catch (error) {
+        console.error('Error loading courses:', error);
+        throw error;
       }
-      
-      return {
-        id: parseInt(course.id),
-        name: course.courseName || course.name, // 🔥 Ajustar nombre del campo
-        program: program,
-        courseCode: course.courseCode || course.code // 🔥 Ajustar nombre del campo
-      };
-    });
-    
-    console.log(`✅ Loaded ${this.subjects.length} courses`);
-  } catch (error) {
-    console.error('Error loading courses:', error);
-    throw error;
-  }
-},
+    },
 
     async loadStudents() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/students`);
-    if (!response.ok) throw new Error('Failed to fetch students');
-    
-    const studentsData = await response.json();
-    
-    this.students = studentsData.map(student => {
-      const progress = {};
-      const grades = {};
-      
-      // ✅ Verificar que student.grades existe y es un objeto
-      if (student.grades && typeof student.grades === 'object') {
-        Object.entries(student.grades).forEach(([courseId, gradeInfo]) => {
-          if (gradeInfo && typeof gradeInfo === 'object') {
-            const id = parseInt(courseId);
-            
-            // 🔥 MEJORAR: Usar el status que viene del backend
-            const status = gradeInfo.status || 'Not Started';
-            const letter = gradeInfo.letter || '-';
-            
-            progress[id] = this.gradeStatusToProgressStatus(status, letter);
-            
-            grades[id] = {
-              grade: gradeInfo.grade || null,
-              letter: letter,
-              status: status, // 🎯 Usar el status del backend
-              courseCode: gradeInfo.courseCode || '',
-              courseName: gradeInfo.courseName || '',
-              sessionName: gradeInfo.sessionName || 'N/A'
-            };
-          }
-        });
-      }
-      
-      const studentProgram = student.program && student.program.includes('Bachelor') ? 'BSGM' : 'ASSD';
-      
-      const relevantSubjects = this.subjects.filter(s => s.program === studentProgram);
-      relevantSubjects.forEach(subject => {
-        if (typeof progress[subject.id] === 'undefined') {
-          progress[subject.id] = 0;
-        }
-      });
-      
-      let gpa = 0;
-      let letterGrade = 'N/A';
-      
-      if (Object.keys(grades).length > 0) {
-        const numericGrades = Object.values(grades)
-          .map(g => g.grade)
-          .filter(g => g !== null && g !== undefined && g > 0);
+      try {
+        const response = await fetch(`${API_BASE_URL}/students`);
+        if (!response.ok) throw new Error('Failed to fetch students');
         
-        if (numericGrades.length > 0) {
-          const sum = numericGrades.reduce((a, b) => a + b, 0);
-          const avg = sum / numericGrades.length;
-          gpa = this.numericToGPA(avg);
-          letterGrade = this.gpaToLetter(gpa);
-        }
+        const studentsData = await response.json();
+        
+        this.students = studentsData.map(student => {
+          const progress = {};
+          const grades = {};
+          
+          // ✅ CORREGIDO: Usar programId en vez de buscar en el string
+          const programId = student.program?.id || 0;
+          const programName = student.program?.programName || '';
+          const studentProgram = programId === 1 ? 'BSGM' : 'ASSD';
+          
+          console.log('🔍 Student program:', {
+            studentId: student.studentIdNumber,
+            programId: programId,
+            programName: programName,
+            detected: studentProgram
+          });
+          
+          if (student.grades && typeof student.grades === 'object') {
+            Object.entries(student.grades).forEach(([courseId, gradeInfo]) => {
+              if (gradeInfo && typeof gradeInfo === 'object') {
+                const id = parseInt(courseId);
+                const status = gradeInfo.status || 'Not Started';
+                const letter = gradeInfo.letter || '-';
+                
+                progress[id] = this.gradeStatusToProgressStatus(status, letter);
+                
+                grades[id] = {
+                  grade: gradeInfo.grade || null,
+                  letter: letter,
+                  status: status,
+                  courseCode: gradeInfo.courseCode || '',
+                  courseName: gradeInfo.courseName || '',
+                  sessionName: gradeInfo.sessionName || 'N/A'
+                };
+              }
+            });
+          }
+          
+          const relevantSubjects = this.subjects.filter(s => s.program === studentProgram);
+          relevantSubjects.forEach(subject => {
+            if (typeof progress[subject.id] === 'undefined') {
+              progress[subject.id] = 0;
+            }
+          });
+          
+          let gpa = 0;
+          let letterGrade = 'N/A';
+          
+          if (Object.keys(grades).length > 0) {
+            const numericGrades = Object.values(grades)
+              .map(g => g.grade)
+              .filter(g => g !== null && g !== undefined && g > 0);
+            
+            if (numericGrades.length > 0) {
+              const sum = numericGrades.reduce((a, b) => a + b, 0);
+              const avg = sum / numericGrades.length;
+              gpa = this.numericToGPA(avg);
+              letterGrade = this.gpaToLetter(gpa);
+            }
+          }
+          
+          return {
+            id: student.id || 0,
+            name: student.name || `${student.firstName} ${student.lastName}`,
+            studentId: student.studentIdNumber || 'N/A',
+            firstName: student.firstName || '',
+            middleName: student.middleName || '',
+            lastName: student.lastName || '',
+            phone: student.phone || 'N/A',
+            emailPersonal: student.email || 'N/A',
+            emailSDGKU: student.sdgkuEmail || 'N/A',
+            status: student.status || 'Active',
+            program: programName, // ✅ Nombre completo del programa
+            programType: studentProgram, // ✅ BSGM o ASSD
+            modality: student.modality || 'Online',
+            cohort: student.cohort || 'N/A',
+            language: student.language || 'English',
+            totalUnits: student.totalUnits || 0,
+            transferredUnits: student.transferredUnits || 0,
+            unitsEarned: student.totalUnitsEarned || 0,
+            startDate: student.startDate || 'N/A',
+            scheduledCompletion: student.scheduledCompletionDate || 'N/A',
+            graduationDate: student.graduationDate || 'N/A',
+            progress: progress,
+            grades: grades,
+            gpa: gpa,
+            letterGrade: letterGrade
+          };
+        });
+        
+        console.log(`✅ Loaded ${this.students.length} students`);
+        console.log('Sample student data:', this.students[0]);
+      } catch (error) {
+        console.error('Error loading students:', error);
+        throw error;
       }
-      
-      return {
-        id: student.id || 0,
-        name: student.name || 'Unknown',
-        studentId: student.studentId || 'N/A',
-        firstName: student.firstName || '',
-        middleName: student.middleName || '',
-        lastName: student.lastName || '',
-        phone: student.phone || 'N/A',
-        emailPersonal: student.emailPersonal || 'N/A',
-        emailSDGKU: student.emailSDGKU || 'N/A',
-        status: student.status || 'Active',
-        program: student.program || 'Unknown',
-        modality: student.modality || 'Online',
-        cohort: student.cohort || 'N/A',
-        language: student.language || 'English',
-        totalUnits: student.totalUnits || 0,
-        transferredUnits: student.transferredUnits || 0,
-        unitsEarned: student.unitsEarned || 0,
-        startDate: student.startDate || 'N/A',
-        scheduledCompletion: student.scheduledCompletion || 'N/A',
-        graduationDate: student.graduationDate || 'N/A',
-        progress: progress,
-        grades: grades,
-        gpa: gpa,
-        letterGrade: letterGrade
-      };
-    });
-    
-    console.log(`✅ Loaded ${this.students.length} students`);
-    console.log('Sample student data:', this.students[0]);
-  } catch (error) {
-    console.error('Error loading students:', error);
-    throw error;
-  }
-},
+    },
 
     gradeStatusToProgressStatus(status, letter) {
-
-  // 🔥 ACTUALIZAR: Usar los status que devuelve tu backend
-  if (!status || status === 'Not Started') return 0;
-  if (status === 'In Progress') return 1;
-  if (status === 'Completed') {
-    // Si tiene letra T o P, es transferido
-    if (letter === 'T' || letter === 'P') return 4;
-    return 2; // Completado normal
-  }
-  if (status === 'Failed' || letter === 'F') return 3;
-  if (status === 'Transferred') return 4;
-  
-  return 0;
-},
+      // Normalizar status a minúsculas
+      const normalizedStatus = status ? status.toLowerCase().trim() : '';
+      const normalizedLetter = letter ? letter.toUpperCase().trim() : '';
+      
+      // Casos transferred
+      if (normalizedLetter === 'T' || normalizedLetter === 'P') {
+        return 4;
+      }
+      
+      if (normalizedStatus === 'transferred') {
+        return 4;
+      }
+      
+      // Otros casos
+      if (!normalizedStatus || normalizedStatus === 'not started') {
+        return 0;
+      }
+      if (normalizedStatus === 'in progress') {
+        return 1;
+      }
+      if (normalizedStatus === 'completed') {
+        return 2;
+      }
+      if (normalizedStatus === 'failed') {
+        return 3;
+      }
+      
+      return 0;
+    },
 
     numericToGPA(numeric) {
       if (numeric >= 93) return 4.0;
@@ -268,8 +288,8 @@ function academicData() {
     },
 
     hasMissingSubjects(student) {
-      const studentProgram = student.program.includes('Bachelor') ? 'BSGM' : 'ASSD';
-      const relevantSubjects = this.subjects.filter(s => s.program === studentProgram);
+      // ✅ Usar programType
+      const relevantSubjects = this.subjects.filter(s => s.program === student.programType);
       
       return relevantSubjects.some(subject => {
         const status = student.progress[subject.id];
@@ -327,8 +347,8 @@ function academicData() {
         const isGenEd = genEdCodes.includes(subject.courseCode);
         
         this.students.forEach(student => {
-          const studentProgram = student.program.includes('Bachelor') ? 'BSGM' : 'ASSD';
-          const belongsToProgram = subject.program === studentProgram;
+          // ✅ Usar programType
+          const belongsToProgram = subject.program === student.programType;
           
           if (isGenEd || belongsToProgram) {
             const status = student.progress[subject.id];
@@ -345,8 +365,8 @@ function academicData() {
     },
 
     calculateProgress(student) {
-      const studentProgram = student.program.includes('Bachelor') ? 'BSGM' : 'ASSD';
-      const relevantSubjects = this.subjects.filter(s => s.program === studentProgram);
+      // ✅ Usar programType
+      const relevantSubjects = this.subjects.filter(s => s.program === student.programType);
       if (relevantSubjects.length === 0) return 0;
       
       const completed = Object.entries(student.progress)
@@ -359,8 +379,8 @@ function academicData() {
     },
 
     getCompletedCount(student) {
-      const studentProgram = student.program.includes('Bachelor') ? 'BSGM' : 'ASSD';
-      const relevantSubjects = this.subjects.filter(s => s.program === studentProgram);
+      // ✅ Usar programType
+      const relevantSubjects = this.subjects.filter(s => s.program === student.programType);
       
       return Object.entries(student.progress)
         .filter(([id, status]) => {
@@ -370,8 +390,8 @@ function academicData() {
     },
 
     getTotalSubjects(student) {
-      const studentProgram = student.program.includes('Bachelor') ? 'BSGM' : 'ASSD';
-      return this.subjects.filter(s => s.program === studentProgram).length;
+      // ✅ Usar programType
+      return this.subjects.filter(s => s.program === student.programType).length;
     },
 
     getFilteredSubjects() {
@@ -385,15 +405,15 @@ function academicData() {
 
     getFilteredStudentsByProgram() {
       if (this.programFilter === 'all') return this.filteredStudents;
-      const programType = this.programFilter === 'BSGM' ? 'Bachelor' : 'Associate';
-      return this.filteredStudents.filter(s => s.program.includes(programType));
+      // ✅ Usar programType directamente
+      return this.filteredStudents.filter(s => s.programType === this.programFilter);
     },
 
     getSortedAndFilteredCourses(student) {
       if (!student || !student.progress) return [];
       
-      const studentProgram = student.program.includes('Bachelor') ? 'BSGM' : 'ASSD';
-      const relevantSubjects = this.subjects.filter(s => s.program === studentProgram);
+      // ✅ Usar programType
+      const relevantSubjects = this.subjects.filter(s => s.program === student.programType);
 
       const filteredSubjects = relevantSubjects.filter(subject => {
         const status = student.progress[subject.id];
@@ -425,8 +445,9 @@ function academicData() {
       this.filteredStudents = this.students.filter(student => {
         let match = true;
         
-        if (this.filters.program) {
-          match = match && student.program.toLowerCase().includes(this.filters.program);
+        // ✅ Usar programType directamente
+        if (this.programFilter !== 'all') {
+          match = match && student.programType === this.programFilter;
         }
         
         if (this.filters.status) {

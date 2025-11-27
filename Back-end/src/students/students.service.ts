@@ -239,20 +239,11 @@ export class StudentsService {
     const students = await this.prisma.student.findMany({
       where: { status: 'active' },
       include: {
-        program: true,
-        enrollments: {
-          include: {
-            offering: {
-              include: {
-                course: true,
-                session: true
-              }
-            }
-          }
-        },
+        program: true, // ✅ Ya está incluido
         records: {
           include: {
-            course: true
+            course: true,
+            session: true // ✅ Agregado para tener sessionName
           }
         },
         transfers: {
@@ -267,9 +258,11 @@ export class StudentsService {
       ]
     });
 
+    console.log(`📊 Processing ${students.length} students...`);
+
     return students.map(student => {
       const completedRecords = student.records.filter(r => 
-        ['passed', 'completed', 'P', 'completado'].includes(r.status || '')
+        ['passed', 'completed', 'transferred', 'completado'].includes(r.status?.toLowerCase() || '')
       );
       
       const unitsEarned = completedRecords.reduce((sum, record) => {
@@ -277,51 +270,56 @@ export class StudentsService {
         return sum + (course.credits || 3);
       }, 0) + student.transferredUnits;
 
-      const completedCourseIds = [
-        ...completedRecords.map(r => r.courseId),
-        ...student.transfers.map(t => t.courseId)
-      ];
-
-      const programCourses = student.program ? [] : [];
-
+      // ✅ CORREGIDO: Procesar grades correctamente
       const grades = {};
       student.records.forEach(record => {
+        const numericGrade = this.convertGradeToNumeric(record.grade);
+        
         grades[record.courseId] = {
-          grade: this.convertGradeToNumeric(record.grade),
-          letter: record.grade || '-',
-          status: this.mapStatus(record.status)
+          grade: numericGrade, // Numérico para cálculos
+          letter: record.grade || '-', // Letra original
+          status: this.mapStatus(record.status), // Status mapeado
+          courseCode: record.course.courseCode,
+          courseName: record.course.courseName,
+          sessionName: record.session?.sessionName || 'N/A'
         };
       });
 
+      // 🔍 DEBUG: Ver primer estudiante
+      if (student.id === students[0]?.id) {
+        console.log('📋 Sample student grades:', {
+          studentId: student.studentIdNumber,
+          totalRecords: student.records.length,
+          sampleGrade: grades[Object.keys(grades)[0]]
+        });
+      }
+
       return {
         id: Number(student.id),
-        studentId: student.studentIdNumber,
+        studentIdNumber: student.studentIdNumber,
         name: `${student.firstName} ${student.lastName}`,
         firstName: student.firstName,
         middleName: student.middleName || '',
         lastName: student.lastName,
         phone: student.phone || 'N/A',
-        emailPersonal: student.email || 'N/A',
-        emailSDGKU: student.sdgkuEmail || 'N/A',
+        email: student.email || 'N/A',
+        sdgkuEmail: student.sdgkuEmail || 'N/A',
         status: student.status === 'active' ? 'Active' : 'Inactive',
-        program: student.program?.programName || 'Unknown',
+        program: student.program, // ✅ Enviar objeto completo con programName
         modality: student.modality || 'Online',
-        cohort: `Fall ${student.enrollmentYear}`,
+        cohort: student.cohort || `Fall ${student.enrollmentYear}`,
         language: student.language || 'English',
         totalUnits: student.totalUnits,
         transferredUnits: student.transferredUnits,
-        unitsEarned: unitsEarned,
+        totalUnitsEarned: unitsEarned,
         startDate: student.startDate.toISOString().split('T')[0],
-        scheduledCompletion: student.scheduledCompletionDate 
+        scheduledCompletionDate: student.scheduledCompletionDate 
           ? student.scheduledCompletionDate.toISOString().split('T')[0] 
           : 'TBD',
         graduationDate: student.graduationDate 
           ? student.graduationDate.toISOString().split('T')[0] 
           : 'TBD',
-        completedSubjects: completedCourseIds,
-        requiredSubjects: programCourses,
-        grades: grades,
-        progress: {}
+        grades: grades // ✅ Grades con estructura completa
       };
     });
   }
@@ -331,19 +329,10 @@ export class StudentsService {
       where: { id: studentId },
       include: {
         program: true,
-        enrollments: {
-          include: {
-            offering: {
-              include: {
-                course: true,
-                session: true
-              }
-            }
-          }
-        },
         records: {
           include: {
-            course: true
+            course: true,
+            session: true
           }
         },
         transfers: {
@@ -359,7 +348,7 @@ export class StudentsService {
     }
 
     const completedRecords = student.records.filter(r => 
-      ['passed', 'completed', 'P', 'completado'].includes(r.status || '')
+      ['passed', 'completed', 'transferred', 'completado'].includes(r.status?.toLowerCase() || '')
     );
     
     const unitsEarned = completedRecords.reduce((sum, record) => {
@@ -368,63 +357,94 @@ export class StudentsService {
 
     const grades = {};
     student.records.forEach(record => {
+      const numericGrade = this.convertGradeToNumeric(record.grade);
+      
       grades[record.courseId] = {
-        grade: this.convertGradeToNumeric(record.grade),
+        grade: numericGrade,
         letter: record.grade || '-',
-        status: this.mapStatus(record.status)
+        status: this.mapStatus(record.status),
+        courseCode: record.course.courseCode,
+        courseName: record.course.courseName,
+        sessionName: record.session?.sessionName || 'N/A'
       };
     });
 
     return {
       id: Number(student.id),
-      studentId: student.studentIdNumber,
+      studentIdNumber: student.studentIdNumber,
       name: `${student.firstName} ${student.lastName}`,
       firstName: student.firstName,
       middleName: student.middleName || '',
       lastName: student.lastName,
       phone: student.phone || 'N/A',
-      emailPersonal: student.email || 'N/A',
-      emailSDGKU: student.sdgkuEmail || 'N/A',
+      email: student.email || 'N/A',
+      sdgkuEmail: student.sdgkuEmail || 'N/A',
       status: student.status === 'active' ? 'Active' : 'Inactive',
-      program: student.program?.programName || 'Unknown',
+      program: student.program,
       modality: student.modality || 'Online',
-      cohort: `Fall ${student.enrollmentYear}`,
+      cohort: student.cohort || `Fall ${student.enrollmentYear}`,
       language: student.language || 'English',
       totalUnits: student.totalUnits,
       transferredUnits: student.transferredUnits,
-      unitsEarned: unitsEarned,
+      totalUnitsEarned: unitsEarned,
       startDate: student.startDate.toISOString().split('T')[0],
-      scheduledCompletion: student.scheduledCompletionDate?.toISOString().split('T')[0] || 'TBD',
+      scheduledCompletionDate: student.scheduledCompletionDate?.toISOString().split('T')[0] || 'TBD',
       graduationDate: student.graduationDate?.toISOString().split('T')[0] || 'TBD',
       grades: grades
     };
   }
 
+  // ✅ MEJORADO: Convertir grade a numérico
   private convertGradeToNumeric(grade: string | null): number | null {
     if (!grade) return null;
     
+    // Si ya es numérico, retornarlo
+    const numeric = parseFloat(grade);
+    if (!isNaN(numeric)) return numeric;
+    
+    // Si es T o P, no tiene valor numérico
+    if (grade === 'T' || grade === 'P') return null;
+    
+    // Mapeo de letras a números
     const gradeMap: { [key: string]: number } = {
-      'A': 95, 'A-': 92,
+      'A+': 97, 'A': 95, 'A-': 92,
       'B+': 88, 'B': 85, 'B-': 82,
       'C+': 78, 'C': 75, 'C-': 72,
       'D+': 68, 'D': 65, 'D-': 62,
-      'F': 50, 'P': 85
+      'F': 50
     };
     
-    return gradeMap[grade] || null;
+    return gradeMap[grade.toUpperCase()] || null;
   }
 
+  // ✅ MEJORADO: Mapear status correctamente
   private mapStatus(status: string | null): string {
     if (!status) return 'Not Started';
     
-    const statusLower = status.toLowerCase();
+    const statusLower = status.toLowerCase().trim();
     
-    if (statusLower === 'completado') return 'Completed';
-    if (statusLower === 'pendiente') return 'In Progress';
-    if (statusLower === 'reprobado') return 'Failed';
-    if (statusLower === 'completed') return 'Completed';
-    if (statusLower === 'in progress') return 'In Progress';
-    if (statusLower === 'failed') return 'Failed';
+    // Transferred
+    if (statusLower === 'transferred' || statusLower === 'transferido') {
+      return 'Transferred';
+    }
+    
+    // Completed
+    if (statusLower === 'completed' || statusLower === 'completado' || 
+        statusLower === 'passed' || statusLower === 'aprobado') {
+      return 'Completed';
+    }
+    
+    // In Progress
+    if (statusLower === 'in progress' || statusLower === 'pendiente' || 
+        statusLower === 'pending') {
+      return 'In Progress';
+    }
+    
+    // Failed
+    if (statusLower === 'failed' || statusLower === 'reprobado' || 
+        statusLower === 'fail') {
+      return 'Failed';
+    }
     
     return 'Not Started';
   }

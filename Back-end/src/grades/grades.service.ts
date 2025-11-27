@@ -2,7 +2,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.services';
 
-// Interfaces para los tipos de retorno - EXPORTADAS
 export interface GradeResult {
   courseCode: string;
   grade: string;
@@ -17,296 +16,224 @@ export interface BatchUpdateResult {
   errors?: string[];
 }
 
+// 🔥 FUNCIÓN GLOBAL DE NORMALIZACIÓN
+function normalizeStatus(input?: string, grade?: string): string {
+  if (!input && grade) input = grade;
+  const s = input?.toLowerCase().trim();
+
+  if (!s || s === '--' || s === 'ip') return 'pending';
+
+  if (['c', 'completed', 'completado', 'pass', 'aprobado'].includes(s))
+    return 'completed';
+
+  if (['f', 'failed', 'fail', 'reprobado'].includes(s))
+    return 'failed';
+
+  if (['t', 'transfer', 'transferred', 'transferido'].includes(s))
+    return 'transferred';
+
+  return 'pending';
+}
+
 @Injectable()
 export class GradesService {
   constructor(private prisma: PrismaService) {}
 
-  // Obtener todas las calificaciones de un estudiante
+  // Obtener todas las calificaciones
   async getStudentGrades(studentId: bigint) {
-    try {
-      console.log('🔍 Service: Buscando calificaciones para:', studentId);
-      
-      const records = await this.prisma.academicRecord.findMany({
-        where: { studentId },
-        include: {
-          course: true,
-          session: true
-        },
-        orderBy: {
-          course: {
-            courseCode: 'asc'
-          }
-        }
-      });
-
-      console.log('✅ Service: Registros encontrados:', records.length);
-      return records;
-    } catch (error) {
-      console.error('❌ Service Error:', error);
-      throw error;
-    }
+    return this.prisma.academicRecord.findMany({
+      where: { studentId },
+      include: { course: true, session: true },
+      orderBy: { course: { courseCode: 'asc' } }
+    });
   }
 
   // Actualizar o crear una calificación
-  // grades.service.ts
-async updateGrade(
-  studentId: bigint,
-  courseCode: string,
-  grade: string,
-  sessionId?: number
-) {
-  const course = await this.prisma.course.findUnique({
-    where: { courseCode }
-  });
+  async updateGrade(
+    studentId: bigint,
+    courseCode: string,
+    grade: string,
+    status?: string,
+    sessionId?: number
+  ) {
+    const course = await this.prisma.course.findUnique({ where: { courseCode } });
 
-  if (!course) {
-    throw new NotFoundException(`Curso ${courseCode} no encontrado`);
-  }
+    if (!course) throw new NotFoundException(`Curso ${courseCode} no encontrado`);
 
-  // 🔥 MEJORAR LA LÓGICA DEL STATUS
-  let status = 'pendiente';
-  
-  if (!grade || grade === '--' || grade === 'IP') {
-    status = 'pendiente';
-  } else if (grade === 'F') {
-    status = 'reprobado';  // 🎯 IMPORTANTE: Reprobado si es F
-  } else {
-    status = 'completado';
-  }
+    const normalizedStatus = normalizeStatus(status, grade);
 
-  const existingRecord = await this.prisma.academicRecord.findFirst({
-    where: {
-      studentId,
-      courseId: course.id,
-      sessionId: sessionId ?? null
-    }
-  });
-
-  let record;
-  if (existingRecord) {
-    record = await this.prisma.academicRecord.update({
-      where: { id: existingRecord.id },
-      data: {
-        grade,
-        status,
-        sessionId: sessionId ?? null
-      },
-      include: {
-        course: true
-      }
+    const existingRecord = await this.prisma.academicRecord.findFirst({
+      where: { studentId, courseId: course.id, sessionId: sessionId ?? null }
     });
-  } else {
-    record = await this.prisma.academicRecord.create({
-      data: {
-        studentId,
-        courseId: course.id,
-        sessionId: sessionId ?? null,
-        grade,
-        status
-      },
-      include: {
-        course: true
-      }
-    });
-  }
 
-  return {
-    success: true,
-    message: `Calificación actualizada: ${courseCode} - ${grade}`,
-    record
-  };
-}
+    let record;
 
-  // Actualizar múltiples calificaciones
-  async batchUpdateGrades(
-  studentId: bigint,
-  grades: Array<{ courseCode: string; grade: string; sessionId?: number; status?: string }>
-): Promise<BatchUpdateResult> {
-  const results: GradeResult[] = [];
-  const errors: string[] = [];
-
-  for (const gradeData of grades) {
-    try {
-      const { courseCode, grade, sessionId } = gradeData;
-
-      const course = await this.prisma.course.findUnique({
-        where: { courseCode }
+    if (existingRecord) {
+      record = await this.prisma.academicRecord.update({
+        where: { id: existingRecord.id },
+        data: {
+          grade,
+          status: normalizedStatus,
+          sessionId: sessionId ?? null
+        },
+        include: { course: true }
       });
-
-      if (!course) {
-        errors.push(`Curso ${courseCode} no encontrado`);
-        continue;
-      }
-
-      // 🔥 MEJORAR LA LÓGICA DEL STATUS
-      let status = 'pendiente';
-      
-      if (!grade || grade === '--' || grade === 'IP') {
-        status = 'pendiente';
-      } else if (grade === 'F') {
-        status = 'reprobado';  // 🎯 Reprobado si es F
-      } else {
-        status = 'completado';
-      }
-
-      const existingRecord = await this.prisma.academicRecord.findFirst({
-        where: {
+    } else {
+      record = await this.prisma.academicRecord.create({
+        data: {
           studentId,
           courseId: course.id,
-          sessionId: sessionId ?? null
-        }
+          sessionId: sessionId ?? null,
+          grade,
+          status: normalizedStatus
+        },
+        include: { course: true }
       });
-
-      if (existingRecord) {
-        await this.prisma.academicRecord.update({
-          where: { id: existingRecord.id },
-          data: {
-            grade,
-            status,
-            sessionId: sessionId ?? null
-          }
-        });
-      } else {
-        await this.prisma.academicRecord.create({
-          data: {
-            studentId,
-            courseId: course.id,
-            sessionId: sessionId ?? null,
-            grade,
-            status
-          }
-        });
-      }
-
-      results.push({ courseCode, grade, success: true });
-
-    } catch (error: any) {
-      errors.push(`Error en ${gradeData.courseCode}: ${error.message}`);
     }
-  }
-
-  return {
-    success: true,
-    totalProcessed: grades.length,
-    successful: results.length,
-    results,
-    errors: errors.length > 0 ? errors : undefined
-  };
-}
-
-  // Eliminar una calificación
-  async deleteGrade(studentId: bigint, courseCode: string) {
-    const course = await this.prisma.course.findUnique({
-      where: { courseCode }
-    });
-
-    if (!course) {
-      throw new NotFoundException('Curso no encontrado');
-    }
-
-    await this.prisma.academicRecord.deleteMany({
-      where: {
-        studentId,
-        courseId: course.id
-      }
-    });
 
     return {
       success: true,
-      message: 'Calificación eliminada'
+      message: `Calificación actualizada: ${courseCode} - ${grade}`,
+      record
     };
   }
 
-  // src/grades/grades.service.ts
+  // Actualizar múltiples calificaciones (IMPORT/EXCEL)
+  async batchUpdateGrades(
+    studentId: bigint,
+    grades: Array<{ courseCode: string; grade: string; sessionId?: number; status?: string }>
+  ): Promise<BatchUpdateResult> {
+    const results: GradeResult[] = [];
+    const errors: string[] = [];
 
-async getAllStudentsWithGrades() {
-  return this.prisma.student.findMany({
-    where: { status: 'active' },
-    include: {
-      program: {
-        include: {
-          programCourses: {
-            include: {
-              course: true
-            }
-          }
-        }
-      },
-      records: {
-        include: {
-          course: true
-        }
-      },
-      transfers: {
-        include: {
-          course: true
-        }
-      }
-    },
-    orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }]
-  });
-}
-
-/**
- * Devuelve todas las materias (table Course en tu esquema)
- */
-async getAllSubjects() {
-  return this.prisma.course.findMany();
-}
-
-// 📌 Obtener recomendaciones globales
-async getGlobalRecommendations() {
-  // 1️⃣ Obtener todos los cursos
-  const courses = await this.prisma.course.findMany();
-
-  // 2️⃣ Obtener todos los alumnos con sus registros y cursos
-  const students = await this.prisma.student.findMany({
-    include: {
-      records: {
-        include: { course: true }
-      }
-    }
-  });
-
-  // ⛔ ANTES: const recommendations = [];
-  // ✔ AHORA:
-  const recommendations: {
-    courseId: number;
-    courseCode: string;
-    courseName: string;
-    missingCount: number;
-    students: { id: bigint; fullName: string }[];
-  }[] = [];
-
-  for (const course of courses) {
-    // ⛔ ANTES: const studentsMissing = [];
-    // ✔ AHORA:
-    const studentsMissing: { id: bigint; fullName: string }[] = [];
-
-    for (const student of students) {
-      const completed = student.records.map(r => r.courseId);
-
-      if (!completed.includes(course.id)) {
-        studentsMissing.push({
-          id: student.id,
-          fullName: `${student.firstName} ${student.middleName ?? ""} ${student.lastName}`.trim()
+    for (const g of grades) {
+      try {
+        const course = await this.prisma.course.findUnique({
+          where: { courseCode: g.courseCode }
         });
+
+        if (!course) {
+          errors.push(`Curso ${g.courseCode} no encontrado`);
+          continue;
+        }
+
+        const normalizedStatus = normalizeStatus(g.status, g.grade);
+
+        const existing = await this.prisma.academicRecord.findFirst({
+          where: {
+            studentId,
+            courseId: course.id,
+            sessionId: g.sessionId ?? null
+          }
+        });
+
+        if (existing) {
+          await this.prisma.academicRecord.update({
+            where: { id: existing.id },
+            data: {
+              grade: g.grade,
+              status: normalizedStatus,
+              sessionId: g.sessionId ?? null
+            }
+          });
+        } else {
+          await this.prisma.academicRecord.create({
+            data: {
+              studentId,
+              courseId: course.id,
+              sessionId: g.sessionId ?? null,
+              grade: g.grade,
+              status: normalizedStatus
+            }
+          });
+        }
+
+        results.push({ courseCode: g.courseCode, grade: g.grade, success: true });
+
+      } catch (e: any) {
+        errors.push(`Error en ${g.courseCode}: ${e.message}`);
       }
     }
 
-    recommendations.push({
-      courseId: course.id,
-      courseCode: course.courseCode,
-      courseName: course.courseName,
-      missingCount: studentsMissing.length,
-      students: studentsMissing
+    return {
+      success: true,
+      totalProcessed: grades.length,
+      successful: results.length,
+      results,
+      errors: errors.length > 0 ? errors : undefined
+    };
+  }
+
+  // Eliminar una calificación
+  async deleteGrade(studentId: bigint, courseCode: string) {
+    const course = await this.prisma.course.findUnique({ where: { courseCode } });
+
+    if (!course) throw new NotFoundException('Curso no encontrado');
+
+    await this.prisma.academicRecord.deleteMany({
+      where: { studentId, courseId: course.id }
+    });
+
+    return { success: true, message: 'Calificación eliminada' };
+  }
+
+  // Obtener estudiantes con calificaciones
+  async getAllStudentsWithGrades() {
+    return this.prisma.student.findMany({
+      where: { status: 'active' },
+      include: {
+        program: { include: { programCourses: { include: { course: true } } } },
+        records: { include: { course: true } },
+        transfers: { include: { course: true } }
+      },
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }]
     });
   }
 
-  return recommendations;
-}
+  // Obtener todas las materias
+  async getAllSubjects() {
+    return this.prisma.course.findMany();
+  }
+
+  // Recomendaciones globales
+  async getGlobalRecommendations() {
+    const courses = await this.prisma.course.findMany();
+    const students = await this.prisma.student.findMany({
+      include: { records: { include: { course: true } } }
+    });
+
+    const recommendations: {
+  courseId: number;
+  courseCode: string;
+  courseName: string;
+  missingCount: number;
+  students: { id: bigint; fullName: string }[];
+}[] = [];
 
 
+    for (const course of courses) {
+      const missing: { id: bigint; fullName: string }[] = [];
 
+      for (const st of students) {
+        const completed = st.records.map(r => r.courseId);
 
+        if (!completed.includes(course.id)) {
+          missing.push({
+            id: st.id,
+            fullName: `${st.firstName} ${st.middleName ?? ''} ${st.lastName}`.trim()
+          });
+        }
+      }
+
+      recommendations.push({
+        courseId: course.id,
+        courseCode: course.courseCode,
+        courseName: course.courseName,
+        missingCount: missing.length,
+        students: missing
+      });
+    }
+
+    return recommendations;
+  }
 }

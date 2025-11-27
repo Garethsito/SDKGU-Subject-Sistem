@@ -1339,14 +1339,14 @@ function settingsData() {
       return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     },
     
-    async processImport() {
+   async processImport() {
   if (!this.selectedFile || !this.importType) return;
 
   const formData = new FormData();
   formData.append('file', this.selectedFile);
 
   try {
-    // Para el caso de grades, procesamos el Excel en el frontend
+    // ⭐ Importación especial para GRADES (desde Excel en el frontend)
     if (this.importType === 'grades') {
       const data = await this.readExcelFile(this.selectedFile);
       const results = [];
@@ -1356,28 +1356,50 @@ function settingsData() {
         const studentId = row['Students ID Number'];
         const courseCode = row['Course'];
         const grade = row['Grade'];
-        const status = row['Status'] || 'Completed'; // valor por defecto si no hay status
 
-        if (!studentId || !courseCode || !grade) {
-          console.warn('Fila incompleta, se omite:', row);
-          continue; // saltar filas incompletas
+        // 🔍 Normalizar status del Excel
+        let rawStatus = (row['Status'] || '').toString().trim().toLowerCase();
+        let status = 'Completed'; // default
+
+        if (rawStatus === 'f' || rawStatus === 'failed') {
+          status = 'Failed';
+        } 
+        else if (
+          rawStatus === 't' || rawStatus === 'p' || 
+          rawStatus === 'transferred' || rawStatus === 'transfer'
+        ) {
+          status = 'Transferred';
+        } 
+        else if (rawStatus === 'completed' || rawStatus === 'c') {
+          status = 'Completed';
         }
 
-        // Llamar al endpoint de grades (puedes usar fetch o axios)
+        // Validación mínima
+        if (!studentId || !courseCode || !grade) {
+          console.warn('Fila incompleta, se omite:', row);
+          continue;
+        }
+
+        // 📤 Enviar al backend
         const res = await fetch(`http://localhost:3000/api/students/${studentId}/grades`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ courseCode, grade, status })
         });
-       let result = {};
-if (res.ok) {
-  result = await res.json();
-} else {
-  console.error('HTTP error:', res.status, res.statusText);
-  result = { success: false };
-}
+
+        let result = {};
+        if (res.ok) {
+          result = await res.json();
+        } else {
+          console.error('HTTP error:', res.status, res.statusText);
+          result = { success: false };
+        }
+
+        // ⭐ IMPORTANTE: agregar resultado al arreglo
+        results.push(result);
       }
 
+      // 🟢 Resultado final
       this.importResult = {
         success: true,
         message: 'Grades imported successfully',
@@ -1395,11 +1417,13 @@ if (res.ok) {
 
       this.selectedFile = null;
       this.importType = '';
-
       return;
     }
 
-    // Para otros tipos de import (students, teachers, etc.)
+    // -------------------------------------------------------------------------------------
+    // ⭐ Importaciones normales (students, teachers, etc.)
+    // -------------------------------------------------------------------------------------
+
     const url = `${this.apiUrl}/import/${this.importType}`;
     console.log('📤 Importando archivo...', this.importType);
 
@@ -1411,6 +1435,7 @@ if (res.ok) {
     const result = await response.json();
 
     this.importResult = result;
+
     this.importHistory.unshift({
       id: Date.now(),
       date: new Date().toLocaleString(),
@@ -1425,12 +1450,14 @@ if (res.ok) {
       this.importType = '';
     }
 
-  } catch (error) {
+  } 
+  catch (error) {
     console.error('❌ Error importing file:', error);
+
     this.importResult = {
       success: false,
       message: 'Error importing file',
-      details: error.message
+      details: error.message || 'Unknown error'
     };
   }
 },

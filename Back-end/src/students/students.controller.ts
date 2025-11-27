@@ -8,6 +8,8 @@ export class StudentsController {
     private readonly studentsService: StudentsService,
   ) {}
 
+  // ✅ IMPORTANTE: Las rutas específicas DEBEN ir ANTES de las rutas con parámetros
+
   @Get('count')
   async getTotalStudents() {
     const total = await this.studentsService.countStudents();
@@ -43,6 +45,32 @@ export class StudentsController {
     }
   }
 
+  // ✅ CORREGIDO: @Get() debe ir ANTES de @Get(':id')
+  @Get()
+  async getAllStudents() {
+    try {
+      console.log('🔍 Fetching all students...');
+      const students = await this.studentsService.getAllStudents();
+      console.log(`✅ Returning ${students.length} students`);
+      
+      // 🔍 DEBUG: Ver estructura del primer estudiante
+      if (students.length > 0) {
+        console.log('📋 Sample student structure:', {
+          id: students[0].id,
+          name: `${students[0].firstName} ${students[0].lastName}`,
+          program: students[0].program,
+          hasGrades: !!students[0].grades
+        });
+      }
+      
+      return students;
+    } catch (error) {
+      console.error('❌ Error fetching students:', error);
+      throw error;
+    }
+  }
+
+  // ✅ Las rutas con parámetros van AL FINAL
   @Get(':id')
   async getStudentById(@Param('id') id: string) {
     try {
@@ -53,16 +81,4 @@ export class StudentsController {
       throw new NotFoundException(`Student with ID ${id} not found`);
     }
   }
-
-  @Get()
-  async getAllStudents() {
-    try {
-      const students = await this.studentsService.getAllStudents();
-      return students;
-    } catch (error) {
-      console.error('Error fetching students:', error);
-      throw error;
-    }
-  }
-
 }
