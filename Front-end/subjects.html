@@ -546,78 +546,166 @@
     </div>
 
     <div x-show="showCreateSessionModal"
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="opacity-0"
-         x-transition:enter-end="opacity-100"
-         x-transition:leave="transition ease-in duration-200"
-         x-transition:leave-start="opacity-100"
-         x-transition:leave-end="opacity-0"
-         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[999]"
-         x-cloak>
-      <div @click.outside="showCreateSessionModal = false"
-           class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        @click.self="showCreateSessionModal = false"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[999] p-4"
+        x-cloak>
+      
+      <div @click.stop
+          class="bg-white rounded-xl shadow-2xl w-[700px] relative overflow-hidden">
         
-        <div class="p-6 border-b flex justify-between items-center">
-          <h3 class="text-2xl font-bold">Add New Session</h3>
-          <button @click="showCreateSessionModal = false" class="text-gray-500 hover:text-gray-700">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-[#D41736] to-[#A6192E] h-[70px] flex items-center justify-between px-6">
+          <h2 class="text-2xl text-white font-bold flex items-center">
+            <i class="fa-solid fa-plus-circle mr-2"></i>
+            Add New Session
+          </h2>
+          <button @click="showCreateSessionModal = false" 
+                  class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
             <i class="fa-solid fa-times text-xl"></i>
           </button>
         </div>
-        
-        <div class="p-6 space-y-4 overflow-y-auto">
-          <div>
-            <label for="sessionNumber" class="block text-sm font-medium text-gray-700 mb-1">Session Number</label>
-            <input type="number" id="sessionNumber" x-model.number="newSession.number"
-                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+
+        <!-- Body -->
+        <div class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          
+          <!-- ID Session, Session # y Program en grid de 3 columnas -->
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
+                <i class="fa-solid fa-hashtag mr-1 text-xs"></i>ID Session
+              </label>
+              <input type="text" 
+                    value="Auto-generated"
+                    class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-50 cursor-not-allowed text-sm" 
+                    readonly>
+            </div>
+
+            <div>
+              <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
+                <i class="fa-solid fa-list-ol mr-1 text-xs"></i>Session #
+              </label>
+              <input type="number" 
+                    x-model.number="newSession.number" 
+                    class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm">
+            </div>
+
+            <div>
+              <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
+                <i class="fa-solid fa-graduation-cap mr-1 text-xs"></i>Program<span class="text-[#D41736] ml-1">*</span>
+              </label>
+              <select x-model="newSession.programId"
+                      class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm">
+                <option value="">Select Program</option>
+                <template x-for="program in allPrograms" :key="program.id">
+                  <option :value="program.id" x-text="program.programName"></option>
+                </template>
+              </select>
+            </div>
           </div>
           
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Start Date y End Date -->
+          <div class="grid grid-cols-2 gap-4">
             <div>
-              <label for="startDate" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-              <input type="date" id="startDate" x-model="newSession.startDate"
-                     class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+              <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
+                <i class="fa-solid fa-calendar mr-1 text-xs"></i>Start Date<span class="text-[#D41736] ml-1">*</span>
+              </label>
+              <input type="date" 
+                    x-model="newSession.startDate"
+                    class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm">
             </div>
+
             <div>
-              <label for="endDate" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-              <input type="date" id="endDate" x-model="newSession.endDate"
-                     class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+              <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
+                <i class="fa-solid fa-calendar-check mr-1 text-xs"></i>End Date<span class="text-[#D41736] ml-1">*</span>
+              </label>
+              <input type="date" 
+                    x-model="newSession.endDate"
+                    class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm">
             </div>
-          </div>
-          
-          <div>
-            <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select id="status" x-model="newSession.status"
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
-              <option value="Planning">Planning</option>
-              <option value="Open">Open</option>
-              <option value="Closed">Closed</option>
-              <option value="Finished">Finished</option>
-            </select>
           </div>
 
+          <!-- Subjects & Professors -->
           <div>
-            <label for="subjects" class="block text-sm font-medium text-gray-700 mb-1">Subjects (comma-separated)</label>
-            <input type="text" id="subjects" x-model="newSessionCoursesInput"
-                   @input="updateNewSessionCoursesArray()"
-                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]"
-                   placeholder="e.g., GBUS 404, ACCT 301">
+            <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
+              <i class="fa-solid fa-book-open mr-1 text-xs"></i>Subjects & Professors<span class="text-[#D41736] ml-1">*</span>
+            </label>
+            
+            <!-- Chips de materias seleccionadas con profesor -->
+            <div x-show="newSession.coursesWithTeachers && newSession.coursesWithTeachers.length > 0" 
+                class="border border-gray-300 rounded-md w-full p-3 mb-2 bg-white min-h-[42px]">
+              <div class="space-y-2">
+                <template x-for="(item, index) in newSession.coursesWithTeachers" :key="index">
+                  <div class="flex items-center gap-2 bg-gray-50 p-2 rounded border border-gray-200">
+                    <span class="bg-[#D41736] text-white px-3 py-1 rounded-full text-sm font-medium shrink-0">
+                      <i class="fa-solid fa-book mr-1"></i>
+                      <span x-text="item.courseCode"></span>
+                    </span>
+                    
+                    <select 
+                      x-model="item.teacherId"
+                      class="flex-1 border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:border-[#D41736]">
+                      <option value="">Select Professor</option>
+                      <template x-for="teacher in allTeachers" :key="teacher.id">
+                        <option :value="teacher.id" x-text="`${teacher.firstName} ${teacher.lastName}`"></option>
+                      </template>
+                    </select>
+                    
+                    <button 
+                      @click="removeCourseWithTeacher(index)"
+                      type="button"
+                      class="hover:bg-white hover:bg-opacity-20 rounded-full w-6 h-6 flex items-center justify-center bg-gray-500 text-white shrink-0">
+                      <i class="fa-solid fa-times text-xs"></i>
+                    </button>
+                  </div>
+                </template>
+              </div>
+            </div>
+            
+            <!-- Dropdown para agregar materias -->
+            <select
+              x-model="tempSubject"
+              @change="addCourseWithTeacher()"
+              class="border border-gray-300 rounded-md w-full p-2 focus:outline-none focus:border-[#D41736] text-sm"
+              :disabled="!newSession.programId"
+              :class="{'bg-gray-50 cursor-not-allowed': !newSession.programId}">
+              <option value="">+ Add a subject</option>
+              <template x-for="course in getAvailableSubjectsForNewSession()" :key="course.code">
+                <option :value="course.code" x-text="course.name + ' (' + course.code + ')'"></option>
+              </template>
+            </select>
+
+            <p x-show="!newSession.programId" class="text-xs text-[#D41736] mt-1">
+              <i class="fa-solid fa-arrow-up"></i> Please select a program first.
+            </p>
           </div>
-          <div class="flex flex-wrap gap-2" x-show="newSession.courses.length > 0">
-            <template x-for="subject in newSession.courses" :key="subject">
-              <span class="px-3 py-1 bg-gray-100 text-gray-700 text-sm font-medium rounded-full border border-gray-200" x-text="subject"></span>
-            </template>
+
+          <!-- Validation Error -->
+          <div x-show="validationError" 
+              class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded" 
+              role="alert"
+              x-cloak>
+            <p class="font-bold">Validation Error</p>
+            <p x-text="validationError"></p>
           </div>
+
         </div>
-        
-        <div class="p-4 bg-gray-50 rounded-b-xl flex justify-end gap-3">
+
+        <!-- Footer -->
+        <div class="flex justify-end gap-3 pt-4 px-6 pb-6 border-t border-gray-200">
           <button @click="showCreateSessionModal = false" 
-                  class="px-5 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">
-            Cancel
+                  class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">
+            Close
           </button>
+          
           <button @click="saveNewSession()" 
-                  class="px-5 py-2 bg-[#A6192E] text-white rounded-md hover:bg-[#8E1C2D] font-medium transition">
-            <i class="fa-solid fa-save mr-1"></i>
-            <span>Save Session</span>
+                  class="px-4 py-2 bg-gradient-to-r from-[#D41736] to-[#A6192E] text-white rounded-md hover:from-[#A6192E] hover:to-[#D41736] font-medium transition">
+            <i class="fa-solid fa-save mr-1"></i>Save
           </button>
         </div>
       </div>
