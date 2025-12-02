@@ -26,6 +26,7 @@ function reports() {
     subjects: [],
     programs: [],
     recommendations: [], // ✅ Inicializado
+    expandedRecommendations: Alpine.reactive({}),
     loading: true,
     error: null,
     
@@ -207,33 +208,47 @@ function reports() {
       }
     },
 
-    // ✅ CORREGIDO: getFormattedRecommendations
     getFormattedRecommendations() {
       if (!this.recommendations || this.recommendations.length === 0) {
         return [];
       }
 
-      const MAX_STUDENTS = 0; // ✅ Limitar a 10 estudiantes máximo
-
       return this.recommendations.map(rec => {
         const allStudents = rec.students || [];
         const studentNames = allStudents.map(s => s.fullName || s.name || 'Unknown');
+        const subjectId = rec.courseId || rec.subjectId;
+        const isExpanded = this.expandedRecommendations[subjectId] || false;
         
-        // Si hay más de MAX_STUDENTS, mostrar solo los primeros y agregar "... (X more)"
-        const displayStudents = studentNames.length > MAX_STUDENTS
-          ? [
-              ...studentNames.slice(0, MAX_STUDENTS),
-              `... (${studentNames.length - MAX_STUDENTS} more)`
-            ]
-          : studentNames;
-
         return {
           subject: rec.courseName || rec.subjectName || 'Unknown',
-          subjectId: rec.courseId || rec.subjectId,
+          subjectId: subjectId,
           studentCount: rec.missingCount || 0,
-          students: displayStudents // ✅ Ahora limitado
+          students: studentNames, // Mantiene todos los nombres
+          expanded: isExpanded
         };
       });
+    },
+
+    toggleRecommendationExpansion(subjectId) {
+      // Forzar reactividad con spread operator
+      this.expandedRecommendations = {
+        ...this.expandedRecommendations,
+        [subjectId]: !this.expandedRecommendations[subjectId]
+      };
+      console.log('Toggled:', subjectId, 'State:', this.expandedRecommendations[subjectId]);
+    },
+
+    isExpanded(subjectId) {
+      return this.expandedRecommendations[subjectId] === true;
+    },
+
+    getInitials(name) {
+      if (!name) return '??';
+      const parts = name.trim().split(' ');
+      if (parts.length >= 2) {
+        return parts[0][0].toUpperCase() + parts[parts.length - 1][0].toUpperCase();
+      }
+      return parts[0].substring(0, 2).toUpperCase();
     },
 
     getExecutiveSummary() {
