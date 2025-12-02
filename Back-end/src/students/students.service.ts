@@ -236,126 +236,69 @@ export class StudentsService {
   }
 
   async getAllStudents() {
-    const students = await this.prisma.student.findMany({
-      where: { status: 'active' },
-      include: {
-        program: true, // ✅ Ya está incluido
-        records: {
-          include: {
-            course: true,
-            session: true // ✅ Agregado para tener sessionName
-          }
-        },
-        transfers: {
-          include: {
-            course: true
-          }
+  const students = await this.prisma.student.findMany({
+    where: { status: 'active' },
+    include: {
+      program: true,
+      records: {
+        include: {
+          course: true,
+          session: true
         }
       },
-      orderBy: [
-        { lastName: 'asc' },
-        { firstName: 'asc' }
-      ]
-    });
-
-    console.log(`📊 Processing ${students.length} students...`);
-
-    return students.map(student => {
-      const completedRecords = student.records.filter(r => 
-        ['passed', 'completed', 'transferred', 'completado'].includes(r.status?.toLowerCase() || '')
-      );
-      
-      const unitsEarned = completedRecords.reduce((sum, record) => {
-        const course = record.course;
-        return sum + (course.credits || 3);
-      }, 0) + student.transferredUnits;
-
-      // ✅ CORREGIDO: Procesar grades correctamente
-      const grades = {};
-      student.records.forEach(record => {
-        const numericGrade = this.convertGradeToNumeric(record.grade);
-        
-        grades[record.courseId] = {
-          grade: numericGrade, // Numérico para cálculos
-          letter: record.grade || '-', // Letra original
-          status: this.mapStatus(record.status), // Status mapeado
-          courseCode: record.course.courseCode,
-          courseName: record.course.courseName,
-          sessionName: record.session?.sessionName || 'N/A'
-        };
-      });
-
-      // 🔍 DEBUG: Ver primer estudiante
-      if (student.id === students[0]?.id) {
-        console.log('📋 Sample student grades:', {
-          studentId: student.studentIdNumber,
-          totalRecords: student.records.length,
-          sampleGrade: grades[Object.keys(grades)[0]]
-        });
-      }
-
-      return {
-        id: Number(student.id),
-        studentIdNumber: student.studentIdNumber,
-        name: `${student.firstName} ${student.lastName}`,
-        firstName: student.firstName,
-        middleName: student.middleName || '',
-        lastName: student.lastName,
-        phone: student.phone || 'N/A',
-        email: student.email || 'N/A',
-        sdgkuEmail: student.sdgkuEmail || 'N/A',
-        status: student.status === 'active' ? 'Active' : 'Inactive',
-        program: student.program, // ✅ Enviar objeto completo con programName
-        modality: student.modality || 'Online',
-        cohort: student.cohort || `Fall ${student.enrollmentYear}`,
-        language: student.language || 'English',
-        totalUnits: student.totalUnits,
-        transferredUnits: student.transferredUnits,
-        totalUnitsEarned: unitsEarned,
-        startDate: student.startDate.toISOString().split('T')[0],
-        scheduledCompletionDate: student.scheduledCompletionDate 
-          ? student.scheduledCompletionDate.toISOString().split('T')[0] 
-          : 'TBD',
-        graduationDate: student.graduationDate 
-          ? student.graduationDate.toISOString().split('T')[0] 
-          : 'TBD',
-        grades: grades // ✅ Grades con estructura completa
-      };
-    });
-  }
-
-  async getStudentById(studentId: bigint) {
-    const student = await this.prisma.student.findUnique({
-      where: { id: studentId },
-      include: {
-        program: true,
-        records: {
-          include: {
-            course: true,
-            session: true
-          }
-        },
-        transfers: {
-          include: {
-            course: true
+      transfers: {
+        include: {
+          course: true
+        }
+      },
+      enrollments: {
+        include: {
+          offering: {
+            include: {
+              course: true,
+              session: true
+            }
           }
         }
       }
-    });
+    },
+    orderBy: [
+      { lastName: 'asc' },
+      { firstName: 'asc' }
+    ]
+  });
 
-    if (!student) {
-      throw new NotFoundException(`Student with ID ${studentId} not found`);
-    }
+  console.log(`📊 Processing ${students.length} students...`);
 
+  return students.map(student => {
     const completedRecords = student.records.filter(r => 
       ['passed', 'completed', 'transferred', 'completado'].includes(r.status?.toLowerCase() || '')
     );
     
     const unitsEarned = completedRecords.reduce((sum, record) => {
-      return sum + (record.course.credits || 3);
+      const course = record.course;
+      return sum + (course.credits || 3);
     }, 0) + student.transferredUnits;
 
+    // ✅ Process grades
     const grades = {};
+    
+    // 1️⃣ FIRST: Add enrollments (courses in progress)
+    student.enrollments.forEach(enrollment => {
+      const courseId = enrollment.offering.courseId;
+      
+      grades[courseId] = {
+        grade: null,
+        letter: 'IP',
+        status: 'In Progress',
+        courseCode: enrollment.offering.course.courseCode,
+        courseName: enrollment.offering.course.courseName,
+        sessionName: enrollment.offering.session?.sessionName || 'N/A',
+        isEnrolled: true
+      };
+    });
+    
+    // 2️⃣ THEN: Process records (overwrites enrollments if completed)
     student.records.forEach(record => {
       const numericGrade = this.convertGradeToNumeric(record.grade);
       
@@ -365,9 +308,20 @@ export class StudentsService {
         status: this.mapStatus(record.status),
         courseCode: record.course.courseCode,
         courseName: record.course.courseName,
-        sessionName: record.session?.sessionName || 'N/A'
+        sessionName: record.session?.sessionName || 'N/A',
+        isEnrolled: false
       };
     });
+
+    // 🔍 DEBUG: Log first student
+    if (student.id === students[0]?.id) {
+      console.log('📋 Sample student grades:', {
+        studentId: student.studentIdNumber,
+        totalRecords: student.records.length,
+        totalEnrollments: student.enrollments.length,
+        sampleGrade: grades[Object.keys(grades)[0]]
+      });
+    }
 
     return {
       id: Number(student.id),
@@ -388,11 +342,115 @@ export class StudentsService {
       transferredUnits: student.transferredUnits,
       totalUnitsEarned: unitsEarned,
       startDate: student.startDate.toISOString().split('T')[0],
-      scheduledCompletionDate: student.scheduledCompletionDate?.toISOString().split('T')[0] || 'TBD',
-      graduationDate: student.graduationDate?.toISOString().split('T')[0] || 'TBD',
+      scheduledCompletionDate: student.scheduledCompletionDate 
+        ? student.scheduledCompletionDate.toISOString().split('T')[0] 
+        : 'TBD',
+      graduationDate: student.graduationDate 
+        ? student.graduationDate.toISOString().split('T')[0] 
+        : 'TBD',
       grades: grades
     };
+  });
+}
+
+  async getStudentById(studentId: bigint) {
+  const student = await this.prisma.student.findUnique({
+    where: { id: studentId },
+    include: {
+      program: true,
+      records: {
+        include: {
+          course: true,
+          session: true
+        }
+      },
+      transfers: {
+        include: {
+          course: true
+        }
+      }, // ✅ COMA AGREGADA
+      enrollments: {
+        include: {
+          offering: {
+            include: {
+              course: true,
+              session: true
+            }
+          }
+        }
+      }
+    }
+  });
+
+  if (!student) {
+    throw new NotFoundException(`Student with ID ${studentId} not found`);
   }
+
+  const completedRecords = student.records.filter(r => 
+    ['passed', 'completed', 'transferred', 'completado'].includes(r.status?.toLowerCase() || '')
+  );
+  
+  const unitsEarned = completedRecords.reduce((sum, record) => {
+    return sum + (record.course.credits || 3);
+  }, 0) + student.transferredUnits;
+
+  // ✅ Procesar grades igual que en getAllStudents
+  const grades = {};
+  
+  // 1️⃣ FIRST: Add enrollments (courses in progress)
+  student.enrollments.forEach(enrollment => {
+    const courseId = enrollment.offering.courseId;
+    
+    grades[courseId] = {
+      grade: null,
+      letter: 'IP',
+      status: 'In Progress',
+      courseCode: enrollment.offering.course.courseCode,
+      courseName: enrollment.offering.course.courseName,
+      sessionName: enrollment.offering.session?.sessionName || 'N/A',
+      isEnrolled: true
+    };
+  });
+  
+  // 2️⃣ THEN: Process records (overwrites enrollments if completed)
+  student.records.forEach(record => {
+    const numericGrade = this.convertGradeToNumeric(record.grade);
+    
+    grades[record.courseId] = {
+      grade: numericGrade,
+      letter: record.grade || '-',
+      status: this.mapStatus(record.status),
+      courseCode: record.course.courseCode,
+      courseName: record.course.courseName,
+      sessionName: record.session?.sessionName || 'N/A',
+      isEnrolled: false
+    };
+  });
+
+  return {
+    id: Number(student.id),
+    studentIdNumber: student.studentIdNumber,
+    name: `${student.firstName} ${student.lastName}`,
+    firstName: student.firstName,
+    middleName: student.middleName || '',
+    lastName: student.lastName,
+    phone: student.phone || 'N/A',
+    email: student.email || 'N/A',
+    sdgkuEmail: student.sdgkuEmail || 'N/A',
+    status: student.status === 'active' ? 'Active' : 'Inactive',
+    program: student.program,
+    modality: student.modality || 'Online',
+    cohort: student.cohort || `Fall ${student.enrollmentYear}`,
+    language: student.language || 'English',
+    totalUnits: student.totalUnits,
+    transferredUnits: student.transferredUnits,
+    totalUnitsEarned: unitsEarned,
+    startDate: student.startDate.toISOString().split('T')[0],
+    scheduledCompletionDate: student.scheduledCompletionDate?.toISOString().split('T')[0] || 'TBD',
+    graduationDate: student.graduationDate?.toISOString().split('T')[0] || 'TBD',
+    grades: grades
+  };
+}
 
   // ✅ MEJORADO: Convertir grade a numérico
   private convertGradeToNumeric(grade: string | null): number | null {
@@ -422,6 +480,10 @@ export class StudentsService {
     if (!status) return 'Not Started';
     
     const statusLower = status.toLowerCase().trim();
+    // Enrolled (curso actual)
+    if (statusLower === 'enrolled' || statusLower === 'inscrito') {
+      return 'In Progress';
+    }
     
     // Transferred
     if (statusLower === 'transferred' || statusLower === 'transferido') {

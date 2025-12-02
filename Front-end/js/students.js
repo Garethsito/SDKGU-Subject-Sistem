@@ -109,8 +109,15 @@ function academicData() {
                 const id = parseInt(courseId);
                 const status = gradeInfo.status || 'Not Started';
                 const letter = gradeInfo.letter || '-';
-                
-                progress[id] = this.gradeStatusToProgressStatus(status, letter);
+                const isEnrolled = gradeInfo.isEnrolled || false;
+
+
+                if (isEnrolled){
+                  progress[id]=1;
+                }else{
+                  progress[id] = this.gradeStatusToProgressStatus(status, letter);
+
+                }
                 
                 grades[id] = {
                   grade: gradeInfo.grade || null,
@@ -118,7 +125,8 @@ function academicData() {
                   status: status,
                   courseCode: gradeInfo.courseCode || '',
                   courseName: gradeInfo.courseName || '',
-                  sessionName: gradeInfo.sessionName || 'N/A'
+                  sessionName: gradeInfo.sessionName || 'N/A',
+                  isEnrolled : isEnrolled
                 };
               }
             });

@@ -448,35 +448,73 @@ function reports() {
     },
     
     async loadCoursesForEditing(studentId) {
-      try {
-        const gradesResponse = await fetch(`${this.apiUrl}/students/${studentId}/grades`);
-        const existingGrades = await gradesResponse.json();
+  try {
+    // ✅ Obtener datos completos del estudiante (incluye enrollments)
+    const studentResponse = await fetch(`${this.apiUrl}/students/${studentId}`);
+    
+    if (!studentResponse.ok) {
+      throw new Error('Failed to load student data');
+    }
+    
+    const student = await studentResponse.json();
+    
+    // Crear mapa de calificaciones
+    const gradesMap = {};
+    
+    if (student.grades && typeof student.grades === 'object') {
+      Object.entries(student.grades).forEach(([courseId, gradeInfo]) => {
+        const courseCode = gradeInfo.courseCode;
         
-        const gradesMap = {};
-        existingGrades.forEach(record => {
-          gradesMap[record.course.courseCode] = {
-            grade: record.grade || '--',
-            sessionId: record.sessionId
+        if (courseCode) {
+          // ✅ Mapear correctamente los grades
+          let displayGrade = '--';
+          
+          // Si tiene letra de calificación, usarla
+          if (gradeInfo.letter && gradeInfo.letter !== '-') {
+            displayGrade = gradeInfo.letter;
+          }
+          // Si está enrolled (In Progress), mostrar IP
+          else if (gradeInfo.isEnrolled || gradeInfo.status === 'In Progress') {
+            displayGrade = 'IP';
+          }
+          
+          gradesMap[courseCode] = {
+            grade: displayGrade,
+            sessionId: gradeInfo.sessionId || null,
+            status: gradeInfo.status || 'Not Started'
           };
-        });
-        
-        this.coursesForEditing = this.subjects.map(subject => ({
-          code: subject.code,
-          name: subject.name,
-          grade: gradesMap[subject.code]?.grade || '--',
-          sessionId: gradesMap[subject.code]?.sessionId || null,
-          modified: false
-        }));
-        
-        console.log('📝 Cursos cargados para edición:', this.coursesForEditing.length);
-      } catch (error) {
-        console.error('Error loading courses for editing:', error);
-        this.saveStatus = {
-          type: 'error',
-          message: 'Error al cargar los cursos'
-        };
-      }
-    },
+        }
+      });
+    }
+    
+    // Mapear todos los cursos del sistema
+    this.coursesForEditing = this.subjects.map(subject => ({
+      code: subject.code,
+      name: subject.name,
+      grade: gradesMap[subject.code]?.grade || '--',
+      sessionId: gradesMap[subject.code]?.sessionId || null,
+      status: gradesMap[subject.code]?.status || 'Not Started',
+      modified: false
+    }));
+    
+    console.log('📝 Cursos cargados para edición:', this.coursesForEditing.length);
+    
+    // Debug: Mostrar cursos "In Progress"
+    const inProgressCourses = this.coursesForEditing.filter(c => c.grade === 'IP');
+    console.log('📚 Cursos en progreso:', inProgressCourses.length);
+    
+    if (inProgressCourses.length > 0) {
+      console.log('Ejemplo:', inProgressCourses[0]);
+    }
+    
+  } catch (error) {
+    console.error('Error loading courses for editing:', error);
+    this.saveStatus = {
+      type: 'error',
+      message: 'Error al cargar los cursos'
+    };
+  }
+},
     
     get filteredCoursesForEditing() {
       if (!this.courseSearchQuery || this.courseSearchQuery.trim() === '') {
