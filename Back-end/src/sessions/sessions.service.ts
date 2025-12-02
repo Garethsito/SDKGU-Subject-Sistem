@@ -120,88 +120,111 @@ export class SessionsService {
       offerings: session.offerings.map(off => ({
         courseId: off.courseId,
         courseCode: off.course.courseCode,
-        teacherId: off.teacherId
+        teacherId: off.teacherId,
+        teacher: off.teacher 
       }))
     };
   }
 
   // Crear nueva sesión
   async createSession(data: any) {
-    const program = await this.prisma.program.findUnique({
-      where: { id: data.programId }
-    });
+try {
+console.log('➡ DTO recibido para crear sesión:', data);
 
-    if (!program) {
-      throw new NotFoundException(`Program with ID ${data.programId} not found`);
+
+// Validar que venga sessionName
+if (!data.sessionName) {
+  throw new BadRequestException('sessionName is required');
+}
+
+// Validar que no exista sessionName duplicado
+const existingSession = await this.prisma.session.findUnique({
+  where: { sessionName: data.sessionName }
+});
+if (existingSession) {
+  throw new BadRequestException(`Session name "${data.sessionName}" already exists`);
+}
+
+// Validar programa
+const program = await this.prisma.program.findUnique({ where: { id: data.programId } });
+if (!program) {
+  throw new NotFoundException(`Program with ID ${data.programId} not found`);
+}
+
+// Determinar año
+const startDate = new Date(data.startDate);
+const year = startDate.getFullYear();
+
+// Validar límite anual de sesiones
+const sessionsThisYear = await this.prisma.session.count({ where: { year } });
+if (sessionsThisYear >= 20) {
+  throw new BadRequestException(`Maximum of 20 sessions per year reached for ${year}`);
+}
+
+// Crear la sesión
+const session = await this.prisma.session.create({
+  data: {
+    sessionName: data.sessionName,
+    year,
+    startDate,
+    endDate: new Date(data.endDate),
+    programId: data.programId
+  }
+});
+
+// Crear offerings si se enviaron cursos
+if (data.courses && Array.isArray(data.courses)) {
+  for (const courseData of data.courses) {
+    const course = await this.prisma.course.findUnique({ where: { id: courseData.courseId } });
+    if (!course) continue;
+
+    // Validar profesor si se envió
+    if (courseData.teacherId) {
+      const teacher = await this.prisma.teacher.findUnique({ where: { id: courseData.teacherId } });
+      if (!teacher) courseData.teacherId = null;
     }
 
-    // Determinar el año
-    const startDate = new Date(data.startDate);
-    const year = startDate.getFullYear();
-
-    // ✅ Contar TODAS las sesiones globalmente (sin filtros)
-    const totalSessions = await this.prisma.session.count();
-    const sessionNumber = totalSessions + 1;
-
-    // ✅ Validación: máximo 20 sesiones por año (10 por programa × 2 programas)
-    const sessionsThisYear = await this.prisma.session.count({
-      where: { year: year }
+    const existingOffering = await this.prisma.courseOffering.findUnique({
+      where: { courseId_sessionId: { courseId: courseData.courseId, sessionId: session.id } }
     });
+    if (existingOffering) continue;
 
-    if (sessionsThisYear >= 20) {
-      throw new BadRequestException(
-        `Maximum of 20 sessions per year reached for ${year}`
-      );
-    }
-
-    // ✅ Generar nombre único global
-    const uniqueSessionName = `Session ${sessionNumber}`;
-
-    // Crear la sesión
-    const session = await this.prisma.session.create({
+    await this.prisma.courseOffering.create({
       data: {
-        sessionName: uniqueSessionName,
-        year: year,
-        startDate: new Date(data.startDate),
-        endDate: new Date(data.endDate),
-        programId: data.programId,
-      }
-    });
-
-    // Crear los CourseOfferings si se enviaron cursos
-    if (data.courses && Array.isArray(data.courses) && data.courses.length > 0) {
-      for (const courseData of data.courses) {
-        const course = await this.prisma.course.findUnique({ 
-          where: { id: courseData.courseId } 
-        });
-        
-        if (course) {
-          await this.prisma.courseOffering.create({
-            data: {
-              courseId: courseData.courseId,
-              sessionId: session.id,
-              teacherId: courseData.teacherId || null,
-              maxStudents: course.maxCapacity || 30
-            }
-          });
-        }
-      }
-    }
-
-    // Retornar la sesión con sus relaciones
-    return this.prisma.session.findUnique({
-      where: { id: session.id },
-      include: {
-        program: true,
-        offerings: {
-          include: {
-            course: true,
-            teacher: true
-          }
-        }
+        courseId: courseData.courseId,
+        sessionId: session.id,
+        teacherId: courseData.teacherId || null,
+        maxStudents: course.maxCapacity || 30
       }
     });
   }
+}
+
+// Retornar sesión con relaciones
+return this.prisma.session.findUnique({
+  where: { id: session.id },
+  include: {
+    program: true,
+    offerings: {
+      include: {
+        course: true,
+        teacher: true
+      }
+    }
+  }
+});
+
+
+} catch (err) {
+console.error('❌ Error al crear sesión:', err);
+if (err.code === 'P2002') {
+throw new BadRequestException('Duplicate entry detected. Please check the data.');
+}
+throw new BadRequestException(err.message || 'Failed to create session');
+}
+}
+
+
 
   // Actualizar sesión (incluyendo materias y profesores)
   async updateSession(id: number, data: any) {

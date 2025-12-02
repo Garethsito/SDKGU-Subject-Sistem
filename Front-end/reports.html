@@ -152,6 +152,13 @@
        <div class="flex justify-between items-center gap-4 mb-6">
         <h1 class="text-3xl font-bold text-gray-800 mb-2">Reports</h1>
         <div class="flex gap-4">
+        <button 
+          x-show="activeReport === 'general'"
+          @click="openGeneralReport()" 
+          class="bg-[#D41736] hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-file-pdf"></i>
+          Export PDF
+        </button>
       <button 
         @click="activeReport = 'general'" 
         @dblclick="openGeneralReport()" 
@@ -394,12 +401,41 @@
             </p>
             
             <div class="flex flex-wrap gap-2">
-                <template x-for="studentName in rec.students" :key="studentName">
+                <!-- Mostrar primeros 3 estudiantes -->
+                <template x-for="(studentName, index) in rec.students.slice(0, 3)" :key="rec.subjectId + '-' + index">
                     <span class="bg-white border border-gray-300 text-gray-700 px-3 py-1 rounded-full text-sm shadow-sm"
                           x-text="studentName">
                     </span>
                 </template>
+                
+                <!-- Botón para expandir (solo si hay más de 3) -->
+                <template x-if="rec.students.length > 3 && !isExpanded(rec.subjectId)">
+                    <button 
+                        @click="toggleRecommendationExpansion(rec.subjectId)"
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded-full text-sm shadow-sm transition-colors">
+                        ... (<span x-text="rec.students.length - 3"></span> more)
+                    </button>
+                </template>
+                
+                <!-- Mostrar estudiantes restantes (del 4 en adelante) -->
+                <template x-if="isExpanded(rec.subjectId)">
+                    <template x-for="(studentName, index) in rec.students.slice(3)" :key="rec.subjectId + '-extra-' + index">
+                        <span class="bg-white border border-gray-300 text-gray-700 px-3 py-1 rounded-full text-sm shadow-sm"
+                              x-text="studentName">
+                        </span>
+                    </template>
+                </template>
+                
+                <!-- Botón para colapsar -->
+                <template x-if="isExpanded(rec.subjectId)">
+                    <button 
+                        @click="toggleRecommendationExpansion(rec.subjectId)"
+                        class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-3 py-1 rounded-full text-sm shadow-sm transition-colors">
+                        Show less
+                    </button>
+                </template>
             </div>
+
         </div>
     </template>
     

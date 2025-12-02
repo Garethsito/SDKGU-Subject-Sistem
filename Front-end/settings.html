@@ -1665,5 +1665,51 @@ async readExcelFile(file) {
 }
 </script>
 
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  // Selecciona TODOS los campos de teléfono
+  const phoneInputs = document.querySelectorAll('input[type="tel"]');
+
+  phoneInputs.forEach(input => {
+    input.setAttribute("maxlength", "14"); // Formato (xxx) xxx-xxxx
+
+    // Validación de HTML
+    input.setAttribute("required", true);
+    input.setAttribute("pattern", "\\([0-9]{3}\\) [0-9]{3}-[0-9]{4}");
+
+    // Al escribir
+    input.addEventListener("input", (e) => {
+      let value = e.target.value.replace(/\D/g, ""); // remover NO números
+
+      if (value.length > 10) value = value.slice(0, 10);
+
+      // Aplicar formato (XXX) XXX-XXXX
+      if (value.length > 6) {
+        e.target.value = `(${value.slice(0,3)}) ${value.slice(3,6)}-${value.slice(6)}`;
+      } else if (value.length > 3) {
+        e.target.value = `(${value.slice(0,3)}) ${value.slice(3)}`;
+      } else if (value.length > 0) {
+        e.target.value = `(${value}`;
+      }
+    });
+
+    // Evitar letras
+    input.addEventListener("keypress", (e) => {
+      if (!/[0-9]/.test(e.key)) e.preventDefault();
+    });
+
+    // Validación al enviar
+    input.addEventListener("invalid", () => {
+      input.setCustomValidity("Ingrese un número válido de 10 dígitos (ejemplo: (123) 456-7890)");
+    });
+
+    input.addEventListener("input", () => input.setCustomValidity(""));
+  });
+
+});
+</script>
+
+
 </body>
 </html>
