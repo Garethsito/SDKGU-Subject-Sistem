@@ -491,6 +491,150 @@ function academicData() {
       this.searchTerm = '';
       this.programFilter = 'all';
       this.applyFilters();
+    },
+
+    exportStudentReport(student) {
+      if (!student) return;
+      
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      
+      const primaryColor = [166, 25, 46]; // #A6192E
+      
+      const normalizeText = (text) => {
+        if (!text) return '';
+        return String(text).replace(/[^\x00-\x7F]/g, '').trim();
+      };
+      
+      // Header
+      doc.setFillColor(...primaryColor);
+      doc.rect(0, 0, 210, 40, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.setFont(undefined, 'bold');
+      doc.text('SDGKU - Student Report', 105, 20, { align: 'center' });
+      
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 30, { align: 'center' });
+      
+      // Student Information
+      let yPos = 50;
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text('Student Information', 20, yPos);
+      
+      yPos += 10;
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      
+      const info = [
+        ['Name:', normalizeText(`${student.firstName || ''} ${student.middleName || ''} ${student.lastName || ''}`)],
+        ['Student ID:', normalizeText(student.studentId || 'N/A')],
+        ['Program:', normalizeText(student.program || 'N/A')],
+        ['Status:', normalizeText(student.status || 'N/A')],
+        ['Email:', normalizeText(student.emailSDGKU || 'N/A')],
+        ['Phone:', normalizeText(student.phone || 'N/A')]
+      ];
+      
+      info.forEach(([label, value]) => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(label, 20, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(value, 60, yPos);
+        yPos += 7;
+      });
+      
+      // Academic Progress
+      yPos += 5;
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text('Academic Progress', 20, yPos);
+      
+      yPos += 10;
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      
+      const progress = [
+        ['Total Units:', normalizeText(student.totalUnits || '0')],
+        ['Transferred Units:', normalizeText(student.transferredUnits || '0')],
+        ['Units Earned:', normalizeText(student.unitsEarned || '0')],
+        ['GPA:', normalizeText(student.gpa ? student.gpa.toFixed(2) : 'N/A')]
+      ];
+      
+      progress.forEach(([label, value]) => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(label, 20, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(String(value), 60, yPos);
+        yPos += 7;
+      });
+      
+      // Subject Grades Table
+      yPos += 5;
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text('Subject Grades', 20, yPos);
+      yPos += 5;
+      
+      // Obtener todas las materias relevantes del estudiante
+      const relevantSubjects = this.subjects.filter(s => s.program === student.programType);
+      
+      const tableData = relevantSubjects.map(subject => {
+        const gradeInfo = student.grades[subject.id];
+        const status = student.progress[subject.id];
+        
+        return [
+          normalizeText(subject.name || 'Unknown'),
+          normalizeText('3'), // Units por defecto
+          gradeInfo?.grade ? normalizeText(gradeInfo.grade) : '-',
+          gradeInfo?.letter || '-',
+          normalizeText(this.getStatusText(status))
+        ];
+      });
+      
+      doc.autoTable({
+        startY: yPos,
+        head: [['Subject', 'Units', 'Grade', 'Letter', 'Status']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: {
+          fillColor: primaryColor,
+          textColor: [255, 255, 255],
+          fontStyle: 'bold'
+        },
+        styles: {
+          fontSize: 9,
+          cellPadding: 3
+        },
+        columnStyles: {
+          0: { cellWidth: 80 },
+          1: { cellWidth: 20, halign: 'center' },
+          2: { cellWidth: 20, halign: 'center' },
+          3: { cellWidth: 20, halign: 'center' },
+          4: { cellWidth: 40, halign: 'center' }
+        }
+      });
+      
+      // Footer
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(128, 128, 128);
+        doc.text(
+          `Page ${i} of ${pageCount}`,
+          105,
+          doc.internal.pageSize.height - 10,
+          { align: 'center' }
+        );
+      }
+      
+      // Save PDF
+      doc.save(`${student.studentId}_Report.pdf`);
     }
+
   }
 }

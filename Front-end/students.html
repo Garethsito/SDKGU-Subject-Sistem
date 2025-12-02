@@ -9,6 +9,8 @@
   <script src="https://kit.fontawesome.com/337be747ec.js" crossorigin="anonymous"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="js/students.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
   <style>
   [x-cloak] { display: none !important; }
@@ -685,8 +687,9 @@
                     class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">
                     Close
                   </button>
-                  <button class="px-4 py-2 bg-[#A6192E] text-white rounded-lg hover:bg-[#8E1C2D] transition font-medium">
-                    <i class="fa-solid fa-download mr-2"></i>Export Report
+                  <button @click="exportStudentReport(student)"
+                    class="px-4 py-2 bg-[#A6192E] text-white rounded-lg hover:bg-[#8E1C2D] transition font-medium">
+                      <i class="fa-solid fa-download mr-2"></i>Export Report
                   </button>
                 </div>
               </div>
