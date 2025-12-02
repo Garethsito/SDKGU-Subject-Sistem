@@ -120,7 +120,8 @@ export class SessionsService {
       offerings: session.offerings.map(off => ({
         courseId: off.courseId,
         courseCode: off.course.courseCode,
-        teacherId: off.teacherId
+        teacherId: off.teacherId,
+        teacher: off.teacher 
       }))
     };
   }

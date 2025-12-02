@@ -28,6 +28,12 @@ function dashboard() {
     availableCourses: [],
     allPrograms: [],
     allTeachers: [],
+
+    getTeacherName(teacherId) {
+      if (!teacherId) return 'TBD';
+      const teacher = this.allTeachers.find(t => t.id === parseInt(teacherId));
+      return teacher ? `${teacher.firstName} ${teacher.lastName}` : 'TBD';
+    },
     
     get filteredSubjectNames() {
       if (!this.selectedSession.programId) {
@@ -340,11 +346,25 @@ function dashboard() {
     
     async init() {
       console.log('Session.js init() called');
-      await this.loadPrograms();
-      await this.loadAllCourses();
-      await this.loadTeachers();
-      await this.loadSessions();
-      console.log('Init completed');
+
+      try {
+        await this.loadPrograms();
+        console.log('Programs loaded:', this.allPrograms.length);
+        
+        await this.loadAllCourses();
+        console.log('Courses loaded:', this.availableCourses.length);
+        
+        await this.loadTeachers();
+        console.log('Teachers loaded:', this.allTeachers.length);
+        
+        await this.loadSessions();
+        console.log('Sessions loaded:', this.sessions.length);
+        
+        console.log('Init completed successfully');
+      } catch (error) {
+        console.error('Error during initialization:', error);
+        this.showNotification('error', 'Error', 'Failed to initialize dashboard');
+      }
     },
     
     async openModal(session = {}, type = 'add') {
