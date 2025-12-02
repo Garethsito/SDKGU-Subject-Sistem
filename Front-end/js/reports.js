@@ -436,6 +436,347 @@ function reports() {
       return ranges;
     },
 
+    exportIndividualReport(student) {
+          if (!student) return;
+          
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF();
+          
+          // Configuración de colores
+          const primaryColor = [166, 25, 46]; // #A6192E
+          const secondaryColor = [212, 23, 54]; // #D41736
+          
+          // Header
+          doc.setFillColor(...primaryColor);
+          doc.rect(0, 0, 210, 40, 'F');
+          
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(24);
+          doc.setFont(undefined, 'bold');
+          doc.text('SDGKU - Student Report', 105, 20, { align: 'center' });
+          
+          doc.setFontSize(12);
+          doc.setFont(undefined, 'normal');
+          doc.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 30, { align: 'center' });
+          
+          // Student Information
+          let yPos = 50;
+          doc.setTextColor(0, 0, 0);
+          doc.setFontSize(16);
+          doc.setFont(undefined, 'bold');
+          doc.text('Student Information', 20, yPos);
+          
+          yPos += 10;
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'normal');
+          
+          const normalizeText = (text) => {
+            if (!text) return '';
+            return String(text).replace(/[^\x00-\x7F]/g, '').trim();
+          };
+
+          const info = [
+            ['Name:', normalizeText(`${student.firstName || ''} ${student.middleName || ''} ${student.lastName || ''}`)],
+            ['Student ID:', normalizeText(student.studentId || 'N/A')],
+            ['Program:', normalizeText(student.program || 'N/A')],
+            ['Status:', normalizeText(student.status || 'N/A')],
+            ['Email:', normalizeText(student.emailSDGKU || 'N/A')],
+            ['Phone:', normalizeText(student.phone || 'N/A')]
+          ];
+          
+          info.forEach(([label, value]) => {
+            doc.setFont('helvetica', 'bold');
+            doc.text(label, 20, yPos);
+            doc.setFont('helvetica', 'normal');
+            doc.text(value, 60, yPos);
+            yPos += 7;
+          });
+          
+          // Academic Progress
+          yPos += 5;
+          doc.setFontSize(16);
+          doc.setFont(undefined, 'bold');
+          doc.text('Academic Progress', 20, yPos);
+          
+          yPos += 10;
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'normal');
+              
+          const progress = [
+            ['Total Units:', normalizeText(student.totalUnits || '0')],
+            ['Transferred Units:', normalizeText(student.transferredUnits || '0')],
+            ['Units Earned:', normalizeText(student.unitsEarned || '0')],
+            ['GPA:', normalizeText(this.getStudentGPA(student.id) || 'N/A')]
+          ];
+          
+          progress.forEach(([label, value]) => {
+            doc.setFont('helvetica', 'bold');
+            doc.text(label, 20, yPos);
+            doc.setFont('helvetica', 'normal');
+            doc.text(String(value), 60, yPos);
+            yPos += 7;
+          });
+          
+          // Subject Grades Table
+          yPos += 5;
+          doc.setFontSize(16);
+          doc.setFont(undefined, 'bold');
+          doc.text('Subject Grades', 20, yPos);
+          yPos += 5;
+          
+          const subjects = this.getStudentSubjectsWithGrades(student.id);
+          const tableData = subjects.map(subject => [
+            normalizeText(subject.name || 'Unknown'),
+            normalizeText(subject.units || '0'),
+            subject.grade !== null ? normalizeText(subject.grade) : '-',
+            normalizeText(subject.letter || '-'),
+            normalizeText(subject.status || 'Not Started')
+          ]);
+          
+          doc.autoTable({
+            startY: yPos,
+            head: [['Subject', 'Units', 'Grade', 'Letter', 'Status']],
+            body: tableData,
+            theme: 'striped',
+            headStyles: {
+              fillColor: primaryColor,
+              textColor: [255, 255, 255],
+              fontStyle: 'bold'
+            },
+            styles: {
+              fontSize: 9,
+              cellPadding: 3
+            },
+            columnStyles: {
+              0: { cellWidth: 80 },
+              1: { cellWidth: 20, halign: 'center' },
+              2: { cellWidth: 20, halign: 'center' },
+              3: { cellWidth: 20, halign: 'center' },
+              4: { cellWidth: 40, halign: 'center' }
+            }
+          });
+          
+          // Footer
+          const pageCount = doc.internal.getNumberOfPages();
+          for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(128, 128, 128);
+            doc.text(
+              `Page ${i} of ${pageCount}`,
+              105,
+              doc.internal.pageSize.height - 10,
+              { align: 'center' }
+            );
+          }
+          
+          // Save PDF
+          doc.save(`${student.studentId}_Report.pdf`);
+        },
+        
+        exportGeneralReport() {
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF();
+          
+          const primaryColor = [166, 25, 46];
+
+          const normalizeText = (text) => {
+            if (!text) return '';
+            return String(text).replace(/[^\x00-\x7F]/g, '').trim();
+          };
+          
+          // Header
+          doc.setFillColor(...primaryColor);
+          doc.rect(0, 0, 210, 40, 'F');
+          
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(24);
+          doc.setFont(undefined, 'bold');
+          doc.text('SDGKU - General Report', 105, 20, { align: 'center' });
+          
+          doc.setFontSize(12);
+          doc.setFont(undefined, 'normal');
+          doc.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 30, { align: 'center' });
+          
+          let yPos = 50;
+          
+          // Executive Summary
+          if (this.opcionesGeneral.totalAlumnos || this.opcionesGeneral.CantidaddeSesiones || this.opcionesGeneral.All) {
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text('Executive Summary', 20, yPos);
+            yPos += 10;
+            
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            
+            if (this.opcionesGeneral.totalAlumnos || this.opcionesGeneral.All) {
+              doc.text(`Total Students: ${this.totalStudents()}`, 20, yPos);
+              yPos += 7;
+            }
+            
+            if (this.opcionesGeneral.CantidaddeSesiones || this.opcionesGeneral.All) {
+              doc.text(`Total Sessions: ${this.totalSessions()}`, 20, yPos);
+              yPos += 7;
+            }
+            
+            yPos += 5;
+          }
+          
+          // Student List
+          if (this.opcionesGeneral.listaAlumnos || this.opcionesGeneral.All) {
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text('Student List', 20, yPos);
+            yPos += 5;
+                
+            const studentData = this.students.map(s => [
+              normalizeText(s.studentId || 'N/A'),
+              normalizeText(s.name || 'Unknown'),
+              normalizeText(s.program || 'N/A'),
+              normalizeText(s.status || 'N/A'),
+              `${normalizeText(s.unitsEarned || '0')}/${normalizeText(s.totalUnits || '0')}`
+            ]);
+            
+            doc.autoTable({
+              startY: yPos,
+              head: [['ID', 'Name', 'Program', 'Status', 'Units']],
+              body: studentData,
+              theme: 'striped',
+              headStyles: {
+                fillColor: primaryColor,
+                textColor: [255, 255, 255],
+                fontStyle: 'bold'
+              },
+              styles: {
+                fontSize: 8,
+                cellPadding: 2
+              },
+              columnStyles: {
+                0: { cellWidth: 30 },
+                1: { cellWidth: 60 },
+                2: { cellWidth: 35 },
+                3: { cellWidth: 25 },
+                4: { cellWidth: 25 }
+              }
+            });
+            
+            yPos = doc.lastAutoTable.finalY + 10;
+          }
+          
+          // Session Description
+          if (this.opcionesGeneral.DescripcionSesion || this.opcionesGeneral.All) {
+            // Add new page if needed
+            if (yPos > 250) {
+              doc.addPage();
+              yPos = 20;
+            }
+            
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text('Session Overview', 20, yPos);
+            yPos += 5;
+            
+            const sessionData = this.sessionData.map(s => {
+              const occupancy = s.capacity > 0 ? Math.round((s.enrolled / s.capacity) * 100) : 0;
+              return [
+                normalizeText(`Session ${s.NumberofSessions || 'N/A'}`),
+                normalizeText(s.program || 'N/A'),
+                `${normalizeText(s.enrolled || '0')}/${normalizeText(s.capacity || '0')}`,
+                `${occupancy}%`
+              ];
+            });
+            
+            doc.autoTable({
+              startY: yPos,
+              head: [['Session', 'Program', 'Enrolled/Capacity', 'Occupancy']],
+              body: sessionData,
+              theme: 'striped',
+              headStyles: {
+                fillColor: primaryColor,
+                textColor: [255, 255, 255],
+                fontStyle: 'bold'
+              },
+              styles: {
+                fontSize: 9,
+                cellPadding: 3
+              }
+            });
+            
+            yPos = doc.lastAutoTable.finalY + 10;
+          }
+          
+          // Recommendations
+          const recommendations = this.getFormattedRecommendations();
+          if (recommendations.length > 0) {
+            if (yPos > 250) {
+              doc.addPage();
+              yPos = 20;
+            }
+            
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text('Automatic Recommendations', 20, yPos);
+            yPos += 5;
+            
+            const recData = recommendations.map(rec => [
+              normalizeText(rec.subject || 'Unknown'),
+              normalizeText(rec.studentCount || '0'),
+              normalizeText(rec.students.slice(0, 3).join(', ')) + (rec.students.length > 3 ? '...' : '')
+            ]);
+            
+            doc.autoTable({
+              startY: yPos,
+              head: [['Subject', 'Students Needed', 'Student Names']],
+              body: recData,
+              theme: 'striped',
+              headStyles: {
+                fillColor: primaryColor,
+                textColor: [255, 255, 255],
+                fontStyle: 'bold'
+              },
+              styles: {
+                fontSize: 9,
+                cellPadding: 3
+              },
+              columnStyles: {
+                0: { cellWidth: 60 },
+                1: { cellWidth: 30 },
+                2: { cellWidth: 85 }
+              }
+            });
+          }
+          
+          // Footer
+          const pageCount = doc.internal.getNumberOfPages();
+          for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(128, 128, 128);
+            doc.text(
+              `Page ${i} of ${pageCount}`,
+              105,
+              doc.internal.pageSize.height - 10,
+              { align: 'center' }
+            );
+          }
+          
+          doc.save(`SDGKU_General_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+        },
+        
+        openGeneralReport() {
+          // Verificar que al menos una opción esté seleccionada
+          const hasSelection = Object.values(this.opcionesGeneral).some(val => val === true);
+          
+          if (!hasSelection) {
+            alert('Please select at least one option to include in the report');
+            return;
+          }
+          
+          this.exportGeneralReport();
+        },
+
     async openGradesEditor(student) {
       this.selectedStudent = student;
       this.editingStudentId = student.id;
