@@ -2,13 +2,14 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.services';
 import { MailService } from '../mail/mail.service';
+import { ActivityLogService } from '../activityTimeline/activityTimeline.service';
 
 @Injectable()
 export class SessionsService {
   constructor(
   private prisma: PrismaService, 
-  private mailService: MailService
-) {}
+  private mailService: MailService,
+  private readonly activityLog: ActivityLogService) {}
 
   // Obtener todas las sesiones con información completa
   async getAllSessions() {
@@ -126,7 +127,7 @@ export class SessionsService {
     };
   }
 
-  // Crear nueva sesión
+ // Crear nueva sesión
   async createSession(data: any) {
 try {
 console.log('➡ DTO recibido para crear sesión:', data);
@@ -175,27 +176,55 @@ const session = await this.prisma.session.create({
 // Crear offerings si se enviaron cursos
 if (data.courses && Array.isArray(data.courses)) {
   for (const courseData of data.courses) {
-    const course = await this.prisma.course.findUnique({ where: { id: courseData.courseId } });
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseData.courseId },
+    });
     if (!course) continue;
 
     // Validar profesor si se envió
     if (courseData.teacherId) {
-      const teacher = await this.prisma.teacher.findUnique({ where: { id: courseData.teacherId } });
+      const teacher = await this.prisma.teacher.findUnique({
+        where: { id: courseData.teacherId },
+      });
       if (!teacher) courseData.teacherId = null;
     }
 
     const existingOffering = await this.prisma.courseOffering.findUnique({
-      where: { courseId_sessionId: { courseId: courseData.courseId, sessionId: session.id } }
+      where: {
+        courseId_sessionId: {
+          courseId: courseData.courseId,
+          sessionId: session.id,
+        },
+      },
     });
     if (existingOffering) continue;
 
-    await this.prisma.courseOffering.create({
+    // 👇 Antes solo hacías el create y ya, ahora guardamos el resultado
+    const offering = await this.prisma.courseOffering.create({
       data: {
         courseId: courseData.courseId,
         sessionId: session.id,
         teacherId: courseData.teacherId || null,
-        maxStudents: course.maxCapacity || 30
-      }
+        maxStudents: course.maxCapacity || 30,
+      },
+    });
+
+    // 🔍 AUDITORÍA: creación de cada courseOffering (acoplado de la rama entrante)
+    await this.activityLog.logActivity({
+      userId: null,
+      entityCode: 'COURSE_OFFERING',
+      entityId: Number(offering.id),
+      activityCode: 'CREATE',
+      description: `CourseOffering ${offering.id} created for course ${course.id} in session ${session.id}`,
+      oldData: null,
+      newData: {
+        id: Number(offering.id),
+        courseId: offering.courseId,
+        sessionId: offering.sessionId,
+        teacherId: offering.teacherId,
+        maxStudents: offering.maxStudents,
+      },
+      isImportant: true,
     });
   }
 }
@@ -226,7 +255,9 @@ throw new BadRequestException(err.message || 'Failed to create session');
 
 
 
+
   // Actualizar sesión (incluyendo materias y profesores)
+  // Actualizar sesión
   async updateSession(id: number, data: any) {
     const session = await this.prisma.session.findUnique({ 
       where: { id },
@@ -238,6 +269,16 @@ throw new BadRequestException(err.message || 'Failed to create session');
     if (!session) {
       throw new NotFoundException(`Session with ID ${id} not found`);
     }
+
+    // Datos "antes" de la sesión para el log
+    const oldSessionCore = {
+      id: session.id,
+      sessionName: session.sessionName,
+      year: session.year,
+      startDate: session.startDate?.toISOString() ?? null,
+      endDate: session.endDate?.toISOString() ?? null,
+      programId: session.programId,
+    };
 
     // Calcular año si cambia la fecha
     const updateData: any = {
@@ -255,9 +296,31 @@ throw new BadRequestException(err.message || 'Failed to create session');
       updateData.endDate = new Date(data.endDate);
     }
 
+    // Actualizar sesión
     await this.prisma.session.update({
       where: { id },
       data: updateData
+    });
+
+    // Log de actualización de sesión
+    const newSessionCore = {
+      id: id,
+      sessionName: updateData.sessionName ?? session.sessionName,
+      year: updateData.year ?? session.year,
+      startDate: (updateData.startDate ?? session.startDate)?.toISOString() ?? null,
+      endDate: (updateData.endDate ?? session.endDate)?.toISOString() ?? null,
+      programId: updateData.programId ?? session.programId,
+    };
+
+    await this.activityLog.logActivity({
+      userId: null, // luego puedes meter el id del usuario autenticado
+      entityCode: 'SESSION',
+      entityId: id,
+      activityCode: 'UPDATE',
+      description: `Session ${id} updated`,
+      oldData: oldSessionCore,
+      newData: newSessionCore,
+      isImportant: true,
     });
 
     // Si se enviaron materias con profesores
@@ -275,11 +338,48 @@ throw new BadRequestException(err.message || 'Failed to create session');
       // ESTO INCLUYE eliminar primero todos sus enrollments
       for (const offering of currentOfferings) {
         if (!newCourseIds.includes(offering.courseId)) {
+          // 🔍 Log de enrollments que se van a borrar
+          for (const enrollment of offering.enrollments) {
+            await this.activityLog.logActivity({
+              userId: null,
+              entityCode: 'ENROLLMENT',
+              entityId: Number(enrollment.id),
+              activityCode: 'DELETE',
+              description: `Enrollment ${enrollment.id} deleted for offering ${offering.id}`,
+              oldData: {
+                id:        Number(enrollment.id),
+                studentId: Number(enrollment.studentId),
+                offeringId: enrollment.offeringId,
+                status:    enrollment.status,
+              },
+              newData: null,
+              isImportant: true,
+            });
+          }
+
           // Primero eliminar TODOS los enrollments de este offering
           await this.prisma.enrollment.deleteMany({
             where: { offeringId: offering.id }
           });
           
+          // 🔍 Log de borrado de COURSE_OFFERING
+          await this.activityLog.logActivity({
+            userId: null,
+            entityCode: 'COURSE_OFFERING',
+            entityId: Number(offering.id),
+            activityCode: 'DELETE',
+            description: `CourseOffering ${offering.id} removed from session ${id}`,
+            oldData: {
+              id:          Number(offering.id),
+              courseId:    offering.courseId,
+              sessionId:   offering.sessionId,
+              teacherId:   offering.teacherId,
+              maxStudents: offering.maxStudents,
+            },
+            newData: null,
+            isImportant: true,
+          });
+
           // Luego eliminar el offering
           await this.prisma.courseOffering.delete({
             where: { id: offering.id }
@@ -302,23 +402,69 @@ throw new BadRequestException(err.message || 'Failed to create session');
           if (existing) {
             // ACTUALIZAR: Solo cambia el profesor, NO toca los estudiantes
             if (existing.teacherId !== courseData.teacherId) {
-              await this.prisma.courseOffering.update({
+              const oldOffering = {
+                id:          Number(existing.id),
+                courseId:    existing.courseId,
+                sessionId:   existing.sessionId,
+                teacherId:   existing.teacherId,
+                maxStudents: existing.maxStudents,
+              };
+
+              const updatedOffering = await this.prisma.courseOffering.update({
                 where: { id: existing.id },
                 data: { teacherId: courseData.teacherId || null }
+              });
+
+              // Log de UPDATE en COURSE_OFFERING (cambio de profesor)
+              await this.activityLog.logActivity({
+                userId: null,
+                entityCode: 'COURSE_OFFERING',
+                entityId: Number(existing.id),
+                activityCode: 'UPDATE',
+                description: `Teacher updated for CourseOffering ${existing.id} in session ${id}`,
+                oldData: oldOffering,
+                newData: {
+                  id:          Number(updatedOffering.id),
+                  courseId:    updatedOffering.courseId,
+                  sessionId:   updatedOffering.sessionId,
+                  teacherId:   updatedOffering.teacherId,
+                  maxStudents: updatedOffering.maxStudents,
+                },
+                isImportant: true,
               });
             }
           } else {
             // CREAR NUEVO: Se crea vacío sin estudiantes
-            await this.prisma.courseOffering.create({
-              data: {
-                courseId: courseData.courseId,
-                sessionId: id,
-                teacherId: courseData.teacherId || null,
-                maxStudents: course.maxCapacity || 30
-              }
-            }).catch((error) => {
+            try {
+              const newOffering = await this.prisma.courseOffering.create({
+                data: {
+                  courseId: courseData.courseId,
+                  sessionId: id,
+                  teacherId: courseData.teacherId || null,
+                  maxStudents: course.maxCapacity || 30
+                }
+              });
+
+              // Log de CREATE en COURSE_OFFERING
+              await this.activityLog.logActivity({
+                userId: null,
+                entityCode: 'COURSE_OFFERING',
+                entityId: Number(newOffering.id),
+                activityCode: 'CREATE',
+                description: `CourseOffering ${newOffering.id} created for course ${course.id} in session ${id}`,
+                oldData: null,
+                newData: {
+                  id:          Number(newOffering.id),
+                  courseId:    newOffering.courseId,
+                  sessionId:   newOffering.sessionId,
+                  teacherId:   newOffering.teacherId,
+                  maxStudents: newOffering.maxStudents,
+                },
+                isImportant: true,
+              });
+            } catch (error) {
               console.log(`Could not add course ${courseData.courseId}:`, error);
-            });
+            }
           }
         }
       }
@@ -339,7 +485,8 @@ throw new BadRequestException(err.message || 'Failed to create session');
     });
   }
 
-  // Eliminar sesión
+
+ // Eliminar sesión
   async deleteSession(id: number) {
     const session = await this.prisma.session.findUnique({
       where: { id },
@@ -356,27 +503,87 @@ throw new BadRequestException(err.message || 'Failed to create session');
       throw new NotFoundException(`Session with ID ${id} not found`);
     }
 
+    // Datos "antes" de la sesión para el log
+    const oldSessionData = {
+      id:        session.id,
+      sessionName: session.sessionName,
+      year:      session.year,
+      startDate: session.startDate?.toISOString() ?? null,
+      endDate: session.endDate?.toISOString() ?? null,
+      programId: session.programId,
+    };
+
     // Contar estudiantes inscritos
     const totalEnrollments = session.offerings.reduce(
       (sum, off) => sum + off.enrollments.length, 
       0
     );
 
-    // ELIMINAR todos los enrollments primero
+    // 1) ELIMINAR todos los enrollments primero (y loguear cada uno)
     for (const offering of session.offerings) {
       if (offering.enrollments.length > 0) {
+        for (const enrollment of offering.enrollments) {
+          // Log de delete de ENROLLMENT
+          await this.activityLog.logActivity({
+            userId: null,
+            entityCode: 'ENROLLMENT',
+            entityId: Number(enrollment.id),
+            activityCode: 'DELETE',
+            description: `Enrollment ${enrollment.id} deleted when removing session ${id}`,
+            oldData: {
+              id:        Number(enrollment.id),
+              studentId: Number(enrollment.studentId),
+              offeringId: enrollment.offeringId,
+              status:    enrollment.status,
+            },
+            newData: null,
+            isImportant: true,
+          });
+        }
+
         await this.prisma.enrollment.deleteMany({
           where: { offeringId: offering.id }
         });
       }
     }
 
-    // Eliminar los CourseOfferings
+    // 2) Loguear y eliminar los CourseOfferings
+    for (const offering of session.offerings) {
+      // Log de delete de COURSE_OFFERING
+      await this.activityLog.logActivity({
+        userId: null,
+        entityCode: 'COURSE_OFFERING',
+        entityId: Number(offering.id),
+        activityCode: 'DELETE',
+        description: `CourseOffering ${offering.id} deleted from session ${id}`,
+        oldData: {
+          id:          Number(offering.id),
+          courseId:    offering.courseId,
+          sessionId:   offering.sessionId,
+          teacherId:   offering.teacherId,
+          maxStudents: offering.maxStudents,
+        },
+        newData: null,
+        isImportant: true,
+      });
+    }
+
     await this.prisma.courseOffering.deleteMany({
       where: { sessionId: id }
     });
 
-    // Eliminar la sesión
+    // 3) Loguear y eliminar la sesión
+    await this.activityLog.logActivity({
+      userId: null,
+      entityCode: 'SESSION',
+      entityId: id,
+      activityCode: 'DELETE',
+      description: `Session ${id} deleted (with ${totalEnrollments} enrollments removed)`,
+      oldData: oldSessionData,
+      newData: null,
+      isImportant: true,
+    });
+
     await this.prisma.session.delete({
       where: { id }
     });
@@ -388,6 +595,7 @@ throw new BadRequestException(err.message || 'Failed to create session');
       studentsRemoved: totalEnrollments
     };
   }
+
 
   // Obtener materias disponibles para agregar a una sesión
   async getAvailableCourses(sessionId: number) {
@@ -437,7 +645,7 @@ throw new BadRequestException(err.message || 'Failed to create session');
   }
 
   // Agregar materia a sesión con profesor
-  async addCourseToSession(sessionId: number, courseId: number, teacherId?: number, maxStudents?: number) {
+    async addCourseToSession(sessionId: number, courseId: number, teacherId?: number, maxStudents?: number) {
     const session = await this.prisma.session.findUnique({ where: { id: sessionId } });
     if (!session) {
       throw new NotFoundException(`Session with ID ${sessionId} not found`);
@@ -458,7 +666,8 @@ throw new BadRequestException(err.message || 'Failed to create session');
       throw new BadRequestException('Course is already assigned to this session');
     }
 
-    return this.prisma.courseOffering.create({
+    // Crear el CourseOffering
+    const offering = await this.prisma.courseOffering.create({
       data: {
         courseId,
         sessionId,
@@ -471,9 +680,30 @@ throw new BadRequestException(err.message || 'Failed to create session');
         teacher: true
       }
     });
+
+    // Registrar en activity_log
+    await this.activityLog.logActivity({
+      userId: null, // luego puedes pasar el id del usuario autenticado
+      entityCode: 'COURSE_OFFERING',
+      entityId: Number(offering.id),
+      activityCode: 'CREATE',
+      description: `CourseOffering ${offering.id} created for course ${courseId} in session ${sessionId}`,
+      oldData: null,
+      newData: {
+        id:          Number(offering.id),
+        courseId:    offering.courseId,
+        sessionId:   offering.sessionId,
+        teacherId:   offering.teacherId,
+        maxStudents: offering.maxStudents,
+      },
+      isImportant: true,
+    });
+
+    return offering;
   }
 
-  // Eliminar materia de sesión
+
+ // Eliminar materia de sesión
   async removeCourseFromSession(sessionId: number, courseId: number) {
     const offering = await this.prisma.courseOffering.findUnique({
       where: {
@@ -492,12 +722,32 @@ throw new BadRequestException(err.message || 'Failed to create session');
       throw new BadRequestException('Cannot remove course with active enrollments');
     }
 
+    // Registrar en activity_log antes de borrar
+    await this.activityLog.logActivity({
+      userId: null, // cuando tengas auth, aquí metes el id del usuario
+      entityCode: 'COURSE_OFFERING',
+      entityId: Number(offering.id),
+      activityCode: 'DELETE',
+      description: `CourseOffering ${offering.id} removed from session ${sessionId}`,
+      oldData: {
+        id:          Number(offering.id),
+        courseId:    offering.courseId,
+        sessionId:   offering.sessionId,
+        teacherId:   offering.teacherId,
+        maxStudents: offering.maxStudents,
+      },
+      newData: null,
+      isImportant: true,
+    });
+
+    // Ahora sí eliminar el offering
     return this.prisma.courseOffering.delete({
       where: {
         courseId_sessionId: { courseId, sessionId }
       }
     });
   }
+
 
   // Obtener materias asignadas a una sesión con estudiantes
   async getSessionCourses(sessionId: number) {
@@ -595,6 +845,27 @@ throw new BadRequestException(err.message || 'Failed to create session');
       }
     });
 
+    // Registrar en activity_log la inscripción (ENROLLMENT / CREATE)
+    await this.activityLog.logActivity({
+      userId: null, // cuando tengas auth, aquí puedes meter el id del usuario logueado
+      entityCode: 'ENROLLMENT',
+      entityId: Number(enrollment.id),
+      activityCode: 'CREATE',
+      description: `Student ${studentId.toString()} enrolled in course ${courseId} (session ${sessionId})`,
+      oldData: null,
+      newData: {
+        id:        Number(enrollment.id),
+        studentId: Number(enrollment.studentId),
+        offeringId: enrollment.offeringId,
+        status:    enrollment.status,
+        // info útil extra para el timeline:
+        sessionId: sessionId,
+        courseId:  courseId,
+      },
+      isImportant: true,
+    });
+
+    // Dejas intacto lo que tu frontend espera
     return {
       id: enrollment.id,
       status: enrollment.status,
@@ -606,8 +877,10 @@ throw new BadRequestException(err.message || 'Failed to create session');
     };
   }
 
+
   // Remover estudiante de una materia de la sesión
   async removeStudentFromCourse(enrollmentId: number) {
+    // 1) Buscar el enrollment antes de borrarlo
     const enrollment = await this.prisma.enrollment.findUnique({
       where: { id: enrollmentId }
     });
@@ -616,6 +889,24 @@ throw new BadRequestException(err.message || 'Failed to create session');
       throw new NotFoundException('Enrollment not found');
     }
 
+    // 2) Registrar en activity_log ANTES de borrar
+    await this.activityLog.logActivity({
+      userId: null, // luego puedes pasar el id del usuario autenticado
+      entityCode: 'ENROLLMENT',
+      entityId: Number(enrollment.id),
+      activityCode: 'DELETE',
+      description: `Enrollment ${enrollment.id} removed from offering ${enrollment.offeringId}`,
+      oldData: {
+        id:        Number(enrollment.id),
+        studentId: Number(enrollment.studentId),
+        offeringId: enrollment.offeringId,
+        status:    enrollment.status,
+      },
+      newData: null,
+      isImportant: true,
+    });
+
+    // 3) Ahora sí borrar el enrollment
     await this.prisma.enrollment.delete({
       where: { id: enrollmentId }
     });
@@ -625,6 +916,7 @@ throw new BadRequestException(err.message || 'Failed to create session');
       message: 'Student removed successfully' 
     };
   }
+
 
   // Obtener estudiantes disponibles para agregar a una materia
   async getAvailableStudents(sessionId: number, courseId: number) {

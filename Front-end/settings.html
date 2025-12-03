@@ -8,14 +8,15 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://kit.fontawesome.com/337be747ec.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="js/dashboard.js"></script>
+  <script src="js/settings.js"></script>
+
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <style>
   [x-cloak] { display: none !important; }
 </style>
 </head>
 
-<body x-data="dashboardData()"> 
+<body x-data="settingsData()" x-init="init()"> 
   <!-- Header -->
   <header class="bg-[#2D2828] shadow-md border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
     <div class="px-6 py-4">
@@ -145,8 +146,7 @@
   <!-- Content -->
 <main
   :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'"
-  class="flex-1 p-6 bg-gray-100 min-h-screen pt-20"
-  x-data="settingsData()" x-init="init()">
+  class="flex-1 p-6 bg-gray-100 min-h-screen pt-20">
   
   <div class="mb-6">
     <h1 class="text-3xl font-bold text-gray-800 mb-2">Settings</h1>
@@ -355,41 +355,58 @@
   </div>
 
   <!-- Filtros -->
-  <div class="bg-white rounded-lg shadow p-6">
-    <h3 class="text-lg font-bold text-gray-800 mb-4">Filters</h3>
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-2">User</label>
-        <select x-model="activityFilters.user" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-          <option value="">All Users</option>
-          <option value="John Doe">John Doe</option>
-          <option value="Jane Smith">Jane Smith</option>
-          <option value="Robert Johnson">Robert Johnson</option>
-        </select>
-      </div>
-      
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-2">Action Type</label>
-        <select x-model="activityFilters.action" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-          <option value="">All Actions</option>
-          <option value="Login">Login</option>
-          <option value="Logout">Logout</option>
-          <option value="Grade Update">Grade Update</option>
-          <option value="Session Assignment">Session Assignment</option>
-          <option value="Teacher Assignment">Teacher Assignment</option>
-          <option value="Student Added">Student Added</option>
-          <option value="Data Import">Data Import</option>
-        </select>
-      </div>
-      
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-2">Date From</label>
-        <input type="date" x-model="activityFilters.dateFrom" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-      </div>
-      
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-2">Date To</label>
-        <input type="date" x-model="activityFilters.dateTo" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+  <div x-show="activeTab === 'activity'">
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-lg font-bold text-gray-800 mb-4">Filters</h3>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">User</label>
+          <select x-model="activityFilters.user" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            <option value="">All Users</option>
+            <option value="John Doe">John Doe</option>
+            <option value="Jane Smith">Jane Smith</option>
+            <option value="Robert Johnson">Robert Johnson</option>
+          </select>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Action Type</label>
+          <select x-model="activityFilters.action" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            <option value="">All Actions</option>
+
+            <!-- Autenticación -->
+            <option value="Login">Login</option>
+            <option value="Login Failed">Login Failed</option>
+            <option value="Logout">Logout</option>
+
+            <!-- Estudiantes -->
+            <option value="Student Added">Student Added</option>
+            <option value="Student Removed">Student Removed</option>
+            <option value="Student Update">Student Update</option>
+
+            <!-- Sesiones -->
+            <option value="Session Start">Session Start</option>
+            <option value="Session Update">Session Update</option>
+
+            <!-- Cursos / maestros -->
+            <option value="Teacher Assignment">Teacher Assignment</option>
+
+            <!-- Otros -->
+            <option value="Grade Update">Grade Update</option>
+            <option value="Data Import">Data Import</option>
+            <option value="Report Request">Report Request</option>
+          </select>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Date From</label>
+          <input type="date" x-model="activityFilters.dateFrom" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Date To</label>
+          <input type="date" x-model="activityFilters.dateTo" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+        </div>
       </div>
     </div>
     
@@ -405,8 +422,9 @@
       </button>
     </div>
   </div>
-
+<!--*********************************************************************************************************************************************************-->
   <!-- Timeline de actividades -->
+<div>
   <div class="bg-white rounded-lg shadow p-6">
     <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
       <i class="fa-solid fa-timeline text-[#D41736] mr-2"></i>
@@ -417,51 +435,104 @@
       <template x-for="(activity, index) in filteredActivityLog" :key="activity.id">
         <div class="relative pl-8 pb-6 border-l-2 border-gray-200 last:border-l-0 last:pb-0">
           <!-- Icono de tiempo -->
-          <div class="absolute left-0 top-0 -translate-x-1/2 w-8 h-8 rounded-full flex items-center justify-center"
-               :class="{
-                 'bg-green-100': activity.type === 'Login',
-                 'bg-red-100': activity.type === 'Logout',
-                 'bg-blue-100': activity.type === 'Grade Update',
-                 'bg-purple-100': activity.type === 'Session Assignment',
-                 'bg-orange-100': activity.type === 'Teacher Assignment',
-                 'bg-yellow-100': activity.type === 'Student Added',
-                 'bg-indigo-100': activity.type === 'Data Import'
-               }">
-            <i class="fa-solid"
-               :class="{
-                 'fa-right-to-bracket text-green-600': activity.type === 'Login',
-                 'fa-right-from-bracket text-red-600': activity.type === 'Logout',
-                 'fa-pen-to-square text-blue-600': activity.type === 'Grade Update',
-                 'fa-calendar-check text-purple-600': activity.type === 'Session Assignment',
-                 'fa-user-tie text-orange-600': activity.type === 'Teacher Assignment',
-                 'fa-user-plus text-yellow-600': activity.type === 'Student Added',
-                 'fa-file-import text-indigo-600': activity.type === 'Data Import'
-               }"></i>
+          <div
+            class="absolute left-0 top-0 -translate-x-1/2 w-8 h-8 rounded-full flex items-center justify-center"
+            :class="{
+              'bg-green-100':  activity.type === 'Login',
+              'bg-red-100':    activity.type === 'Logout' || activity.type === 'Login Failed',
+              'bg-blue-100':   activity.type === 'Grade Update',
+              'bg-purple-100': activity.type === 'Session Start',
+              'bg-purple-200': activity.type === 'Session Update',
+              'bg-orange-100': activity.type === 'Teacher Assignment',
+              'bg-yellow-100': activity.type === 'Student Added',
+              'bg-rose-100':   activity.type === 'Student Removed',
+              'bg-indigo-100': activity.type === 'Data Import',
+              'bg-teal-100':   activity.type === 'Report Request',
+              'bg-cyan-100':   activity.type === 'Student Update',
+              'bg-gray-200':   activity.type === 'Other'
+            }"
+          >
+            <i
+              class="fa-solid"
+              :class="{
+                'fa-right-to-bracket text-green-600':     activity.type === 'Login',
+                'fa-right-from-bracket text-red-600':     activity.type === 'Logout',
+                'fa-triangle-exclamation text-red-600':   activity.type === 'Login Failed',
+                'fa-pen-to-square text-blue-600':         activity.type === 'Grade Update',
+                'fa-calendar-plus text-purple-600':       activity.type === 'Session Start',
+                'fa-calendar-check text-purple-700':      activity.type === 'Session Update',
+                'fa-user-tie text-orange-600':            activity.type === 'Teacher Assignment',
+                'fa-user-plus text-yellow-600':           activity.type === 'Student Added',
+                'fa-user-minus text-rose-600':            activity.type === 'Student Removed',
+                'fa-file-import text-indigo-600':         activity.type === 'Data Import',
+                'fa-file-circle-question text-teal-600':  activity.type === 'Report Request',
+                'fa-user-pen text-cyan-600':              activity.type === 'Student Update',
+                'fa-circle-question text-gray-500':       activity.type === 'Other'
+              }"
+            ></i>
           </div>
           
           <!-- Contenido de la actividad -->
-          <div class="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow">
+          <div
+            class="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow"
+            :class="activity.isImportant ? 'border-l-4 border-red-500' : ''"
+          >
             <div class="flex items-start justify-between mb-2">
               <div class="flex-1">
                 <div class="flex items-center gap-2 mb-1">
                   <span class="font-semibold text-gray-800" x-text="activity.user"></span>
-                  <span class="px-2 py-1 text-xs font-semibold rounded-full"
-                        :class="{
-                          'bg-green-100 text-green-800': activity.type === 'Login',
-                          'bg-red-100 text-red-800': activity.type === 'Logout',
-                          'bg-blue-100 text-blue-800': activity.type === 'Grade Update',
-                          'bg-purple-100 text-purple-800': activity.type === 'Session Assignment',
-                          'bg-orange-100 text-orange-800': activity.type === 'Teacher Assignment',
-                          'bg-yellow-100 text-yellow-800': activity.type === 'Student Added',
-                          'bg-indigo-100 text-indigo-800': activity.type === 'Data Import'
-                        }"
-                        x-text="activity.type">
+
+                  <!-- Pill del tipo -->
+                  <span
+                    class="px-2 py-1 text-xs font-semibold rounded-full"
+                    :class="{
+                      'bg-green-100 text-green-800':   activity.type === 'Login',
+                      'bg-red-100 text-red-800':       activity.type === 'Logout',
+                      'bg-red-200 text-red-800':       activity.type === 'Login Failed',
+                      'bg-blue-100 text-blue-800':     activity.type === 'Grade Update',
+                      'bg-purple-100 text-purple-800': activity.type === 'Session Start',
+                      'bg-purple-200 text-purple-900': activity.type === 'Session Update',
+                      'bg-orange-100 text-orange-800': activity.type === 'Teacher Assignment',
+                      'bg-yellow-100 text-yellow-800': activity.type === 'Student Added',
+                      'bg-rose-100 text-rose-800':     activity.type === 'Student Removed',
+                      'bg-indigo-100 text-indigo-800': activity.type === 'Data Import',
+                      'bg-teal-100 text-teal-800':     activity.type === 'Report Request',
+                      'bg-cyan-100 text-cyan-800':     activity.type === 'Student Update',
+                      'bg-gray-200 text-gray-800':     activity.type === 'Other'
+                    }"
+                    x-text="activity.type"
+                  ></span>
+
+                  <!-- Badge de importante -->
+                  <span
+                    x-show="activity.isImportant"
+                    class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-red-100 text-red-700 uppercase tracking-wide"
+                  >
+                    Important
                   </span>
                 </div>
+
+                <!-- Descripción principal -->
                 <p class="text-sm text-gray-700" x-text="activity.description"></p>
+
+                <!-- Meta info extra -->
+                <div class="mt-2 text-[11px] text-gray-500 space-y-1">
+                  <div>
+                    <span class="font-semibold">Entity:</span>
+                    <span x-text="activity.entityCode || 'N/A'"></span>
+                  </div>
+                  <div>
+                    <span class="font-semibold">Action:</span>
+                    <span x-text="activity.activityCode || 'N/A'"></span>
+                  </div>
+                </div>
                 
-                <!-- Detalles adicionales si existen -->
-                <div x-show="activity.details" class="mt-2 text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
+                <!-- Detalles adicionales si existen (old/new data, etc.) -->
+                <div
+                  x-show="activity.details"
+                  class="mt-2 text-xs text-gray-600 bg-white p-2 rounded border border-gray-200"
+                >
+                  <p class="font-semibold mb-1">Details:</p>
                   <template x-for="(value, key) in activity.details" :key="key">
                     <div class="flex gap-2">
                       <span class="font-semibold" x-text="key + ':'"></span>
@@ -474,7 +545,7 @@
               <div class="text-right">
                 <p class="text-xs text-gray-500" x-text="activity.date"></p>
                 <p class="text-xs font-semibold text-gray-700" x-text="activity.time"></p>
-                <p class="text-xs text-gray-500 mt-1" x-text="activity.ipAddress"></p>
+                <p class="text-xs text-gray-500 mt-1" x-text="activity.ipAddress || ''"></p>
               </div>
             </div>
           </div>
@@ -482,37 +553,51 @@
       </template>
       
       <!-- Mensaje cuando no hay actividades -->
-      <div x-show="filteredActivityLog.length === 0" class="text-center py-12 text-gray-500">
+      <div x-show="filteredActivityCount === 0" class="text-center py-12 text-gray-500">
         <i class="fa-solid fa-inbox text-6xl mb-4"></i>
         <p class="text-lg font-semibold">No activities found</p>
         <p class="text-sm">Try adjusting your filters</p>
       </div>
     </div>
     
-    <!-- Paginación -->
+    <!-- Paginación (si más adelante la quieres usar) -->
     <div class="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
       <p class="text-sm text-gray-600">
-        Showing <span class="font-semibold" x-text="Math.min(currentPage * itemsPerPage, filteredActivityLog.length)"></span> 
-        of <span class="font-semibold" x-text="filteredActivityLog.length"></span> activities
+        Showing
+        <span class="font-semibold"
+              x-text="filteredActivityCount === 0 ? 0 : Math.min(currentPage * itemsPerPage, filteredActivityCount)">
+        </span>
+        of
+        <span class="font-semibold" x-text="filteredActivityCount"></span>
+        activities
       </p>
+
+      <!-- Si ya no quieres paginación, puedes esconder estos botones -->
       <div class="flex gap-2">
-        <button @click="currentPage > 1 && currentPage--" 
-                :disabled="currentPage === 1"
-                :class="currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'"
-                class="px-4 py-2 border border-gray-300 rounded-lg transition-colors">
+        <button
+          @click="currentPage > 1 && currentPage--"
+          :disabled="currentPage === 1"
+          :class="currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'"
+          class="px-4 py-2 border border-gray-300 rounded-lg transition-colors"
+        >
           Previous
         </button>
-        <button @click="currentPage < Math.ceil(filteredActivityLog.length / itemsPerPage) && currentPage++" 
-                :disabled="currentPage === Math.ceil(filteredActivityLog.length / itemsPerPage)"
-                :class="currentPage === Math.ceil(filteredActivityLog.length / itemsPerPage) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'"
-                class="px-4 py-2 border border-gray-300 rounded-lg transition-colors">
+
+        <button
+          @click="currentPage < Math.ceil(filteredActivityCount / itemsPerPage) && currentPage++"
+          :disabled="currentPage >= Math.ceil(filteredActivityCount / itemsPerPage)"
+          :class="currentPage >= Math.ceil(filteredActivityCount / itemsPerPage) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'"
+          class="px-4 py-2 border border-gray-300 rounded-lg transition-colors"
+        >
           Next
         </button>
       </div>
     </div>
   </div>
 </div>
-
+  </div>
+</div>
+<!--*********************************************************************************************************************************************************-->
   <!-- TEACHERS TAB -->
   <div x-show="activeTab === 'teachers'" class="space-y-6">
     <div class="bg-white rounded-lg shadow p-6">
@@ -526,37 +611,37 @@
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">First Name *</label>
             <input type="text" x-model="newTeacher.firstName" required
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
           </div>
           
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">Last Name *</label>
             <input type="text" x-model="newTeacher.lastName" required
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
           </div>
           
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">Email *</label>
             <input type="email" x-model="newTeacher.email" required
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
           </div>
           
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
             <input type="tel" x-model="newTeacher.phone"
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
           </div>
           
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">Department *</label>
             <input type="text" x-model="newTeacher.department" required
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
           </div>
           
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">Specialization</label>
             <input type="text" x-model="newTeacher.specialization"
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
           </div>
         </div>
         
@@ -902,7 +987,13 @@
     </div>
   </div>
 </main>
-
+  <footer :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'" class="bg-[#2D2828] border-t">
+    <div class="max-w-7xl mx-auto px-6 py-4">
+      <div class="flex justify-between items-center">
+        <p class="text-sm text-gray-300">© 2025 San Diego Global Knowledge University</p>
+      </div>
+    </div>
+  </footer>
 <script>
 
 function settingsData() {
