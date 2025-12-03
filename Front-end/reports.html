@@ -179,14 +179,14 @@
       <button 
         @click="activeReport = 'general'" 
         @dblclick="openGeneralReport()" 
-        :class="activeReport === 'general' ? 'bg-[#A6192E]' : 'bg-[#D41736]'" 
-        class="bg-[#D41736] hover:bg-[#A6192E] text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+        :class="activeReport === 'general' ? 'bg-[#4D4E4E]' : 'bg-[#252121]'" 
+        class="bg-[#4D4E4E] hover:bg-[#252121] text-white font-semibold py-2 px-4 rounded-lg transition-colors">
         <i class="fa-solid fa-file mr-1"></i>Report General
       </button>
       <button 
       @click="activeReport = 'individual'"
-      :class="activeReport === 'individual' ? 'bg-[#A6192E]' : 'bg-[#D41736]'"  
-      class="bg-[#D41736] hover:bg-[#A6192E] text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+      :class="activeReport === 'individual' ? 'bg-[#4D4E4E]' : 'bg-[#252121]'"  
+      class="bg-[#4D4E4E] hover:bg-[#252121] text-white font-semibold py-2 px-4 rounded-lg transition-colors">
         <i class="fa-solid fa-user mr-1"></i>Report Individual
       </button>
       </div>
@@ -695,34 +695,7 @@
     
     <!-- Body -->
     <div class="p-6">
-      <!-- Información Personal -->
-      <div class="mb-6">
-        <h4 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-          <i class="fa-solid fa-user text-[#D41736] mr-2"></i>
-          Personal Information
-        </h4>
-        <div class="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <p class="text-gray-600">Full Name</p>
-            <p class="font-semibold" x-text="`${selectedStudent?.firstName} ${selectedStudent?.middleName} ${selectedStudent?.lastName}`"></p>
-          </div>
-          <div>
-            <p class="text-gray-600">Phone</p>
-            <p class="font-semibold" x-text="selectedStudent?.phone"></p>
-          </div>
-          <div>
-            <p class="text-gray-600">Personal Email</p>
-            <p class="font-semibold" x-text="selectedStudent?.emailPersonal"></p>
-          </div>
-          <div>
-            <p class="text-gray-600">SDGKU Email</p>
-            <p class="font-semibold" x-text="selectedStudent?.emailSDGKU"></p>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Body -->
-      <div class="p-6">
+
         <!-- Información Personal -->
         <div class="mb-6">
           <h4 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
