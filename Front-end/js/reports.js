@@ -1,5 +1,6 @@
 function reports() {
   return {
+    open: false,
     activeReport: 'general',
     searchQuery: '',
     selectedStudent: null,
@@ -19,17 +20,38 @@ function reports() {
       DescripcionSesion: false,
       All: false
     },
-    filters: { program: 'all', session: 'all', occupancy: 'all' },
+
+    reportFilters: {
+      program: 'all',
+      demandLevel: 'all',
+      minStudents: 0,
+      courseType: 'all',
+      sortBy: 'demand_desc'
+    },
     
     students: [],
     sessionData: [],
     subjects: [],
     programs: [],
-    recommendations: [], // ✅ Inicializado
+    recommendations: [],
     expandedRecommendations: Alpine.reactive({}),
     loading: true,
+    availablePrograms: [],
     error: null,
-    
+
+    // Paginación para recomendaciones
+    recommendationsPage: 1,
+    recommendationsPerPage: 10,
+    reportFilters: {
+      program: 'all',
+      demandLevel: 'all',
+      minStudents: 0,
+      courseType: 'all',
+      sortBy: 'demand_desc'
+    },
+    open: false,
+    showFilters: false,  
+
     apiUrl: 'http://localhost:3000/api',
     
     // ✅ CORREGIDO: init
@@ -51,15 +73,18 @@ function reports() {
           this.loadSessions()
         ]);
         
-        console.log('✅ Datos cargados correctamente:', {
-          programs: this.programs.length,
-          courses: this.subjects.length,
-          students: this.students.length,
-          sessions: this.sessionData.length
-        });
+      console.log('✅ Datos cargados correctamente:', {
+        programs: this.programs.length,
+        courses: this.subjects.length,
+        students: this.students.length,
+        sessions: this.sessionData.length
+      });
+
+      this.availablePrograms = [...new Set(this.students.map(s => s.program))].filter(Boolean);
+      console.log('📋 Programas disponibles:', this.availablePrograms);
+
       } catch (error) {
         console.error('❌ Error cargando datos:', error);
-        this.error = 'Error al cargar datos. Verifica que el servidor esté corriendo.';
       } finally {
         this.loading = false;
       }
@@ -139,44 +164,67 @@ function reports() {
       }
     },
     
-    async loadSessions() {
-      try {
-        const response = await fetch(`${this.apiUrl}/sessions`);
-        if (!response.ok) throw new Error('Error loading sessions');
-        const sessions = await response.json();
+   async loadSessions() {
+  try {
+    const response = await fetch(`${this.apiUrl}/sessions`);
+    if (!response.ok) throw new Error('Error loading sessions');
+    const sessions = await response.json();
 
-        this.sessionData = sessions.map(session => {
-          const enrolled = session.enrolled || 0;
-          const capacity = session.capacity || enrolled;
-          const available = capacity - enrolled;
-          
-          let materiaIds = [];
-          if (session.subjects) {
-            materiaIds = session.subjects.map(code => {
-              const subject = this.subjects.find(s => s.code === code);
-              return subject ? subject.id : null;
-            }).filter(id => id !== null);
-          }
+    sessions.forEach(s => console.log('Raw session:', s));
 
-          return {
-            id: session.id,
-            number: session.number || session.id,
-            date: session.startDate,
-            program: session.program,
-            capacity,
-            enrolled,
-            available,
-            Materias: materiaIds,
-            listAlumns: []
-          };
-        });
-        
-        console.log('📅 Sesiones cargadas:', this.sessionData.length);
-      } catch (error) {
-        console.error('Error loading sessions:', error);
-        throw error;
-      }
-    },
+    this.sessionData = sessions.map(session => {
+      console.log('Mapping session:', session.sessionName);
+      
+      const materiaIds = session.subjects || [];
+      
+      // Usar el occupancy que viene de la API (estudiantes asignados)
+      const enrolled = session.occupancy || 0;
+      
+      // Capacidad = número de materias × 50 estudiantes por materia
+      const capacity = materiaIds.length * 50;
+      const available = Math.max(0, capacity - enrolled);
+
+      // Buscar qué estudiantes están asignados a esta sesión
+      const assignedStudents = this.students.filter(student => 
+        student.assignedSession === session.id || 
+        student.sessionId === session.id ||
+        student.currentSessionId === session.id // Ajusta según tu modelo de datos
+      );
+
+      return {
+        id: session.id,
+        number: session.number || session.id,
+        sessionName: session.sessionName,
+        date: session.startDate,
+        program: session.program,
+        capacity,
+        enrolled,
+        available,
+        Materias: materiaIds,
+        listAlumns: assignedStudents.map(s => s.id) // IDs de estudiantes asignados
+      };
+    });
+
+    console.log('📅 Sesiones cargadas:', this.sessionData);
+
+  } catch (error) {
+    console.error('Error loading sessions:', error);
+    throw error;
+  }
+},
+getStudentPendingSubjects(studentId) {
+  const student = this.students.find(s => s.id === studentId);
+  if (!student) return [];
+  
+  // Obtener todas las materias del programa del estudiante
+  const programSubjects = this.subjects
+    .filter(s => s.programId === student.programId)
+    .map(s => s.id);
+  
+  // Filtrar las que ya completó
+  const completedSubjects = student.completedSubjects || [];
+  return programSubjects.filter(id => !completedSubjects.includes(id));
+},
 
     // ✅ CORREGIDO: loadRecommendations (una sola versión)
     async loadRecommendations() {
@@ -213,20 +261,176 @@ function reports() {
         return [];
       }
 
-      return this.recommendations.map(rec => {
+      // 1️⃣ Formatear todas las recomendaciones
+      let allFormatted = this.recommendations.map(rec => {
         const allStudents = rec.students || [];
         const studentNames = allStudents.map(s => s.fullName || s.name || 'Unknown');
-        const subjectId = rec.courseId || rec.subjectId;
-        const isExpanded = this.expandedRecommendations[subjectId] || false;
         
         return {
           subject: rec.courseName || rec.subjectName || 'Unknown',
-          subjectId: subjectId,
+          subjectId: rec.courseId || rec.subjectId,
+          courseCode: rec.courseCode || '',
           studentCount: rec.missingCount || 0,
-          students: studentNames, // Mantiene todos los nombres
-          expanded: isExpanded
+          students: studentNames,
+          _rawData: rec
         };
       });
+      // Filtro por PROGRAMA
+      if (this.reportFilters.program !== 'all') {
+        allFormatted = allFormatted.filter(rec => {
+          return rec.students.some(studentName => {
+            const student = this.students.find(s => 
+              s.name === studentName || 
+              `${s.firstName} ${s.lastName}` === studentName
+            );
+            
+            if (!student) return false;
+            
+            const programLower = (student.program || '').toLowerCase();
+            
+            if (this.reportFilters.program === 'bachelor') {
+              return programLower.includes('bachelor') || programLower.includes('bsgm');
+            } else if (this.reportFilters.program === 'associate') {
+              return programLower.includes('associate') || programLower.includes('assd');
+            }
+            
+            return false;
+          });
+        });
+      }
+
+      // Filtro por NIVEL DE DEMANDA
+      if (this.reportFilters.demandLevel !== 'all') {
+        allFormatted = allFormatted.filter(rec => {
+          const count = rec.studentCount;
+          
+          switch(this.reportFilters.demandLevel) {
+            case 'critical':
+              return count >= 75;
+            case 'high':
+              return count >= 40 && count < 75;
+            case 'medium':
+              return count >= 10 && count < 40;
+            case 'low':
+              return count < 10;
+            default:
+              return true;
+          }
+        });
+      }
+
+      // Filtro por CANTIDAD MÍNIMA
+      if (this.reportFilters.minStudents > 0) {
+        allFormatted = allFormatted.filter(rec => {
+          return rec.studentCount >= this.reportFilters.minStudents;
+        });
+      }
+
+      // ORDENAR según criterio
+      switch(this.reportFilters.sortBy) {
+        case 'demand_desc':
+          allFormatted.sort((a, b) => b.studentCount - a.studentCount);
+          break;
+        case 'demand_asc':
+          allFormatted.sort((a, b) => a.studentCount - b.studentCount);
+          break;
+        case 'alphabetical':
+          allFormatted.sort((a, b) => a.subject.localeCompare(b.subject));
+          break;
+      }
+
+      // Aplicar paginación
+      const startIndex = (this.recommendationsPage - 1) * this.recommendationsPerPage;
+      const endIndex = startIndex + this.recommendationsPerPage;
+      
+      return allFormatted.slice(startIndex, endIndex);
+    },
+
+    // Total de páginas considerando filtros
+    get totalRecommendationPages() {
+      if (!this.recommendations || this.recommendations.length === 0) return 1;
+      
+      let filtered = [...this.recommendations];
+      
+      if (this.reportFilters.program !== 'all') {
+        filtered = filtered.filter(rec => {
+          const students = rec.students || [];
+          return students.some(s => {
+            const student = this.students.find(st => 
+              st.name === (s.fullName || s.name) || 
+              `${st.firstName} ${st.lastName}` === (s.fullName || s.name)
+            );
+            
+            if (!student) return false;
+            const programLower = (student.program || '').toLowerCase();
+            
+            if (this.reportFilters.program === 'bachelor') {
+              return programLower.includes('bachelor') || programLower.includes('bsgm');
+            } else if (this.reportFilters.program === 'associate') {
+              return programLower.includes('associate') || programLower.includes('assd');
+            }
+            return false;
+          });
+        });
+      }
+      
+      if (this.reportFilters.demandLevel !== 'all') {
+        filtered = filtered.filter(rec => {
+          const count = rec.missingCount || 0;
+          switch(this.reportFilters.demandLevel) {
+            case 'critical': return count >= 75;
+            case 'high': return count >= 40 && count < 75;
+            case 'medium': return count >= 10 && count < 40;
+            case 'low': return count < 10;
+            default: return true;
+          }
+        });
+      }
+      
+      if (this.reportFilters.minStudents > 0) {
+        filtered = filtered.filter(rec => (rec.missingCount || 0) >= this.reportFilters.minStudents);
+      }
+      
+      if (this.reportFilters.courseType !== 'all') {
+        filtered = filtered.filter(rec => {
+          const code = (rec.courseCode || '').toUpperCase();
+          switch(this.reportFilters.courseType) {
+            case 'gen_ed':
+              return code.startsWith('ENGL') || code.startsWith('MATH') || 
+                    code.startsWith('SPCH') || code.startsWith('HIST') ||
+                    code.startsWith('PSYC') || code.startsWith('SOCI');
+            case 'core':
+              return code.startsWith('GBUS') || code.startsWith('ACCT') ||
+                    code.startsWith('MGMT') || code.startsWith('MKTG');
+            case 'elective':
+              return !code.startsWith('GBUS') && !code.startsWith('ACCT') &&
+                    !code.startsWith('ENGL') && !code.startsWith('MATH');
+            default:
+              return true;
+          }
+        });
+      }
+      
+      return Math.ceil(filtered.length / this.recommendationsPerPage);
+    },
+
+    // Métodos de paginación
+    nextRecommendationsPage() {
+      if (this.recommendationsPage < this.totalRecommendationPages) {
+        this.recommendationsPage++;
+      }
+    },
+
+    prevRecommendationsPage() {
+      if (this.recommendationsPage > 1) {
+        this.recommendationsPage--;
+      }
+    },
+
+    goToRecommendationsPage(page) {
+      if (page >= 1 && page <= this.totalRecommendationPages) {
+        this.recommendationsPage = page;
+      }
     },
 
     toggleRecommendationExpansion(subjectId) {
@@ -883,7 +1087,91 @@ function reports() {
         course.name.toLowerCase().includes(query)
       );
     },
-    
+
+    get availablePrograms() {
+      const programs = new Set();
+      this.students.forEach(student => {
+        if (student.program && student.program !== 'Unknown' && student.program !== 'N/A') {
+          programs.add(student.program);
+        }
+      });
+      const programsArray = Array.from(programs).sort();
+      console.log('📋 Programas disponibles:', programsArray);
+      return programsArray;
+    },
+
+    get filteredRecommendations() {
+      let filtered = [...this.recommendations];
+      
+      // Filtrar por programa
+      if (this.reportFilters.program !== 'all') {
+        filtered = filtered.filter(rec => {
+          const students = rec.students || [];
+          return students.some(student => {
+            const studentData = this.students.find(s => 
+              s.name === student.fullName || s.name === student.name
+            );
+            return studentData && studentData.program === this.reportFilters.program;
+          });
+        });
+      }
+      
+      // Filtrar por nivel de demanda
+      if (this.reportFilters.demandLevel !== 'all') {
+        filtered = filtered.filter(rec => {
+          const count = rec.missingCount || 0;
+          switch(this.reportFilters.demandLevel) {
+            case 'critical': return count >= 75;
+            case 'high': return count >= 40 && count < 75;
+            case 'medium': return count >= 10 && count < 40;
+            case 'low': return count < 10;
+            default: return true;
+          }
+        });
+      }
+      
+      // Filtrar por cantidad mínima
+      if (this.reportFilters.minStudents > 0) {
+        filtered = filtered.filter(rec => 
+          (rec.missingCount || 0) >= this.reportFilters.minStudents
+        );
+      }
+      
+      // Ordenar
+      filtered.sort((a, b) => {
+        const countA = a.missingCount || 0;
+        const countB = b.missingCount || 0;
+        const nameA = a.courseName || a.subjectName || '';
+        const nameB = b.courseName || b.subjectName || '';
+        
+        switch(this.reportFilters.sortBy) {
+          case 'demand_desc': return countB - countA;
+          case 'demand_asc': return countA - countB;
+          case 'alphabetical': return nameA.localeCompare(nameB);
+          default: return countB - countA;
+        }
+      });
+      
+      return filtered;
+    },
+
+    clearReportFilters() {
+      this.reportFilters = {
+        program: 'all',
+        demandLevel: 'all',
+        minStudents: 0,
+        sortBy: 'demand_desc'
+      };
+    },
+
+    get availableSessions() {
+      return this.sessionData.map(s => ({
+        id: s.id,
+        number: s.number,
+        display: `Session ${s.number}`
+      }));
+    },    
+
     markAsModified(courseCode) {
       const course = this.coursesForEditing.find(c => c.code === courseCode);
       if (course) {
@@ -988,14 +1276,37 @@ function reports() {
       }
     },
 
-    clearFilters() {
-      this.filters = { program: 'all', session: 'all', occupancy: 'all' };
-    },
-    
     applyFilters() {
-      console.log('Applying filters:', this.filters);
+      console.log('Applying filters:', this.reportFilters);
     },
-    
+
+    // Aplicar filtros de reportes
+    applyReportFilters() {
+      console.log('Applying report filters:', this.reportFilters);
+      this.recommendationsPage = 1;
+      this.showFilters = false;
+    },
+
+    // Limpiar filtros de reportes
+    clearReportFilters() {
+      this.reportFilters = {
+        program: 'all',
+        demandLevel: 'all',
+        minStudents: 0,
+        courseType: 'all',
+        sortBy: 'demand_desc'
+      };
+      this.recommendationsPage = 1;
+    },
+
+    // Verificar si hay filtros activos
+    get hasActiveReportFilters() {
+      return this.reportFilters.program !== 'all' ||
+            this.reportFilters.demandLevel !== 'all' ||
+            this.reportFilters.minStudents > 0 ||
+            this.reportFilters.courseType !== 'all';
+    }, 
+
     verSeleccionados() {
       console.log(this.opcionesGeneral);
       const seleccionadas = Object.keys(this.opcionesGeneral).filter(key => this.opcionesGeneral[key]);
