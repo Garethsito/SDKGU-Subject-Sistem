@@ -1,0 +1,33 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "Ainy-improvements",
+    "George170205-patch-1",
+    "Tornero",
+    "abelitos-top-secret-branch",
+    "fix-grades",
+    "fix-grades-copia",
+    "main",
+    "origin"
+  ],
+  "parent": {
+    "Ainy-improvements": "main",
+    "George170205-patch-1": "main",
+    "Tornero": "main",
+    "abelitos-top-secret-branch": "main",
+    "fix-grades": "main",
+    "fix-grades-copia": "fix-grades",
+    "main": null,
+    "origin": "main"
+  },
+  "order": [
+    "main",
+    "Ainy-improvements",
+    "George170205-patch-1",
+    "Tornero",
+    "abelitos-top-secret-branch",
+    "fix-grades",
+    "origin",
+    "fix-grades-copia"
+  ]
+}
