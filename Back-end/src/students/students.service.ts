@@ -131,6 +131,9 @@ export class StudentsService {
 
   async getMissingSubjectsByStudent() {
     try {
+      console.log('🔍 Starting getMissingSubjectsByStudent...');
+
+      // 1️⃣ Obtener todos los cursos con sus programas
       const allCourses = await this.prisma.course.findMany({
         include: {
           programCourses: {
@@ -138,90 +141,121 @@ export class StudentsService {
               program: true
             }
           }
+        },
+        orderBy: {
+          courseCode: 'asc'
         }
       });
 
-      console.log(`📚 Total courses in system: ${allCourses.length}`);
+      console.log(`📚 Total courses found: ${allCourses.length}`);
 
-      const totalStudents = await this.prisma.student.count({
-        where: { status: 'active' }
-      });
-
-      console.log(`👥 Total active students: ${totalStudents}`);
-
-      if (totalStudents === 0 || allCourses.length === 0) {
-        console.log('⚠️ No students or courses found');
+      if (allCourses.length === 0) {
+        console.log('⚠️ No courses found in database');
         return { labels: [], data: [] };
       }
 
-      const missingData = await Promise.all(
-        allCourses.map(async (course) => {
-          const programIds = course.programCourses.map(pc => pc.programId);
-          
-          const studentsWithCourse = await this.prisma.student.count({
-            where: {
-              status: 'active',
-              programId: {
-                in: programIds
-              },
-              OR: [
-                {
-                  enrollments: {
-                    some: {
-                      offering: {
-                        courseId: course.id
-                      }
-                    }
-                  }
-                },
-                {
-                  records: {
-                    some: {
-                      courseId: course.id
-                    }
-                  }
-                },
-                {
-                  transfers: {
-                    some: {
-                      courseId: course.id
-                    }
-                  }
+      // 2️⃣ Obtener todos los estudiantes activos con sus relaciones
+      const allStudents = await this.prisma.student.findMany({
+        where: { 
+          status: 'active' 
+        },
+        include: {
+          enrollments: {
+            include: {
+              offering: {
+                include: {
+                  course: true
                 }
-              ]
-            }
-          });
-
-          const programStudents = await this.prisma.student.count({
-            where: {
-              status: 'active',
-              programId: {
-                in: programIds
               }
             }
-          });
+          },
+          records: {
+            include: {
+              course: true
+            }
+          },
+          transfers: {
+            include: {
+              course: true
+            }
+          }
+        }
+      });
 
-          const missingCount = programStudents - studentsWithCourse;
+      console.log(`👥 Total active students: ${allStudents.length}`);
 
+      if (allStudents.length === 0) {
+        console.log('⚠️ No active students found');
+        return { labels: [], data: [] };
+      }
+
+      // 3️⃣ Calcular estudiantes faltantes por cada curso
+      const missingData = allCourses.map(course => {
+        // Obtener los IDs de los programas que incluyen este curso
+        const programIds = course.programCourses.map(pc => pc.programId);
+
+        if (programIds.length === 0) {
           return {
             label: course.courseCode,
             courseName: course.courseName,
-            missing: missingCount > 0 ? missingCount : 0,
-            programIds: programIds
+            missing: 0,
+            totalStudents: 0,
+            studentsWithCourse: 0
           };
-        })
-      );
+        }
 
+        // Estudiantes del programa que deberían tomar este curso
+        const studentsInProgram = allStudents.filter(student => 
+          programIds.includes(student.programId)
+        );
+
+        // Estudiantes que YA TIENEN el curso (enrollments, records o transfers)
+        const studentsWithCourse = studentsInProgram.filter(student => {
+          // Verificar enrollments (cursos actuales)
+          const hasEnrollment = student.enrollments.some(
+            e => e.offering.courseId === course.id
+          );
+
+          // Verificar records (cursos completados/en progreso)
+          const hasRecord = student.records.some(
+            r => r.courseId === course.id
+          );
+
+          // Verificar transfers
+          const hasTransfer = student.transfers.some(
+            t => t.courseId === course.id
+          );
+
+          return hasEnrollment || hasRecord || hasTransfer;
+        });
+
+        const missingCount = studentsInProgram.length - studentsWithCourse.length;
+
+        return {
+          label: course.courseCode,
+          courseName: course.courseName,
+          missing: missingCount > 0 ? missingCount : 0,
+          totalStudents: studentsInProgram.length,
+          studentsWithCourse: studentsWithCourse.length
+        };
+      });
+
+      console.log('📊 Missing data calculated:', missingData.slice(0, 3));
+
+      // 4️⃣ Filtrar y ordenar: Top 6 cursos con más estudiantes faltantes
       const topMissing = missingData
         .filter(item => item.missing > 0)
         .sort((a, b) => b.missing - a.missing)
         .slice(0, 6);
 
-      console.log('🔍 Top 6 missing courses:', topMissing);
+      console.log('✅ Top 6 courses with missing students:', topMissing);
 
       if (topMissing.length === 0) {
-        console.log('✅ All students have taken all courses!');
-        return { labels: [], data: [] };
+        console.log('✅ All students have completed all required courses!');
+        return { 
+          labels: ['No Data'], 
+          data: [0] 
+        };
       }
 
       return {
@@ -230,8 +264,11 @@ export class StudentsService {
       };
 
     } catch (error) {
-      console.error('❌ Error calculating missing subjects:', error);
-      return { labels: [], data: [] };
+      console.error('❌ Error in getMissingSubjectsByStudent:', error);
+      return { 
+        labels: [], 
+        data: [] 
+      };
     }
   }
 
