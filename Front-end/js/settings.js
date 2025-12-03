@@ -1,34 +1,55 @@
 function settingsData() {
   return {
-    init() {
-      this.loadActivityLog();
-    },
 
-    activeTab: 'activity', // Tab por defecto
+    open: false,
     searchQuery: '',
     showFilters: false,
-
     filters: {
-      user: '',
-      action: '',
-      dateFrom: '',
-      dateTo: ''
+      program: 'all',
+      session: 'all',
+      occupancy: 'all'
     },
 
-    // ⭐ DATOS PARA ADMINISTRATORS (AHORA EN ACTIVITY LOG)
-    newAdmin: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      role: '',
-      status: 'Active'
+    applyFilters() {
+      console.log('Header filters applied:', this.filters);
     },
-    administrators: [
-      { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@sdgku.edu', phone: '+1 (619) 555-0100', role: 'Super Admin', status: 'Active' },
-      { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@sdgku.edu', phone: '+1 (619) 555-0101', role: 'Admin', status: 'Active' }
-    ],
+
+    clearFilters() {
+      this.filters = {
+        program: 'all',
+        session: 'all',
+        occupancy: 'all'
+      };
+    },
     
+    // ========= CONFIG GENERAL =========
+    apiUrl: 'http://localhost:3000/api', // para imports "generales" (students, teachers, etc.)
+
+    // Alpine llama init() al crear el componente
+    init() {
+      // Activity log desde backend
+      this.loadActivityLog();
+
+      // Datos que ya tenías desde la base
+      this.loadTeachers();
+      this.loadPrograms();
+      this.loadSubjects();
+    },
+
+    // ========= TABS / UI GENERAL =========
+    activeTab: 'activity',
+
+    // Filtros generales de dashboard (los que disparan errores: filters.program, filters.session, filters.occupancy)
+    filters: {
+      program: '',
+      session: '',
+      occupancy: ''
+    },
+
+    searchQuery: '',
+    showFilters: true,
+
+    // ========= ACTIVITY LOG (desde BD) =========
     activityLog: [],
 
     activityFilters: {
@@ -39,7 +60,7 @@ function settingsData() {
     },
 
     currentPage: 1,
-    itemsPerPage: 10, 
+    itemsPerPage: 10,
 
     isLoadingActivity: false,
     activityError: null,
@@ -50,9 +71,7 @@ function settingsData() {
 
       try {
         console.log('🔄 Loading activity timeline...');
-
         const res = await fetch('http://localhost:3000/activityTimeline/recent');
-        console.log('Status:', res.status);
 
         if (!res.ok) {
           throw new Error(`Failed to load activity timeline: ${res.status}`);
@@ -62,7 +81,6 @@ function settingsData() {
         console.log('✅ Timeline data:', data);
 
         this.activityLog = Array.isArray(data) ? data : [];
-
       } catch (e) {
         console.error('❌ Error loading activity timeline:', e);
         this.activityError = 'Could not load activity timeline';
@@ -71,37 +89,31 @@ function settingsData() {
       }
     },
 
-    // LISTA FILTRADA COMPLETA (sin paginar)
+    // Lista filtrada completa (sin paginar)
     get filteredActivityLogAll() {
-      let filtered = this.activityLog || [];
+      let filtered = this.activityLog;
 
-      // Filtro por usuario (select User)
       if (this.activityFilters.user) {
         filtered = filtered.filter(a => a.user === this.activityFilters.user);
       }
 
-      // Filtro por tipo/acción (select Action Type)
       if (this.activityFilters.action) {
-        // En tus datos de demo usabas "type" (Login, Grade Update, etc.)
         filtered = filtered.filter(a => a.type === this.activityFilters.action);
       }
 
-      // Filtro por fecha desde
       if (this.activityFilters.dateFrom) {
         filtered = filtered.filter(a => a.date >= this.activityFilters.dateFrom);
       }
 
-      // Filtro por fecha hasta
       if (this.activityFilters.dateTo) {
         filtered = filtered.filter(a => a.date <= this.activityFilters.dateTo);
       }
 
-      // Búsqueda por texto (si en algún lado usas searchQuery)
       if (this.searchQuery) {
         const q = this.searchQuery.toLowerCase();
         filtered = filtered.filter(a =>
-          (a.description || '').toLowerCase().includes(q) ||
           (a.user || '').toLowerCase().includes(q) ||
+          (a.description || '').toLowerCase().includes(q) ||
           (a.type || '').toLowerCase().includes(q)
         );
       }
@@ -109,14 +121,14 @@ function settingsData() {
       return filtered;
     },
 
-    // 🔹 LISTA FILTRADA + PAGINADA (esta es la que usa el x-for)
+    // Lista filtrada + paginada (la que debe usar tu x-for)
     get filteredActivityLog() {
       const start = (this.currentPage - 1) * this.itemsPerPage;
       const end   = this.currentPage * this.itemsPerPage;
       return this.filteredActivityLogAll.slice(start, end);
     },
 
-    // 🔹 Cantidad total filtrada (para "Showing X of Y")
+    // Cantidad total filtrada (para "Showing X of Y")
     get filteredActivityCount() {
       return this.filteredActivityLogAll.length;
     },
@@ -135,26 +147,42 @@ function settingsData() {
       };
       this.searchQuery = '';
       this.currentPage = 1;
-      console.log('Filters cleared');
     },
 
     exportActivityLog() {
       alert('Exporting activity log to Excel...');
-      console.log('Activity log data:', this.filteredActivityLogAll);
-      // Aquí implementarías la exportación real con XLSX si quieres
+      console.log('Activity log data:', this.activityLog);
     },
 
+    // ========= ADMINISTRATORS =========
+    newAdmin: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      role: '',
+      status: 'Active'
+    },
+
+    administrators: [
+      { id: 1, firstName: 'John', lastName: 'Doe',   email: 'john.doe@sdgku.edu',  phone: '+1 (619) 555-0100', role: 'Super Admin', status: 'Active' },
+      { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@sdgku.edu', phone: '+1 (619) 555-0101', role: 'Admin',       status: 'Active' }
+    ],
+
     addAdministrator() {
-      const newId = this.administrators.length > 0 ? Math.max(...this.administrators.map(a => a.id)) + 1 : 1;
+      const newId = this.administrators.length > 0
+        ? Math.max(...this.administrators.map(a => a.id)) + 1
+        : 1;
+
       this.administrators.push({
         id: newId,
         ...this.newAdmin
       });
-      
-      // Agregar actividad al log
+
+      // Registrar actividad localmente
       this.activityLog.unshift({
         id: this.activityLog.length + 1,
-        user: 'Current User', // Cambiar por usuario actual
+        user: 'Current User',
         type: 'Student Added',
         description: `Added new administrator: ${this.newAdmin.firstName} ${this.newAdmin.lastName}`,
         date: new Date().toISOString().split('T')[0],
@@ -166,11 +194,11 @@ function settingsData() {
           'Role': this.newAdmin.role
         }
       });
-      
+
       alert('Administrator added successfully!');
       this.resetAdminForm();
     },
-    
+
     resetAdminForm() {
       this.newAdmin = {
         firstName: '',
@@ -181,88 +209,135 @@ function settingsData() {
         status: 'Active'
       };
     },
-    
+
     deleteAdmin(id) {
-      if (confirm('Are you sure you want to delete this administrator?')) {
-        const admin = this.administrators.find(a => a.id === id);
-        this.administrators = this.administrators.filter(a => a.id !== id);
-        
-        // Agregar actividad al log
-        if (admin) {
-          this.activityLog.unshift({
-            id: this.activityLog.length + 1,
-            user: 'Current User',
-            type: 'Student Added',
-            description: `Deleted administrator: ${admin.firstName} ${admin.lastName}`,
-            date: new Date().toISOString().split('T')[0],
-            time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-            ipAddress: '192.168.1.100',
-            details: {
-              'Name': `${admin.firstName} ${admin.lastName}`,
-              'Email': admin.email,
-              'Role': admin.role
-            }
-          });
-        }
+      if (!confirm('Are you sure you want to delete this administrator?')) return;
+
+      const admin = this.administrators.find(a => a.id === id);
+      this.administrators = this.administrators.filter(a => a.id !== id);
+
+      if (admin) {
+        this.activityLog.unshift({
+          id: this.activityLog.length + 1,
+          user: 'Current User',
+          type: 'Student Added',
+          description: `Deleted administrator: ${admin.firstName} ${admin.lastName}`,
+          date: new Date().toISOString().split('T')[0],
+          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          ipAddress: '192.168.1.100',
+          details: {
+            'Name': `${admin.firstName} ${admin.lastName}`,
+            'Email': admin.email,
+            'Role': admin.role
+          }
+        });
       }
     },
-    
-    // ⭐ MÉTODOS PARA ESTADÍSTICAS
+
+    // ========= STATS (opcionales, usan activityLog) =========
     getTodayLogins() {
       const today = new Date().toISOString().split('T')[0];
       return this.activityLog.filter(a => a.type === 'Login' && a.date === today).length;
     },
-    
+
     getActiveUsers() {
       const uniqueUsers = [...new Set(this.activityLog.map(a => a.user))];
       return uniqueUsers.length;
     },
-    
+
     getRecentChanges() {
       const today = new Date().toISOString().split('T')[0];
-      return this.activityLog.filter(a => a.date === today && a.type !== 'Login' && a.type !== 'Logout').length;
+      return this.activityLog.filter(
+        a => a.date === today && a.type !== 'Login' && a.type !== 'Logout'
+      ).length;
     },
-    
+
+    // ========= TEACHERS (desde BD) =========
     newTeacher: {
+      teacherIdNumber: '',
       firstName: '',
+      middleName: '',
       lastName: '',
       email: '',
       phone: '',
       department: '',
-      specialization: ''
+      specialization: '',
+      hireDate: new Date().toISOString()
     },
-    teachers: [
-      { id: 1, firstName: 'Robert', lastName: 'Johnson', email: 'r.johnson@sdgku.edu', phone: '+1 (619) 555-0200', department: 'Computer Science', specialization: 'AI & Machine Learning' },
-      { id: 2, firstName: 'Maria', lastName: 'Garcia', email: 'm.garcia@sdgku.edu', phone: '+1 (619) 555-0201', department: 'Mathematics', specialization: 'Statistics' }
-    ],
-    
-    addTeacher() {
-      const newId = this.teachers.length > 0 ? Math.max(...this.teachers.map(t => t.id)) + 1 : 1;
-      this.teachers.push({
-        id: newId,
-        ...this.newTeacher
-      });
-      alert('Teacher added successfully!');
-      this.resetTeacherForm();
+
+    teachers: [],
+
+    async loadTeachers() {
+      try {
+        const res = await fetch('http://localhost:3000/teachers');
+        const data = await res.json();
+        this.teachers = data;
+      } catch (error) {
+        console.error('❌ Error loading teachers:', error);
+      }
     },
-    
+
+    async addTeacher() {
+      try {
+        this.newTeacher.hireDate = new Date().toISOString();
+        const res = await fetch('http://localhost:3000/teachers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.newTeacher)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert('Error adding teacher: ' + (data.message || JSON.stringify(data)));
+          return;
+        }
+
+        alert('Teacher added successfully!');
+        this.loadTeachers();
+        this.resetTeacherForm();
+      } catch (error) {
+        console.error('❌ Error adding teacher:', error);
+      }
+    },
+
     resetTeacherForm() {
       this.newTeacher = {
+        teacherIdNumber: '',
         firstName: '',
+        middleName: '',
         lastName: '',
         email: '',
         phone: '',
         department: '',
-        specialization: ''
+        specialization: '',
+        hireDate: new Date().toISOString()
       };
     },
-    
-    deleteTeacher(id) {
-      if (confirm('Are you sure you want to delete this teacher?')) {
-        this.teachers = this.teachers.filter(t => t.id !== id);
+
+    async deleteTeacher(id) {
+      if (!confirm('Are you sure you want to delete this teacher?')) return;
+
+      try {
+        const res = await fetch(`http://localhost:3000/teachers/${id}`, {
+          method: 'DELETE'
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert('Error deleting teacher: ' + (data.message || JSON.stringify(data)));
+          return;
+        }
+
+        alert('Teacher deleted!');
+        this.loadTeachers();
+      } catch (error) {
+        console.error('❌ Error deleting teacher:', error);
       }
     },
-    
+
+    // ========= PROGRAMS (desde BD) =========
     newProgram: {
       name: '',
       type: '',
@@ -270,21 +345,57 @@ function settingsData() {
       duration: '',
       description: ''
     },
-    programs: [
-      { id: 1, name: 'Computer Science', type: "Bachelor's", totalUnits: 120, duration: 4, description: 'Comprehensive program in computer science and software development' },
-      { id: 2, name: 'Business Administration', type: 'Associate', totalUnits: 60, duration: 2, description: 'Foundational business principles and practices' }
-    ],
-    
-    addProgram() {
-      const newId = this.programs.length > 0 ? Math.max(...this.programs.map(p => p.id)) + 1 : 1;
-      this.programs.push({
-        id: newId,
-        ...this.newProgram
-      });
-      alert('Program added successfully!');
-      this.resetProgramForm();
+
+    programs: [],
+
+    async loadPrograms() {
+      try {
+        const res = await fetch('http://localhost:3000/api/programs');
+        const data = await res.json();
+
+        this.programs = data.map(p => ({
+          id: p.id,
+          name: p.programName,
+          type: p.programType,
+          totalUnits: p.totalUnits,
+          totalCourses: p.totalCourses
+        }));
+      } catch (error) {
+        console.error('❌ Error loading programs:', error);
+      }
     },
-    
+
+    async addProgram() {
+      try {
+        const payload = {
+          programName: this.newProgram.name,
+          programType: this.newProgram.type,
+          totalUnits: Number(this.newProgram.totalUnits),
+          totalCourses: Number(this.newProgram.totalCourses || 0),
+          description: this.newProgram.description
+        };
+
+        const res = await fetch('http://localhost:3000/api/programs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert('Error adding program: ' + (data.message || JSON.stringify(data)));
+          return;
+        }
+
+        alert('Program added successfully!');
+        this.loadPrograms();
+        this.resetProgramForm();
+      } catch (error) {
+        console.error('❌ Error adding program:', error);
+      }
+    },
+
     resetProgramForm() {
       this.newProgram = {
         name: '',
@@ -294,13 +405,30 @@ function settingsData() {
         description: ''
       };
     },
-    
-    deleteProgram(id) {
-      if (confirm('Are you sure you want to delete this program?')) {
-        this.programs = this.programs.filter(p => p.id !== id);
+
+    async deleteProgram(id) {
+      if (!confirm('Are you sure you want to delete this program?')) return;
+
+      try {
+        const res = await fetch(`http://localhost:3000/api/programs/${id}`, {
+          method: 'DELETE'
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert('Error deleting program: ' + (data.message || JSON.stringify(data)));
+          return;
+        }
+
+        alert('Program deleted!');
+        this.loadPrograms();
+      } catch (error) {
+        console.error('❌ Error deleting program:', error);
       }
     },
-    
+
+    // ========= SUBJECTS (desde BD) =========
     newSubject: {
       name: '',
       code: '',
@@ -308,21 +436,59 @@ function settingsData() {
       department: '',
       description: ''
     },
-    subjects: [
-      { id: 1, name: 'Introduction to Programming', code: 'CS101', units: 4, department: 'Computer Science' },
-      { id: 2, name: 'Calculus I', code: 'MATH101', units: 4, department: 'Mathematics' }
-    ],
-    
-    addSubject() {
-      const newId = this.subjects.length > 0 ? Math.max(...this.subjects.map(s => s.id)) + 1 : 1;
-      this.subjects.push({
-        id: newId,
-        ...this.newSubject
-      });
-      alert('Subject added successfully!');
-      this.resetSubjectForm();
+
+    subjects: [],
+
+    async loadSubjects() {
+      try {
+        const res = await fetch('http://localhost:3000/api/courses');
+        const data = await res.json();
+
+        this.subjects = data.map(s => ({
+          id: s.id,
+          name: s.name,
+          code: s.code,
+          units: s.units || s.credits,
+          department: s.department || 'General',
+          description: s.description || ''
+        }));
+      } catch (error) {
+        console.error('❌ Error loading subjects:', error);
+      }
     },
-    
+
+    async addSubject() {
+      try {
+        const payload = {
+          courseCode: this.newSubject.code,
+          courseName: this.newSubject.name,
+          credits: Number(this.newSubject.units) || 3,
+          language: 'English',
+          isTransferable: true,
+          maxCapacity: 30
+        };
+
+        const res = await fetch('http://localhost:3000/api/courses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert('Error adding subject: ' + (data.message || JSON.stringify(data)));
+          return;
+        }
+
+        alert('Subject added successfully!');
+        this.loadSubjects();
+        this.resetSubjectForm();
+      } catch (error) {
+        console.error('❌ Error adding subject:', error);
+      }
+    },
+
     resetSubjectForm() {
       this.newSubject = {
         name: '',
@@ -332,38 +498,56 @@ function settingsData() {
         description: ''
       };
     },
-    
-    deleteSubject(id) {
-      if (confirm('Are you sure you want to delete this subject?')) {
-        this.subjects = this.subjects.filter(s => s.id !== id);
+
+    async deleteSubject(id) {
+      if (!confirm('Are you sure you want to delete this subject?')) return;
+
+      try {
+        const res = await fetch(`http://localhost:3000/api/courses/${id}`, {
+          method: 'DELETE'
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert('Error deleting subject: ' + (data.message || JSON.stringify(data)));
+          return;
+        }
+
+        alert('Subject deleted!');
+        this.loadSubjects();
+      } catch (error) {
+        console.error('❌ Error deleting subject:', error);
       }
     },
-    
+
+    // ========= IMPORT (Excel) =========
     selectedFile: null,
     importType: '',
     importResult: null,
+
     importHistory: [
       { id: 1, date: '2025-01-10', fileName: 'students_fall_2024.xlsx', type: 'Students', records: 150, status: 'Success' },
-      { id: 2, date: '2025-01-05', fileName: 'subjects_2024.xlsx', type: 'Subjects', records: 45, status: 'Success' }
+      { id: 2, date: '2025-01-05', fileName: 'subjects_2024.xlsx',     type: 'Subjects', records: 45,  status: 'Success' }
     ],
-    
+
     handleFileUpload(event) {
       const file = event.target.files[0];
       if (file) {
-        if (file.size > 10 * 1024 * 1024) { // 10MB
+        if (file.size > 10 * 1024 * 1024) {
           alert('File size exceeds 10MB limit');
           return;
         }
         this.selectedFile = file;
       }
     },
-    
+
     clearFile() {
       this.selectedFile = null;
       const input = document.getElementById('fileUpload');
       if (input) input.value = '';
     },
-    
+
     formatFileSize(bytes) {
       if (!bytes) return '0 Bytes';
       const k = 1024;
@@ -371,7 +555,7 @@ function settingsData() {
       const i = Math.floor(Math.log(bytes) / Math.log(k));
       return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     },
-    
+
     async processImport() {
       if (!this.selectedFile || !this.importType) return;
 
@@ -379,29 +563,43 @@ function settingsData() {
       formData.append('file', this.selectedFile);
 
       try {
-        // Para el caso de grades, procesamos el Excel en el frontend
+        // Caso especial: import de GRADES (Excel -> API de grades)
         if (this.importType === 'grades') {
           const data = await this.readExcelFile(this.selectedFile);
           const results = [];
 
           for (const row of data) {
-            // Mapear columnas del Excel a propiedades del backend
             const studentId = row['Students ID Number'];
             const courseCode = row['Course'];
             const grade = row['Grade'];
-            const status = row['Status'] || 'Completed'; // valor por defecto si no hay status
+
+            let rawStatus = (row['Status'] || '').toString().trim().toLowerCase();
+            let status = 'Completed';
+
+            if (rawStatus === 'f' || rawStatus === 'failed') {
+              status = 'Failed';
+            } else if (
+              rawStatus === 't' ||
+              rawStatus === 'p' ||
+              rawStatus === 'transferred' ||
+              rawStatus === 'transfer'
+            ) {
+              status = 'Transferred';
+            } else if (rawStatus === 'completed' || rawStatus === 'c') {
+              status = 'Completed';
+            }
 
             if (!studentId || !courseCode || !grade) {
               console.warn('Fila incompleta, se omite:', row);
-              continue; // saltar filas incompletas
+              continue;
             }
 
-            // Llamar al endpoint de grades
             const res = await fetch(`http://localhost:3000/api/students/${studentId}/grades`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ courseCode, grade, status })
             });
+
             let result = {};
             if (res.ok) {
               result = await res.json();
@@ -430,11 +628,10 @@ function settingsData() {
 
           this.selectedFile = null;
           this.importType = '';
-
           return;
         }
 
-        // Para otros tipos de import (students, teachers, etc.)
+        // Otros tipos de import (students, teachers, etc.)
         const url = `${this.apiUrl}/import/${this.importType}`;
         console.log('📤 Importando archivo...', this.importType);
 
@@ -459,22 +656,20 @@ function settingsData() {
           this.selectedFile = null;
           this.importType = '';
         }
-
       } catch (error) {
         console.error('❌ Error importing file:', error);
         this.importResult = {
           success: false,
           message: 'Error importing file',
-          details: error.message
+          details: error.message || 'Unknown error'
         };
       }
     },
 
-    // Método auxiliar para leer Excel en el frontend
     async readExcelFile(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = e => {
           const data = new Uint8Array(e.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
           const sheetName = workbook.SheetNames[0];
@@ -482,7 +677,7 @@ function settingsData() {
           const rows = XLSX.utils.sheet_to_json(sheet);
           resolve(rows);
         };
-        reader.onerror = (err) => reject(err);
+        reader.onerror = err => reject(err);
         reader.readAsArrayBuffer(file);
       });
     },
