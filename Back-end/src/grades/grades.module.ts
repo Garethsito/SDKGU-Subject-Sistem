@@ -9,6 +9,6 @@ import { ActivityLogModule } from '../activityTimeline/activityTimeline.module';
   imports: [PrismaModule, ActivityLogModule],
   controllers: [GradesController],
   providers: [GradesService],
-  exports: [GradesService]
+  exports: [GradesService],
 })
 export class GradesModule {}

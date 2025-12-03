@@ -17,7 +17,7 @@ export interface BatchUpdateResult {
   errors?: string[];
 }
 
-// 🔥 FUNCIÓN GLOBAL DE NORMALIZACIÓN (HEAD)
+// FUNCIÓN GLOBAL DE NORMALIZACIÓN (HEAD)
 function normalizeStatus(input?: string, grade?: string): string {
   if (!input && grade) input = grade;
   const s = input?.toLowerCase().trim();
@@ -45,11 +45,22 @@ export class GradesService {
 
   // Obtener todas las calificaciones de un estudiante
   async getStudentGrades(studentId: bigint) {
-    return this.prisma.academicRecord.findMany({
-      where: { studentId },
-      include: { course: true, session: true },
-      orderBy: { course: { courseCode: 'asc' } },
-    });
+    // 👇 Integrando lo que trae la otra rama (logs + try/catch)
+    try {
+      console.log('🔍 Service: Buscando calificaciones para:', studentId);
+
+      const records = await this.prisma.academicRecord.findMany({
+        where: { studentId },
+        include: { course: true, session: true },
+        orderBy: { course: { courseCode: 'asc' } },
+      });
+
+      console.log('✅ Service: Registros encontrados:', records.length);
+      return records;
+    } catch (error) {
+      console.error('❌ Service Error:', error);
+      throw error;
+    }
   }
 
   // Actualizar o crear una calificación (INDIVIDUAL) + auditoría
