@@ -1,8 +1,20 @@
-
 function settingsData() {
   return {
+    init() {
+      this.loadActivityLog();
+    },
+
     activeTab: 'activity', // Tab por defecto
-    
+    searchQuery: '',
+    showFilters: false,
+
+    filters: {
+      user: '',
+      action: '',
+      dateFrom: '',
+      dateTo: ''
+    },
+
     // ⭐ DATOS PARA ADMINISTRATORS (AHORA EN ACTIVITY LOG)
     newAdmin: {
       firstName: '',
@@ -17,7 +29,6 @@ function settingsData() {
       { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@sdgku.edu', phone: '+1 (619) 555-0101', role: 'Admin', status: 'Active' }
     ],
     
-    // ⭐ DATOS PARA ACTIVITY LOG
     activityLog: [],
 
     activityFilters: {
@@ -28,19 +39,18 @@ function settingsData() {
     },
 
     currentPage: 1,
-    itemsPerPage: 10, // o 100 si quieres, pero 10 es más usable
+    itemsPerPage: 10, 
 
     isLoadingActivity: false,
     activityError: null,
 
-    // Cargar actividades desde el backend
     async loadActivityLog() {
       this.isLoadingActivity = true;
       this.activityError = null;
 
       try {
         console.log('🔄 Loading activity timeline...');
-        // OJO: el controller es 'activity-timeline', con guión
+
         const res = await fetch('http://localhost:3000/activityTimeline/recent');
         console.log('Status:', res.status);
 
@@ -51,8 +61,7 @@ function settingsData() {
         const data = await res.json();
         console.log('✅ Timeline data:', data);
 
-        this.activityLog = data;
-        this.currentPage = 1;
+        this.activityLog = Array.isArray(data) ? data : [];
 
       } catch (e) {
         console.error('❌ Error loading activity timeline:', e);
@@ -62,24 +71,39 @@ function settingsData() {
       }
     },
 
-    // 🔹 LISTA FILTRADA COMPLETA (sin paginar)
+    // LISTA FILTRADA COMPLETA (sin paginar)
     get filteredActivityLogAll() {
-      let filtered = this.activityLog;
+      let filtered = this.activityLog || [];
 
+      // Filtro por usuario (select User)
       if (this.activityFilters.user) {
         filtered = filtered.filter(a => a.user === this.activityFilters.user);
       }
 
+      // Filtro por tipo/acción (select Action Type)
       if (this.activityFilters.action) {
+        // En tus datos de demo usabas "type" (Login, Grade Update, etc.)
         filtered = filtered.filter(a => a.type === this.activityFilters.action);
       }
 
+      // Filtro por fecha desde
       if (this.activityFilters.dateFrom) {
         filtered = filtered.filter(a => a.date >= this.activityFilters.dateFrom);
       }
 
+      // Filtro por fecha hasta
       if (this.activityFilters.dateTo) {
         filtered = filtered.filter(a => a.date <= this.activityFilters.dateTo);
+      }
+
+      // Búsqueda por texto (si en algún lado usas searchQuery)
+      if (this.searchQuery) {
+        const q = this.searchQuery.toLowerCase();
+        filtered = filtered.filter(a =>
+          (a.description || '').toLowerCase().includes(q) ||
+          (a.user || '').toLowerCase().includes(q) ||
+          (a.type || '').toLowerCase().includes(q)
+        );
       }
 
       return filtered;
@@ -109,16 +133,17 @@ function settingsData() {
         dateFrom: '',
         dateTo: ''
       };
+      this.searchQuery = '';
       this.currentPage = 1;
+      console.log('Filters cleared');
     },
 
     exportActivityLog() {
       alert('Exporting activity log to Excel...');
-      console.log('Activity log data:', this.activityLog);
+      console.log('Activity log data:', this.filteredActivityLogAll);
+      // Aquí implementarías la exportación real con XLSX si quieres
     },
 
-    
-    // ⭐ MÉTODOS PARA ADMINISTRATORS
     addAdministrator() {
       const newId = this.administrators.length > 0 ? Math.max(...this.administrators.map(a => a.id)) + 1 : 1;
       this.administrators.push({
@@ -198,28 +223,6 @@ function settingsData() {
       return this.activityLog.filter(a => a.date === today && a.type !== 'Login' && a.type !== 'Logout').length;
     },
     
-    applyActivityFilters() {
-      this.currentPage = 1;
-      console.log('Filters applied:', this.activityFilters);
-    },
-    
-    clearActivityFilters() {
-      this.activityFilters = {
-        user: '',
-        action: '',
-        dateFrom: '',
-        dateTo: ''
-      };
-      this.currentPage = 1;
-    },
-    
-    exportActivityLog() {
-      alert('Exporting activity log to Excel...');
-      // Aquí implementarías la exportación con XLSX
-      console.log('Activity log data:', this.activityLog);
-    },
-    
-    // ⭐ DATOS PARA TEACHERS
     newTeacher: {
       firstName: '',
       lastName: '',
@@ -260,7 +263,6 @@ function settingsData() {
       }
     },
     
-    // ⭐ DATOS PARA PROGRAMS
     newProgram: {
       name: '',
       type: '',
@@ -299,7 +301,6 @@ function settingsData() {
       }
     },
     
-    // ⭐ DATOS PARA SUBJECTS
     newSubject: {
       name: '',
       code: '',
@@ -338,7 +339,6 @@ function settingsData() {
       }
     },
     
-    // ⭐ DATOS PARA IMPORT
     selectedFile: null,
     importType: '',
     importResult: null,
@@ -360,7 +360,8 @@ function settingsData() {
     
     clearFile() {
       this.selectedFile = null;
-      document.getElementById('fileUpload').value = '';
+      const input = document.getElementById('fileUpload');
+      if (input) input.value = '';
     },
     
     formatFileSize(bytes) {
@@ -371,120 +372,123 @@ function settingsData() {
       return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     },
     
-  async processImport() {
-    if (!this.selectedFile || !this.importType) return;
+    async processImport() {
+      if (!this.selectedFile || !this.importType) return;
 
-    const formData = new FormData();
-    formData.append('file', this.selectedFile);
+      const formData = new FormData();
+      formData.append('file', this.selectedFile);
 
-    try {
-      // Para el caso de grades, procesamos el Excel en el frontend
-      if (this.importType === 'grades') {
-        const data = await this.readExcelFile(this.selectedFile);
-        const results = [];
+      try {
+        // Para el caso de grades, procesamos el Excel en el frontend
+        if (this.importType === 'grades') {
+          const data = await this.readExcelFile(this.selectedFile);
+          const results = [];
 
-        for (const row of data) {
-          // Mapear columnas del Excel a propiedades del backend
-          const studentId = row['Students ID Number'];
-          const courseCode = row['Course'];
-          const grade = row['Grade'];
-          const status = row['Status'] || 'Completed'; // valor por defecto si no hay status
+          for (const row of data) {
+            // Mapear columnas del Excel a propiedades del backend
+            const studentId = row['Students ID Number'];
+            const courseCode = row['Course'];
+            const grade = row['Grade'];
+            const status = row['Status'] || 'Completed'; // valor por defecto si no hay status
 
-          if (!studentId || !courseCode || !grade) {
-            console.warn('Fila incompleta, se omite:', row);
-            continue; // saltar filas incompletas
+            if (!studentId || !courseCode || !grade) {
+              console.warn('Fila incompleta, se omite:', row);
+              continue; // saltar filas incompletas
+            }
+
+            // Llamar al endpoint de grades
+            const res = await fetch(`http://localhost:3000/api/students/${studentId}/grades`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ courseCode, grade, status })
+            });
+            let result = {};
+            if (res.ok) {
+              result = await res.json();
+            } else {
+              console.error('HTTP error:', res.status, res.statusText);
+              result = { success: false };
+            }
+
+            results.push(result);
           }
 
-          // Llamar al endpoint de grades (puedes usar fetch o axios)
-          const res = await fetch(`http://localhost:3000/api/students/${studentId}/grades`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ courseCode, grade, status })
+          this.importResult = {
+            success: true,
+            message: 'Grades imported successfully',
+            recordsProcessed: results.length
+          };
+
+          this.importHistory.unshift({
+            id: Date.now(),
+            date: new Date().toLocaleString(),
+            fileName: this.selectedFile.name,
+            type: this.importType,
+            records: results.length,
+            status: 'Success'
           });
-          let result = {};
-          if (res.ok) {
-            result = await res.json();
-          } else {
-            console.error('HTTP error:', res.status, res.statusText);
-            result = { success: false };
-          }
+
+          this.selectedFile = null;
+          this.importType = '';
+
+          return;
         }
 
-        this.importResult = {
-          success: true,
-          message: 'Grades imported successfully',
-          recordsProcessed: results.length
-        };
+        // Para otros tipos de import (students, teachers, etc.)
+        const url = `${this.apiUrl}/import/${this.importType}`;
+        console.log('📤 Importando archivo...', this.importType);
 
+        const response = await fetch(url, {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        this.importResult = result;
         this.importHistory.unshift({
           id: Date.now(),
           date: new Date().toLocaleString(),
           fileName: this.selectedFile.name,
           type: this.importType,
-          records: results.length,
-          status: 'Success'
+          records: result?.recordsProcessed || 0,
+          status: result?.success ? 'Success' : 'Failed'
         });
 
-        this.selectedFile = null;
-        this.importType = '';
+        if (result.success) {
+          this.selectedFile = null;
+          this.importType = '';
+        }
 
-        return;
+      } catch (error) {
+        console.error('❌ Error importing file:', error);
+        this.importResult = {
+          success: false,
+          message: 'Error importing file',
+          details: error.message
+        };
       }
+    },
 
-      // Para otros tipos de import (students, teachers, etc.)
-      const url = `${this.apiUrl}/import/${this.importType}`;
-      console.log('📤 Importando archivo...', this.importType);
-
-      const response = await fetch(url, {
-        method: 'POST',
-        body: formData
+    // Método auxiliar para leer Excel en el frontend
+    async readExcelFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const rows = XLSX.utils.sheet_to_json(sheet);
+          resolve(rows);
+        };
+        reader.onerror = (err) => reject(err);
+        reader.readAsArrayBuffer(file);
       });
+    },
 
-      const result = await response.json();
-
-      this.importResult = result;
-      this.importHistory.unshift({
-        id: Date.now(),
-        date: new Date().toLocaleString(),
-        fileName: this.selectedFile.name,
-        type: this.importType,
-        records: result?.recordsProcessed || 0,
-        status: result?.success ? 'Success' : 'Failed'
-      });
-
-      if (result.success) {
-        this.selectedFile = null;
-        this.importType = '';
-      }
-
-    } catch (error) {
-      console.error('❌ Error importing file:', error);
-      this.importResult = {
-        success: false,
-        message: 'Error importing file',
-        details: error.message
-      };
+    downloadTemplate() {
+      alert('Template download feature will be implemented with actual Excel generation');
     }
-  },
-
-  // Método auxiliar para leer Excel en el frontend
-  async readExcelFile(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json(sheet);
-        resolve(rows);
-      };
-      reader.onerror = (err) => reject(err);
-      reader.readAsArrayBuffer(file);
-    });
-  },
-      downloadTemplate() {
-        alert('Template download feature will be implemented with actual Excel generation');
-      }
   };
 }
