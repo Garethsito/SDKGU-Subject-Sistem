@@ -236,51 +236,196 @@ export class StudentsService {
   }
 
   async getAllStudents() {
-  const students = await this.prisma.student.findMany({
-    where: { status: 'active' },
-    include: {
-      program: true,
-      records: {
-        include: {
-          course: true,
-          session: true
+    const students = await this.prisma.student.findMany({
+      where: { status: 'active' },
+      include: {
+        program: {
+          include: {
+            programCourses: {
+              include: {
+                course: true
+              }
+            }
+          }
+        },
+        records: {
+          include: {
+            course: true,
+            session: true
+          }
+        },
+        transfers: {
+          include: {
+            course: true
+          }
+        },
+        enrollments: {
+          include: {
+            offering: {
+              include: {
+                course: true,
+                session: true
+              }
+            }
+          }
         }
       },
-      transfers: {
-        include: {
-          course: true
-        }
-      },
-      enrollments: {
-        include: {
-          offering: {
-            include: {
-              course: true,
-              session: true
+      orderBy: [
+        { lastName: 'asc' },
+        { firstName: 'asc' }
+      ]
+    });
+
+    console.log(`📊 Processing ${students.length} students...`);
+
+    return students.map(student => {
+      // ✅ OBTENER CURSOS DEL PROGRAMA DEL ESTUDIANTE
+      const programCourseIds = student.program?.programCourses?.map(pc => pc.courseId) || [];
+      
+      // ✅ FILTRAR SOLO RECORDS QUE PERTENECEN AL PROGRAMA
+      const completedRecords = student.records.filter(r => 
+        ['passed', 'completed', 'transferred', 'completado'].includes(r.status?.toLowerCase() || '') &&
+        programCourseIds.includes(r.courseId) // ⭐ FILTRO AÑADIDO
+      );
+      
+      // ✅ CALCULAR CRÉDITOS SOLO DE CURSOS DEL PROGRAMA
+      const unitsEarned = completedRecords.reduce((sum, record) => {
+        const course = record.course;
+        return sum + (course.credits || 3);
+      }, 0);
+
+      // ✅ Process grades
+      const grades = {};
+      
+      // 1️⃣ FIRST: Add enrollments (courses in progress)
+      student.enrollments.forEach(enrollment => {
+        const courseId = enrollment.offering.courseId;
+        
+        grades[courseId] = {
+          grade: null,
+          letter: 'IP',
+          status: 'In Progress',
+          courseCode: enrollment.offering.course.courseCode,
+          courseName: enrollment.offering.course.courseName,
+          sessionName: enrollment.offering.session?.sessionName || 'N/A',
+          isEnrolled: true
+        };
+      });
+      
+      // 2️⃣ THEN: Process records (overwrites enrollments if completed)
+      student.records.forEach(record => {
+        const numericGrade = this.convertGradeToNumeric(record.grade);
+        
+        grades[record.courseId] = {
+          grade: numericGrade,
+          letter: record.grade || '-',
+          status: this.mapStatus(record.status),
+          courseCode: record.course.courseCode,
+          courseName: record.course.courseName,
+          sessionName: record.session?.sessionName || 'N/A',
+          isEnrolled: false
+        };
+      });
+
+      // 🔍 DEBUG: Log first student
+      if (student.id === students[0]?.id) {
+        console.log('📋 Sample student calculation:', {
+          studentId: student.studentIdNumber,
+          programCourses: programCourseIds.length,
+          completedInProgram: completedRecords.length,
+          totalRecords: student.records.length,
+          unitsEarned: unitsEarned,
+          transferredUnits: student.transferredUnits,
+          totalUnits: student.totalUnits
+        });
+      }
+
+      return {
+        id: Number(student.id),
+        studentIdNumber: student.studentIdNumber,
+        name: `${student.firstName} ${student.lastName}`,
+        firstName: student.firstName,
+        middleName: student.middleName || '',
+        lastName: student.lastName,
+        phone: student.phone || 'N/A',
+        email: student.email || 'N/A',
+        sdgkuEmail: student.sdgkuEmail || 'N/A',
+        status: student.status === 'active' ? 'Active' : 'Inactive',
+        program: student.program,
+        modality: student.modality || 'Online',
+        cohort: student.cohort || `Fall ${student.enrollmentYear}`,
+        language: student.language || 'English',
+        totalUnits: student.totalUnits,
+        transferredUnits: student.transferredUnits,
+        totalUnitsEarned: unitsEarned, // ✅ AHORA SOLO CUENTA CURSOS DEL PROGRAMA
+        startDate: student.startDate.toISOString().split('T')[0],
+        scheduledCompletionDate: student.scheduledCompletionDate 
+          ? student.scheduledCompletionDate.toISOString().split('T')[0] 
+          : 'TBD',
+        graduationDate: student.graduationDate 
+          ? student.graduationDate.toISOString().split('T')[0] 
+          : 'TBD',
+        grades: grades
+      };
+    });
+  }
+
+  async getStudentById(studentId: bigint) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      include: {
+        program: {
+          include: {
+            programCourses: {
+              include: {
+                course: true
+              }
+            }
+          }
+        },
+        records: {
+          include: {
+            course: true,
+            session: true
+          }
+        },
+        transfers: {
+          include: {
+            course: true
+          }
+        },
+        enrollments: {
+          include: {
+            offering: {
+              include: {
+                course: true,
+                session: true
+              }
             }
           }
         }
       }
-    },
-    orderBy: [
-      { lastName: 'asc' },
-      { firstName: 'asc' }
-    ]
-  });
+    });
 
-  console.log(`📊 Processing ${students.length} students...`);
+    if (!student) {
+      throw new NotFoundException(`Student with ID ${studentId} not found`);
+    }
 
-  return students.map(student => {
+    // ✅ OBTENER CURSOS DEL PROGRAMA DEL ESTUDIANTE
+    const programCourseIds = student.program?.programCourses?.map(pc => pc.courseId) || [];
+    
+    // ✅ FILTRAR SOLO RECORDS QUE PERTENECEN AL PROGRAMA
     const completedRecords = student.records.filter(r => 
-      ['passed', 'completed', 'transferred', 'completado'].includes(r.status?.toLowerCase() || '')
+      ['passed', 'completed', 'transferred', 'completado'].includes(r.status?.toLowerCase() || '') &&
+      programCourseIds.includes(r.courseId) // ⭐ FILTRO AÑADIDO
     );
     
+    // ✅ CALCULAR CRÉDITOS SOLO DE CURSOS DEL PROGRAMA
     const unitsEarned = completedRecords.reduce((sum, record) => {
-      const course = record.course;
-      return sum + (course.credits || 3);
-    }, 0) + student.transferredUnits;
+      return sum + (record.course.credits || 3);
+    }, 0);
 
-    // ✅ Process grades
+    // ✅ Procesar grades igual que en getAllStudents
     const grades = {};
     
     // 1️⃣ FIRST: Add enrollments (courses in progress)
@@ -313,16 +458,6 @@ export class StudentsService {
       };
     });
 
-    // 🔍 DEBUG: Log first student
-    if (student.id === students[0]?.id) {
-      console.log('📋 Sample student grades:', {
-        studentId: student.studentIdNumber,
-        totalRecords: student.records.length,
-        totalEnrollments: student.enrollments.length,
-        sampleGrade: grades[Object.keys(grades)[0]]
-      });
-    }
-
     return {
       id: Number(student.id),
       studentIdNumber: student.studentIdNumber,
@@ -340,117 +475,13 @@ export class StudentsService {
       language: student.language || 'English',
       totalUnits: student.totalUnits,
       transferredUnits: student.transferredUnits,
-      totalUnitsEarned: unitsEarned,
+      totalUnitsEarned: unitsEarned, // ✅ AHORA SOLO CUENTA CURSOS DEL PROGRAMA
       startDate: student.startDate.toISOString().split('T')[0],
-      scheduledCompletionDate: student.scheduledCompletionDate 
-        ? student.scheduledCompletionDate.toISOString().split('T')[0] 
-        : 'TBD',
-      graduationDate: student.graduationDate 
-        ? student.graduationDate.toISOString().split('T')[0] 
-        : 'TBD',
+      scheduledCompletionDate: student.scheduledCompletionDate?.toISOString().split('T')[0] || 'TBD',
+      graduationDate: student.graduationDate?.toISOString().split('T')[0] || 'TBD',
       grades: grades
     };
-  });
-}
-
-  async getStudentById(studentId: bigint) {
-  const student = await this.prisma.student.findUnique({
-    where: { id: studentId },
-    include: {
-      program: true,
-      records: {
-        include: {
-          course: true,
-          session: true
-        }
-      },
-      transfers: {
-        include: {
-          course: true
-        }
-      }, // ✅ COMA AGREGADA
-      enrollments: {
-        include: {
-          offering: {
-            include: {
-              course: true,
-              session: true
-            }
-          }
-        }
-      }
-    }
-  });
-
-  if (!student) {
-    throw new NotFoundException(`Student with ID ${studentId} not found`);
   }
-
-  const completedRecords = student.records.filter(r => 
-    ['passed', 'completed', 'transferred', 'completado'].includes(r.status?.toLowerCase() || '')
-  );
-  
-  const unitsEarned = completedRecords.reduce((sum, record) => {
-    return sum + (record.course.credits || 3);
-  }, 0) + student.transferredUnits;
-
-  // ✅ Procesar grades igual que en getAllStudents
-  const grades = {};
-  
-  // 1️⃣ FIRST: Add enrollments (courses in progress)
-  student.enrollments.forEach(enrollment => {
-    const courseId = enrollment.offering.courseId;
-    
-    grades[courseId] = {
-      grade: null,
-      letter: 'IP',
-      status: 'In Progress',
-      courseCode: enrollment.offering.course.courseCode,
-      courseName: enrollment.offering.course.courseName,
-      sessionName: enrollment.offering.session?.sessionName || 'N/A',
-      isEnrolled: true
-    };
-  });
-  
-  // 2️⃣ THEN: Process records (overwrites enrollments if completed)
-  student.records.forEach(record => {
-    const numericGrade = this.convertGradeToNumeric(record.grade);
-    
-    grades[record.courseId] = {
-      grade: numericGrade,
-      letter: record.grade || '-',
-      status: this.mapStatus(record.status),
-      courseCode: record.course.courseCode,
-      courseName: record.course.courseName,
-      sessionName: record.session?.sessionName || 'N/A',
-      isEnrolled: false
-    };
-  });
-
-  return {
-    id: Number(student.id),
-    studentIdNumber: student.studentIdNumber,
-    name: `${student.firstName} ${student.lastName}`,
-    firstName: student.firstName,
-    middleName: student.middleName || '',
-    lastName: student.lastName,
-    phone: student.phone || 'N/A',
-    email: student.email || 'N/A',
-    sdgkuEmail: student.sdgkuEmail || 'N/A',
-    status: student.status === 'active' ? 'Active' : 'Inactive',
-    program: student.program,
-    modality: student.modality || 'Online',
-    cohort: student.cohort || `Fall ${student.enrollmentYear}`,
-    language: student.language || 'English',
-    totalUnits: student.totalUnits,
-    transferredUnits: student.transferredUnits,
-    totalUnitsEarned: unitsEarned,
-    startDate: student.startDate.toISOString().split('T')[0],
-    scheduledCompletionDate: student.scheduledCompletionDate?.toISOString().split('T')[0] || 'TBD',
-    graduationDate: student.graduationDate?.toISOString().split('T')[0] || 'TBD',
-    grades: grades
-  };
-}
 
   // ✅ MEJORADO: Convertir grade a numérico
   private convertGradeToNumeric(grade: string | null): number | null {
