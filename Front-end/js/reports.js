@@ -20,14 +20,6 @@ function reports() {
       DescripcionSesion: false,
       All: false
     },
-
-    reportFilters: {
-      program: 'all',
-      demandLevel: 'all',
-      minStudents: 0,
-      courseType: 'all',
-      sortBy: 'demand_desc'
-    },
     
     students: [],
     sessionData: [],
@@ -42,6 +34,15 @@ function reports() {
     // Paginación para recomendaciones
     recommendationsPage: 1,
     recommendationsPerPage: 10,
+
+    // Paginación para estudiantes
+    studentsPage: 1,
+    studentsPerPage: 10,
+    
+    // Paginación para sesiones
+    sessionsPage: 1,
+    sessionsPerPage: 8,
+
     reportFilters: {
       program: 'all',
       demandLevel: 'all',
@@ -432,6 +433,64 @@ getStudentPendingSubjects(studentId) {
         this.recommendationsPage = page;
       }
     },
+
+// Métodos de paginación para estudiantes
+    get totalStudentPages() {
+      return Math.ceil(this.students.length / this.studentsPerPage);
+    },
+
+    get paginatedStudents() {
+      const startIndex = (this.studentsPage - 1) * this.studentsPerPage;
+      const endIndex = startIndex + this.studentsPerPage;
+      return this.students.slice(startIndex, endIndex);
+    },
+
+    nextStudentsPage() {
+      if (this.studentsPage < this.totalStudentPages) {
+        this.studentsPage++;
+      }
+    },
+
+    prevStudentsPage() {
+      if (this.studentsPage > 1) {
+        this.studentsPage--;
+      }
+    },
+
+    goToStudentsPage(page) {
+      if (page >= 1 && page <= this.totalStudentPages) {
+        this.studentsPage = page;
+      }
+    },
+
+    // Métodos de paginación para sesiones
+    get totalSessionPages() {
+      return Math.ceil(this.sessionData.length / this.sessionsPerPage);
+    },
+
+    get paginatedSessions() {
+      const startIndex = (this.sessionsPage - 1) * this.sessionsPerPage;
+      const endIndex = startIndex + this.sessionsPerPage;
+      return this.sessionData.slice(startIndex, endIndex);
+    },
+
+    nextSessionsPage() {
+      if (this.sessionsPage < this.totalSessionPages) {
+        this.sessionsPage++;
+      }
+    },
+
+    prevSessionsPage() {
+      if (this.sessionsPage > 1) {
+        this.sessionsPage--;
+      }
+    },
+
+    goToSessionsPage(page) {
+      if (page >= 1 && page <= this.totalSessionPages) {
+        this.sessionsPage = page;
+      }
+    },    
 
     toggleRecommendationExpansion(subjectId) {
       // Forzar reactividad con spread operator

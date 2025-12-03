@@ -141,7 +141,7 @@
       <li><a href="session.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-calendar-days mr-2"></i>Sessions</a></li>
       <li><a href="subjects.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-book mr-2"></i>Subjects</a></li>
       <li><a href="students.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-users mr-2"></i>Students</a></li>
-      <li><a href="reports.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-file-lines mr-2"></i>Reports</a></li>
+      <li><a href="reports.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-file-lines mr-2"></i>Academic Analytics</a></li>
       <li><a href="settings.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-gear mr-2"></i>Settings</a></li>
     </ul>
   </aside>
@@ -604,36 +604,49 @@
               <div class="mb-6">
                 <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
                   <i class="fa-solid fa-chart-bar text-[#A6192E] mr-2"></i>
-                  Units Summary
+                  Credits Summary
                 </h3>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div class="bg-gray-50 border-2 border-gray-300 rounded-lg p-4">
-                    <p class="text-[#252121] text-xs font-medium mb-1">Total Units</p>
+                    <p class="text-[#252121] text-xs font-medium mb-1">Total Credits</p>
                     <p class="text-3xl font-bold text-[#252121]" x-text="student.totalUnits || '0'"></p>
                   </div>
                   <div class="bg-red-50 border-2 border-[#D41736] rounded-lg p-4">
-                    <p class="text-[#A6192E] text-xs font-medium mb-1">Units Earned</p>
+                    <p class="text-[#A6192E] text-xs font-medium mb-1">Credits Earned</p>
                     <p class="text-3xl font-bold text-[#D41736]" x-text="student.unitsEarned || '0'"></p>
                   </div>
                   <div class="bg-orange-50 border-2 border-[#E35E26] rounded-lg p-4">
-                    <p class="text-[#E35E26] text-xs font-medium mb-1">Transferred Units</p>
+                    <p class="text-[#E35E26] text-xs font-medium mb-1">Transferred Credits</p>
                     <p class="text-3xl font-bold text-[#E35E26]" x-text="student.transferredUnits || '0'"></p>
                   </div>
                   <div class="bg-yellow-50 border-2 border-[#F69A1C] rounded-lg p-4">
-                    <p class="text-[#F69A1C] text-xs font-medium mb-1">Remaining Units</p>
-                    <p class="text-3xl font-bold text-[#F69A1C]" x-text="(student.totalUnits || 0) - (student.unitsEarned || 0)"></p>
+                    <p class="text-[#F69A1C] text-xs font-medium mb-1">Remaining Credits</p>
+                    <p class="text-3xl font-bold" 
+                       :class="(student.totalUnits || 0) - (student.unitsEarned || 0) - (student.transferredUnits || 0) < 0 ? 'text-[#F69A1C]' : 'text-[#F69A1C]'"
+                       x-text="Math.max(0, (student.totalUnits || 0) - (student.unitsEarned || 0) - (student.transferredUnits || 0))"></p>
                   </div>
                 </div>
                 
                 <div class="mt-4">
                   <div class="flex justify-between text-sm text-gray-600 mb-2">
-                    <span>Units Progress</span>
-                    <span x-text="Math.round(((student.unitsEarned || 0) / (student.totalUnits || 1)) * 100) + '%'"></span>
+                    <span>Credits Progress</span>
+                    <span 
+                      :class="((student.unitsEarned || 0) + (student.transferredUnits || 0)) >= (student.totalUnits || 1) ? 'text-[#D41736] font-bold' : ''"
+                      x-text="Math.min(100, Math.round((((student.unitsEarned || 0) + (student.transferredUnits || 0)) / (student.totalUnits || 1)) * 100)) + '%'"></span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-3">
                     <div 
-                      class="bg-gradient-to-r from-[#A6192E] to-[#D41736] h-3 rounded-full transition-all duration-500" 
-                      :style="'width: ' + Math.round(((student.unitsEarned || 0) / (student.totalUnits || 1)) * 100) + '%'"></div>
+                      class="h-3 rounded-full transition-all duration-500" 
+                      :class="((student.unitsEarned || 0) + (student.transferredUnits || 0)) >= (student.totalUnits || 1) ? 'bg-gradient-to-r from-[#A6192E] to-[#D41736]' : 'bg-gradient-to-r from-[#A6192E] to-[#D41736]'"
+                      :style="'width: ' + Math.min(100, Math.round((((student.unitsEarned || 0) + (student.transferredUnits || 0)) / (student.totalUnits || 1)) * 100)) + '%'"></div>
+                  </div>
+                  
+                  <!-- Mensaje de advertencia si excede créditos -->
+                  <div x-show="((student.unitsEarned || 0) + (student.transferredUnits || 0)) > (student.totalUnits || 1)" 
+                       class="mt-2 p-2 bg-[#F69A1C]/5 border border-[#F69A1C]/40 rounded-lg text-xs text-[#F69A1C]">
+                    <i class="fa-solid fa-check-circle mr-1"></i>
+                    <span>Student has completed all required credits</span>
+                    <span x-text="' (' + (((student.unitsEarned || 0) + (student.transferredUnits || 0)) - (student.totalUnits || 0)) + ' credits over requirement)'"></span>
                   </div>
                 </div>
               </div>
