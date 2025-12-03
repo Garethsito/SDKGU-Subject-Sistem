@@ -164,44 +164,67 @@ function reports() {
       }
     },
     
-    async loadSessions() {
-      try {
-        const response = await fetch(`${this.apiUrl}/sessions`);
-        if (!response.ok) throw new Error('Error loading sessions');
-        const sessions = await response.json();
+   async loadSessions() {
+  try {
+    const response = await fetch(`${this.apiUrl}/sessions`);
+    if (!response.ok) throw new Error('Error loading sessions');
+    const sessions = await response.json();
 
-        this.sessionData = sessions.map(session => {
-          const enrolled = session.enrolled || 0;
-          const capacity = session.capacity || enrolled;
-          const available = capacity - enrolled;
-          
-          let materiaIds = [];
-          if (session.subjects) {
-            materiaIds = session.subjects.map(code => {
-              const subject = this.subjects.find(s => s.code === code);
-              return subject ? subject.id : null;
-            }).filter(id => id !== null);
-          }
+    sessions.forEach(s => console.log('Raw session:', s));
 
-          return {
-            id: session.id,
-            number: session.number || session.id,
-            date: session.startDate,
-            program: session.program,
-            capacity,
-            enrolled,
-            available,
-            Materias: materiaIds,
-            listAlumns: []
-          };
-        });
-        
-        console.log('📅 Sesiones cargadas:', this.sessionData.length);
-      } catch (error) {
-        console.error('Error loading sessions:', error);
-        throw error;
-      }
-    },
+    this.sessionData = sessions.map(session => {
+      console.log('Mapping session:', session.sessionName);
+      
+      const materiaIds = session.subjects || [];
+      
+      // Usar el occupancy que viene de la API (estudiantes asignados)
+      const enrolled = session.occupancy || 0;
+      
+      // Capacidad = número de materias × 50 estudiantes por materia
+      const capacity = materiaIds.length * 50;
+      const available = Math.max(0, capacity - enrolled);
+
+      // Buscar qué estudiantes están asignados a esta sesión
+      const assignedStudents = this.students.filter(student => 
+        student.assignedSession === session.id || 
+        student.sessionId === session.id ||
+        student.currentSessionId === session.id // Ajusta según tu modelo de datos
+      );
+
+      return {
+        id: session.id,
+        number: session.number || session.id,
+        sessionName: session.sessionName,
+        date: session.startDate,
+        program: session.program,
+        capacity,
+        enrolled,
+        available,
+        Materias: materiaIds,
+        listAlumns: assignedStudents.map(s => s.id) // IDs de estudiantes asignados
+      };
+    });
+
+    console.log('📅 Sesiones cargadas:', this.sessionData);
+
+  } catch (error) {
+    console.error('Error loading sessions:', error);
+    throw error;
+  }
+},
+getStudentPendingSubjects(studentId) {
+  const student = this.students.find(s => s.id === studentId);
+  if (!student) return [];
+  
+  // Obtener todas las materias del programa del estudiante
+  const programSubjects = this.subjects
+    .filter(s => s.programId === student.programId)
+    .map(s => s.id);
+  
+  // Filtrar las que ya completó
+  const completedSubjects = student.completedSubjects || [];
+  return programSubjects.filter(id => !completedSubjects.includes(id));
+},
 
     // ✅ CORREGIDO: loadRecommendations (una sola versión)
     async loadRecommendations() {
@@ -985,35 +1008,73 @@ function reports() {
     },
     
     async loadCoursesForEditing(studentId) {
-      try {
-        const gradesResponse = await fetch(`${this.apiUrl}/students/${studentId}/grades`);
-        const existingGrades = await gradesResponse.json();
+  try {
+    // ✅ Obtener datos completos del estudiante (incluye enrollments)
+    const studentResponse = await fetch(`${this.apiUrl}/students/${studentId}`);
+    
+    if (!studentResponse.ok) {
+      throw new Error('Failed to load student data');
+    }
+    
+    const student = await studentResponse.json();
+    
+    // Crear mapa de calificaciones
+    const gradesMap = {};
+    
+    if (student.grades && typeof student.grades === 'object') {
+      Object.entries(student.grades).forEach(([courseId, gradeInfo]) => {
+        const courseCode = gradeInfo.courseCode;
         
-        const gradesMap = {};
-        existingGrades.forEach(record => {
-          gradesMap[record.course.courseCode] = {
-            grade: record.grade || '--',
-            sessionId: record.sessionId
+        if (courseCode) {
+          // ✅ Mapear correctamente los grades
+          let displayGrade = '--';
+          
+          // Si tiene letra de calificación, usarla
+          if (gradeInfo.letter && gradeInfo.letter !== '-') {
+            displayGrade = gradeInfo.letter;
+          }
+          // Si está enrolled (In Progress), mostrar IP
+          else if (gradeInfo.isEnrolled || gradeInfo.status === 'In Progress') {
+            displayGrade = 'IP';
+          }
+          
+          gradesMap[courseCode] = {
+            grade: displayGrade,
+            sessionId: gradeInfo.sessionId || null,
+            status: gradeInfo.status || 'Not Started'
           };
-        });
-        
-        this.coursesForEditing = this.subjects.map(subject => ({
-          code: subject.code,
-          name: subject.name,
-          grade: gradesMap[subject.code]?.grade || '--',
-          sessionId: gradesMap[subject.code]?.sessionId || null,
-          modified: false
-        }));
-        
-        console.log('📝 Cursos cargados para edición:', this.coursesForEditing.length);
-      } catch (error) {
-        console.error('Error loading courses for editing:', error);
-        this.saveStatus = {
-          type: 'error',
-          message: 'Error al cargar los cursos'
-        };
-      }
-    },
+        }
+      });
+    }
+    
+    // Mapear todos los cursos del sistema
+    this.coursesForEditing = this.subjects.map(subject => ({
+      code: subject.code,
+      name: subject.name,
+      grade: gradesMap[subject.code]?.grade || '--',
+      sessionId: gradesMap[subject.code]?.sessionId || null,
+      status: gradesMap[subject.code]?.status || 'Not Started',
+      modified: false
+    }));
+    
+    console.log('📝 Cursos cargados para edición:', this.coursesForEditing.length);
+    
+    // Debug: Mostrar cursos "In Progress"
+    const inProgressCourses = this.coursesForEditing.filter(c => c.grade === 'IP');
+    console.log('📚 Cursos en progreso:', inProgressCourses.length);
+    
+    if (inProgressCourses.length > 0) {
+      console.log('Ejemplo:', inProgressCourses[0]);
+    }
+    
+  } catch (error) {
+    console.error('Error loading courses for editing:', error);
+    this.saveStatus = {
+      type: 'error',
+      message: 'Error al cargar los cursos'
+    };
+  }
+},
     
     get filteredCoursesForEditing() {
       if (!this.courseSearchQuery || this.courseSearchQuery.trim() === '') {
@@ -1124,9 +1185,12 @@ function reports() {
     getStatusText(grade) {
       if (grade === '--') return 'Not Taken';
       if (grade === 'IP') return 'In Progress';
-      if (grade === 'T') return 'Transferred'
+      if (grade === 'T') return 'Transferred';
+      if (grade === 'F') return 'Failed';
       return 'Completed';
     },
+
+    
     
     resetGrades() {
       if (confirm('¿Estás seguro de resetear todos los cambios?')) {
@@ -1134,6 +1198,14 @@ function reports() {
         this.modifiedCourses = [];
         this.saveStatus = { type: '', message: '' };
       }
+    },
+     // Agregar la función auxiliar como método
+    getStatusFromGrade(grade) {
+      if (!grade || grade === '--') return 'pending';
+      if (grade === 'IP') return 'pending';
+      if (grade === 'T' || grade === 'P') return 'transferred';
+      if (grade === 'F') return 'failed';
+      return 'completed';
     },
     
     async saveGrades() {
@@ -1156,7 +1228,8 @@ function reports() {
           .map(course => ({
             courseCode: course.code,
             grade: course.grade,
-            sessionId: course.sessionId
+            sessionId: course.sessionId,
+             status: this.getStatusFromGrade(course.grade)
           }));
         
         console.log('💾 Guardando calificaciones:', gradesToSave);

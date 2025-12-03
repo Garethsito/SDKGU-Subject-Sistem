@@ -1,18 +1,26 @@
-import { Controller, Get } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.services';
+import { Controller, Get, Post, Body, Delete, Param } from '@nestjs/common';
+import { TeachersService } from './teachers.service';
+import { CreateTeacherDto } from './dto/create-teacher.dto';
 
-@Controller('api/teachers')
+@Controller('teachers')
 export class TeachersController {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly teachersService: TeachersService) {}
 
+  // GET /api/teachers
   @Get()
-  async getAllTeachers() {
-    return this.prisma.teacher.findMany({
-      where: { status: 'active' },
-      orderBy: [
-        { lastName: 'asc' },
-        { firstName: 'asc' }
-      ]
-    });
+  async getAll() {
+    return this.teachersService.findAll();
+  }
+
+  // POST /api/teachers
+  @Post()
+  async create(@Body() dto: CreateTeacherDto) {
+    return this.teachersService.create(dto);
+  }
+
+  // DELETE /api/teachers/:id
+  @Delete(':id')
+  async delete(@Param('id') id: string) {
+    return this.teachersService.delete(Number(id));
   }
 }
