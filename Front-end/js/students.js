@@ -24,6 +24,9 @@ function academicData() {
     loading: true,
     error: null,
 
+    currentPage: 1,
+    itemsPerPage: 20,
+
     async init() {
       try {
         this.loading = true;
@@ -480,6 +483,7 @@ function academicData() {
         
         return match;
       });
+      this.currentPage = 1;
     },
 
     clearFilters() {
@@ -490,7 +494,47 @@ function academicData() {
       };
       this.searchTerm = '';
       this.programFilter = 'all';
+      this.currentPage = 1;
       this.applyFilters();
+    },
+
+    // Pagination methods
+    getTotalPages() {
+      const students = this.getFilteredStudentsByProgram();
+      return Math.ceil(students.length / this.itemsPerPage);
+    },
+
+    getStartIndex() {
+      return (this.currentPage - 1) * this.itemsPerPage;
+    },
+
+    getEndIndex() {
+      const students = this.getFilteredStudentsByProgram();
+      const end = this.currentPage * this.itemsPerPage;
+      return Math.min(end, students.length);
+    },
+
+    getPaginatedStudents() {
+      const students = this.getFilteredStudentsByProgram();
+      const start = this.getStartIndex();
+      const end = this.getEndIndex();
+      return students.slice(start, end);
+    },
+
+    nextPage() {
+      if (this.currentPage < this.getTotalPages()) {
+        this.currentPage++;
+      }
+    },
+
+    previousPage() {
+      if (this.currentPage > 1) {
+        this.currentPage--;
+      }
+    },
+
+    goToPage(page) {
+      this.currentPage = page;
     },
 
     exportStudentReport(student) {

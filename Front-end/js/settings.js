@@ -6,7 +6,7 @@ function settingsData() {
       this.loadPrograms();
       this.loadSubjects();
     },
-
+    open: false,
     activeTab: 'activity', // Tab por defecto
     searchQuery: '',
     showFilters: false,

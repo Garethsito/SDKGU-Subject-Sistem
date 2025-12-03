@@ -196,7 +196,7 @@
       </div>
     </div>
 
-    <div class="bg-white rounded-lg shadow mb-6 p-4">
+<div class="bg-white rounded-lg shadow mb-6 p-4">
       <div class="flex items-center justify-between">
         <div class="flex gap-2">
           <button 
@@ -234,6 +234,59 @@
             <div class="w-4 h-4 bg-[#E35E26] rounded"></div>
             <span class="text-gray-600">Transferred</span>
           </div>          
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGINATION CONTROLS -->
+    <div class="bg-white rounded-lg shadow mb-6 p-4">
+      <div class="flex items-center justify-between">
+        <div class="text-sm text-gray-600">
+          Showing <span class="font-semibold" x-text="getStartIndex() + 1"></span> 
+          to <span class="font-semibold" x-text="getEndIndex()"></span> 
+          of <span class="font-semibold" x-text="getFilteredStudentsByProgram().length"></span> students
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <button 
+            @click="previousPage()" 
+            :disabled="currentPage === 1"
+            :class="currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'"
+            class="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium transition">
+            <i class="fa-solid fa-chevron-left mr-1"></i> Previous
+          </button>
+          
+          <div class="flex gap-1">
+            <template x-for="page in getTotalPages()" :key="page">
+              <button 
+                @click="goToPage(page)"
+                :class="currentPage === page ? 'bg-[#A6192E] text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                class="w-10 h-10 border border-gray-300 rounded-lg text-sm font-medium transition"
+                x-text="page">
+              </button>
+            </template>
+          </div>
+          
+          <button 
+            @click="nextPage()" 
+            :disabled="currentPage === getTotalPages()"
+            :class="currentPage === getTotalPages() ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'"
+            class="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium transition">
+            Next <i class="fa-solid fa-chevron-right ml-1"></i>
+          </button>
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <label class="text-sm text-gray-600">Per page:</label>
+          <select 
+            x-model="itemsPerPage" 
+            @change="currentPage = 1"
+            class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+            <option value="15">15</option>
+            <option value="20">20</option>
+            <option value="30">30</option>
+            <option value="50">50</option>
+          </select>
         </div>
       </div>
     </div>
@@ -301,7 +354,7 @@
               </div>
 
               <!-- STUDENT ROWS -->
-              <template x-for="student in getFilteredStudentsByProgram()" :key="student.id">
+              <template x-for="student in getPaginatedStudents()" :key="student.id">
                 <div 
                   @click="selectedStudent = student.id; courseStatusFilter = 'all'"
                   class="flex items-center mb-2 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition"
@@ -342,7 +395,7 @@
                 </div>
               </template>
               
-              <div x-show="getFilteredStudentsByProgram().length === 0" class="text-center text-gray-500 p-8" x-cloak>
+              <div x-show="getPaginatedStudents().length === 0" class="text-center text-gray-500 p-8" x-cloak>
                 No students match the current filters.
               </div>
               
@@ -365,7 +418,7 @@
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
-          <template x-for="student in filteredStudents" :key="student.id">
+          <template x-for="student in getPaginatedStudents()" :key="student.id">
             <tr class="hover:bg-gray-50">
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center">
@@ -402,7 +455,7 @@
             </tr>
           </template>
           
-          <tr x-show="filteredStudents.length === 0" x-cloak>
+          <tr x-show="getPaginatedStudents().length === 0" x-cloak>
             <td colspan="5" class="text-center text-gray-500 p-8">
               No students match the current filters.
             </td>
