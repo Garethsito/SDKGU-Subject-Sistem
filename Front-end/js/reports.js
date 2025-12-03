@@ -139,44 +139,67 @@ function reports() {
       }
     },
     
-    async loadSessions() {
-      try {
-        const response = await fetch(`${this.apiUrl}/sessions`);
-        if (!response.ok) throw new Error('Error loading sessions');
-        const sessions = await response.json();
+   async loadSessions() {
+  try {
+    const response = await fetch(`${this.apiUrl}/sessions`);
+    if (!response.ok) throw new Error('Error loading sessions');
+    const sessions = await response.json();
 
-        this.sessionData = sessions.map(session => {
-          const enrolled = session.enrolled || 0;
-          const capacity = session.capacity || enrolled;
-          const available = capacity - enrolled;
-          
-          let materiaIds = [];
-          if (session.subjects) {
-            materiaIds = session.subjects.map(code => {
-              const subject = this.subjects.find(s => s.code === code);
-              return subject ? subject.id : null;
-            }).filter(id => id !== null);
-          }
+    sessions.forEach(s => console.log('Raw session:', s));
 
-          return {
-            id: session.id,
-            number: session.number || session.id,
-            date: session.startDate,
-            program: session.program,
-            capacity,
-            enrolled,
-            available,
-            Materias: materiaIds,
-            listAlumns: []
-          };
-        });
-        
-        console.log('📅 Sesiones cargadas:', this.sessionData.length);
-      } catch (error) {
-        console.error('Error loading sessions:', error);
-        throw error;
-      }
-    },
+    this.sessionData = sessions.map(session => {
+      console.log('Mapping session:', session.sessionName);
+      
+      const materiaIds = session.subjects || [];
+      
+      // Usar el occupancy que viene de la API (estudiantes asignados)
+      const enrolled = session.occupancy || 0;
+      
+      // Capacidad = número de materias × 50 estudiantes por materia
+      const capacity = materiaIds.length * 50;
+      const available = Math.max(0, capacity - enrolled);
+
+      // Buscar qué estudiantes están asignados a esta sesión
+      const assignedStudents = this.students.filter(student => 
+        student.assignedSession === session.id || 
+        student.sessionId === session.id ||
+        student.currentSessionId === session.id // Ajusta según tu modelo de datos
+      );
+
+      return {
+        id: session.id,
+        number: session.number || session.id,
+        sessionName: session.sessionName,
+        date: session.startDate,
+        program: session.program,
+        capacity,
+        enrolled,
+        available,
+        Materias: materiaIds,
+        listAlumns: assignedStudents.map(s => s.id) // IDs de estudiantes asignados
+      };
+    });
+
+    console.log('📅 Sesiones cargadas:', this.sessionData);
+
+  } catch (error) {
+    console.error('Error loading sessions:', error);
+    throw error;
+  }
+},
+getStudentPendingSubjects(studentId) {
+  const student = this.students.find(s => s.id === studentId);
+  if (!student) return [];
+  
+  // Obtener todas las materias del programa del estudiante
+  const programSubjects = this.subjects
+    .filter(s => s.programId === student.programId)
+    .map(s => s.id);
+  
+  // Filtrar las que ya completó
+  const completedSubjects = student.completedSubjects || [];
+  return programSubjects.filter(id => !completedSubjects.includes(id));
+},
 
     // ✅ CORREGIDO: loadRecommendations (una sola versión)
     async loadRecommendations() {
