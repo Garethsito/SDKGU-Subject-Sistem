@@ -7,121 +7,120 @@ export class CoursesService {
   constructor(private prisma: PrismaService) {}
 
   async findAll() {
-  // 1️⃣ Obtener todos los cursos con relaciones necesarias
-  const courses = await this.prisma.course.findMany({
-    include: {
-      programCourses: {
-        include: {
-          program: true,
-        }
-      },
-      prerequisites: {
-        include: {
-          prerequisiteCourse: true
-        }
-      },
-      offerings: {
-        include: {
-          session: true,
-          teacher: true
+    // 1️⃣ Obtener todos los cursos con relaciones necesarias
+    const courses = await this.prisma.course.findMany({
+      include: {
+        programCourses: {
+          include: {
+            program: true,
+          }
         },
-        orderBy: {
-          session: { startDate: 'desc' }
-        }
-      }
-    },
-    orderBy: { courseCode: 'asc' }
-  });
-
-  // 2️⃣ Traer TODOS los estudiantes una sola vez (antes lo hacías 3 veces por curso)
-  const allStudents = await this.prisma.student.findMany({
-    where: { status: 'active' },
-    include: {
-      enrollments: {
-        include: {
-          offering:{
-            include : {session : true}
+        prerequisites: {
+          include: {
+            prerequisiteCourse: true
+          }
+        },
+        offerings: {
+          include: {
+            session: true,
+            teacher: true
+          },
+          orderBy: {
+            session: { startDate: 'desc' }
           }
         }
       },
-      records: true
-    }
-  });
-
-  // 3️⃣ Procesar sin abrir conexiones adicionales
-  const coursesWithData = courses.map(course => {
-    const programIds = course.programCourses.map(pc => pc.programId);
-
-    // Filtrar estudiantes del programa
-    const studentsOfPrograms = allStudents.filter(s =>
-      programIds.includes(s.programId)
-    );
-
-    // Filtrar quienes están inscritos
-    const currentStudents = studentsOfPrograms.filter(s =>
-      s.enrollments.some(e =>
-        e.offering.courseId === course.id &&
-        e.offering.session.endDate >= new Date() &&
-        e.status === 'enrolled'
-      )
-    );
-
-    // Filtrar quienes ya pasaron el curso
-    const passedStudents = studentsOfPrograms.filter(s =>
-      s.records.some(r =>
-        r.courseId === course.id &&
-        ['passed', 'completed', 'P'].includes(r.status ?? '')
-      )
-    );
-
-    // Faltantes
-    const takenIds = new Set([
-      ...currentStudents.map(s => s.id),
-      ...passedStudents.map(s => s.id),
-    ]);
-
-    const missingStudents = studentsOfPrograms.filter(s =>
-      !takenIds.has(s.id)
-    );
-
-    // Última oferta del curso
-    const latestOffering = course.offerings[0];
-
-    const formatStudent = (s: any) => ({
-      id: s.id.toString(),
-      name: `${s.firstName} ${s.lastName}`,
-      studentId: s.studentIdNumber || `STU-${s.id.toString().padStart(6, '0')}`
+      orderBy: { courseCode: 'asc' }
     });
 
-    const programNames = course.programCourses
-      .map(pc => pc.program.programName)
-      .join(' & ');
-
-    return {
-      id: course.id.toString(),
-      code: course.courseCode,
-      name: course.courseName,
-      credits: course.credits,
-      program: programNames,
-      programIds,
-      session: latestOffering?.session.sessionName || 'No active session',
-      maxStudents: latestOffering?.maxStudents ?? course.maxCapacity ?? 30,
-      modality: 'Online',
-      instructor: latestOffering?.teacher
-        ? `${latestOffering.teacher.firstName} ${latestOffering.teacher.lastName}`
-        : 'TBD',
-      students: currentStudents.map(formatStudent),
-      prerequisites: course.prerequisites.map(p => p.prerequisiteCourse.courseCode),
-      courseData: {
-        passedStudents: passedStudents.map(formatStudent),
-        missingStudents: missingStudents.map(formatStudent)
+    // 2️⃣ Traer TODOS los estudiantes una sola vez
+    const allStudents = await this.prisma.student.findMany({
+      where: { status: 'active' },
+      include: {
+        enrollments: {
+          include: {
+            offering: {
+              include: { session: true }
+            }
+          }
+        },
+        records: true
       }
-    };
-  });
+    });
 
-  return coursesWithData;
-}
+    // 3️⃣ Procesar sin abrir conexiones adicionales
+    const coursesWithData = courses.map(course => {
+      const programIds = course.programCourses.map(pc => pc.programId);
 
+      // Filtrar estudiantes del programa
+      const studentsOfPrograms = allStudents.filter(s =>
+        programIds.includes(s.programId)
+      );
+
+      // Filtrar quienes están inscritos
+      const currentStudents = studentsOfPrograms.filter(s =>
+        s.enrollments.some(e =>
+          e.offering.courseId === course.id &&
+          e.offering.session.endDate >= new Date() &&
+          e.status === 'enrolled'
+        )
+      );
+
+      // Filtrar quienes ya pasaron el curso
+      const passedStudents = studentsOfPrograms.filter(s =>
+        s.records.some(r =>
+          r.courseId === course.id &&
+          ['passed', 'completed', 'P'].includes(r.status ?? '')
+        )
+      );
+
+      // Faltantes
+      const takenIds = new Set([
+        ...currentStudents.map(s => s.id),
+        ...passedStudents.map(s => s.id),
+      ]);
+
+      const missingStudents = studentsOfPrograms.filter(s =>
+        !takenIds.has(s.id)
+      );
+
+      // Última oferta del curso
+      const latestOffering = course.offerings[0];
+
+      const formatStudent = (s: any) => ({
+        id: s.id.toString(),
+        name: `${s.firstName} ${s.lastName}`,
+        studentId: s.studentIdNumber || `STU-${s.id.toString().padStart(6, '0')}`
+      });
+
+      const programNames = course.programCourses
+        .map(pc => pc.program.programName)
+        .join(' & ');
+
+      return {
+        id: course.id.toString(),
+        code: course.courseCode,
+        name: course.courseName,
+        credits: course.credits,
+        program: programNames,
+        programIds,
+        session: latestOffering?.session.sessionName || 'No active session',
+        maxStudents: latestOffering?.maxStudents ?? course.maxCapacity ?? 30,
+        modality: 'Online',
+        instructor: latestOffering?.teacher
+          ? `${latestOffering.teacher.firstName} ${latestOffering.teacher.lastName}`
+          : 'TBD',
+        students: currentStudents.map(formatStudent),
+        prerequisites: course.prerequisites.map(p => p.prerequisiteCourse.courseCode),
+        courseData: {
+          passedStudents: passedStudents.map(formatStudent),
+          missingStudents: missingStudents.map(formatStudent)
+        }
+      };
+    });
+
+    return coursesWithData;
+  }
 
   async findById(id: string) {
     const courseId = parseInt(id);
@@ -309,32 +308,31 @@ export class CoursesService {
   }
 
   // Crear curso
-async createCourse(data: any) {
-  return this.prisma.course.create({
-    data: {
-      courseCode: data.courseCode,
-      courseName: data.courseName,
-      credits: parseInt(data.credits) || 3,
-      language: data.language ?? null,
-      isTransferable: data.isTransferable ?? true,
-      maxCapacity: data.maxCapacity ? parseInt(data.maxCapacity) : null,
-    }
-  });
-}
+  async createCourse(data: any) {
+    return this.prisma.course.create({
+      data: {
+        courseCode: data.courseCode,
+        courseName: data.courseName,
+        credits: parseInt(data.credits) || 3,
+        language: data.language ?? null,
+        isTransferable: data.isTransferable ?? true,
+        maxCapacity: data.maxCapacity ? parseInt(data.maxCapacity) : null,
+      }
+    });
+  }
 
-// Actualizar curso
-async updateCourse(id: number, data: any) {
-  return this.prisma.course.update({
-    where: { id },
-    data
-  });
-}
+  // Actualizar curso
+  async updateCourse(id: number, data: any) {
+    return this.prisma.course.update({
+      where: { id },
+      data
+    });
+  }
 
-// Eliminar curso
-async deleteCourse(id: number) {
-  return this.prisma.course.delete({
-    where: { id }
-  });
-}
-
+  // Eliminar curso
+  async deleteCourse(id: number) {
+    return this.prisma.course.delete({
+      where: { id }
+    });
+  }
 }

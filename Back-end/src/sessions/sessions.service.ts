@@ -812,8 +812,18 @@ throw new BadRequestException(err.message || 'Failed to create session');
       throw new NotFoundException(`Student with ID ${studentId} not found`);
     }
 
-    if (offering.enrollments.length >= (offering.maxStudents ?? 30)) {
-      throw new BadRequestException('Course is at maximum capacity');
+    const maxCapacity = offering.maxStudents ?? 30;
+    const currentEnrollment = offering.enrollments.length;
+
+    console.log('Enrollment capacity check:', {
+      currentEnrollment,
+      maxCapacity,
+      offeringId: offering.id,
+      canEnroll: currentEnrollment < maxCapacity
+    });
+
+    if (currentEnrollment >= maxCapacity) {
+      throw new BadRequestException(`Course is at maximum capacity (${currentEnrollment}/${maxCapacity})`);
     }
 
     const existingEnrollment = await this.prisma.enrollment.findUnique({

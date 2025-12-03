@@ -14,10 +14,11 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { MailModule } from './mail/mail.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { GradesModule } from './grades/grades.module'; // 🆕 Agregar esta línea
-import { ActivityLogModule } from './activityTimeline/activityTimeline.module';
+
+import { EnrollmentAutomationModule } from './enrollment/enrollment-automation.module';
 
 @Module({
-  imports: [AuthModule, StudentsModule, SessionsModule, CoursesModule, ProgramsModule, TeachersModule, ScheduleModule.forRoot(), MailModule, NotificationsModule,GradesModule, ActivityLogModule],
+  imports: [AuthModule, StudentsModule, SessionsModule, CoursesModule, ProgramsModule, TeachersModule, ScheduleModule.forRoot(), MailModule, NotificationsModule, GradesModule, EnrollmentAutomationModule],
   controllers: [AppController],
   providers: [AppService, PrismaService],
 })
