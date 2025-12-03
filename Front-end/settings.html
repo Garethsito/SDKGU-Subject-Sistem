@@ -146,7 +146,7 @@
 <main
   :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'"
   class="flex-1 p-6 bg-gray-100 min-h-screen pt-20"
-  x-data="settingsData()">
+  x-data="settingsData()" x-init="init()">
   
   <div class="mb-6">
     <h1 class="text-3xl font-bold text-gray-800 mb-2">Settings</h1>
@@ -907,6 +907,11 @@
 
 function settingsData() {
   return {
+    init() {
+      this.loadTeachers();
+      this.loadPrograms();
+      this.loadSubjects();
+    },
     activeTab: 'activity', // Tab por defecto
     
     // ⭐ DATOS PARA ADMINISTRATORS (AHORA EN ACTIVITY LOG)
@@ -1188,124 +1193,298 @@ function settingsData() {
     },
     
     // ⭐ DATOS PARA TEACHERS
-    newTeacher: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      department: '',
-      specialization: ''
-    },
-    teachers: [
-      { id: 1, firstName: 'Robert', lastName: 'Johnson', email: 'r.johnson@sdgku.edu', phone: '+1 (619) 555-0200', department: 'Computer Science', specialization: 'AI & Machine Learning' },
-      { id: 2, firstName: 'Maria', lastName: 'Garcia', email: 'm.garcia@sdgku.edu', phone: '+1 (619) 555-0201', department: 'Mathematics', specialization: 'Statistics' }
-    ],
-    
-    addTeacher() {
-      const newId = this.teachers.length > 0 ? Math.max(...this.teachers.map(t => t.id)) + 1 : 1;
-      this.teachers.push({
-        id: newId,
-        ...this.newTeacher
-      });
-      alert('Teacher added successfully!');
-      this.resetTeacherForm();
-    },
-    
-    resetTeacherForm() {
-      this.newTeacher = {
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        department: '',
-        specialization: ''
-      };
-    },
-    
-    deleteTeacher(id) {
-      if (confirm('Are you sure you want to delete this teacher?')) {
-        this.teachers = this.teachers.filter(t => t.id !== id);
-      }
-    },
-    
+   // ⭐ DATOS PARA TEACHERS
+newTeacher: {
+  teacherIdNumber: '',
+  firstName: '',
+  middleName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  department: '',
+  specialization: '',
+  hireDate: new Date().toISOString()
+},
+
+teachers: [],
+
+// ======================
+// ⭐ Cargar maestros
+// ======================
+async loadTeachers() {
+  try {
+    const res = await fetch("http://localhost:3000/teachers");
+    const data = await res.json();
+    this.teachers = data;
+  } catch (error) {
+    console.error("❌ Error loading teachers:", error);
+  }
+},
+
+// ======================
+// ⭐ Añadir maestro
+// ======================
+async addTeacher() {
+  try {
+    this.newTeacher.hireDate = new Date().toISOString(); // actualizar fecha
+    const res = await fetch("http://localhost:3000/teachers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(this.newTeacher)
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert("Error adding teacher: " + data.message);
+      return;
+    }
+
+    alert("Teacher added successfully!");
+    this.loadTeachers();
+    this.resetTeacherForm();
+
+  } catch (error) {
+    console.error("❌ Error adding teacher:", error);
+  }
+},
+
+resetTeacherForm() {
+  this.newTeacher = {
+    teacherIdNumber: "",
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    department: "",
+    specialization: "",
+    hireDate: new Date().toISOString()
+  };
+},
+
+// ======================
+// ⭐ Eliminar maestro
+// ======================
+async deleteTeacher(id) {
+  if (!confirm("Are you sure you want to delete this teacher?")) return;
+
+  try {
+    const res = await fetch(`http://localhost:3000/teachers/${id}`, { 
+      method: "DELETE" 
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert("Error deleting teacher: " + data.message);
+      return;
+    }
+
+    alert("Teacher deleted!");
+    this.loadTeachers();
+
+  } catch (error) {
+    console.error("❌ Error deleting teacher:", error);
+  }
+},
+
     // ⭐ DATOS PARA PROGRAMS
-    newProgram: {
-      name: '',
-      type: '',
-      totalUnits: '',
-      duration: '',
-      description: ''
+     newProgram: {
+      programName: '',
+      programType: '',
+      totalUnits: 0,
+      totalCourses: 0,
+      description:''
     },
-    programs: [
-      { id: 1, name: 'Computer Science', type: "Bachelor's", totalUnits: 120, duration: 4, description: 'Comprehensive program in computer science and software development' },
-      { id: 2, name: 'Business Administration', type: 'Associate', totalUnits: 60, duration: 2, description: 'Foundational business principles and practices' }
-    ],
-    
-    addProgram() {
-      const newId = this.programs.length > 0 ? Math.max(...this.programs.map(p => p.id)) + 1 : 1;
-      this.programs.push({
-        id: newId,
-        ...this.newProgram
-      });
-      alert('Program added successfully!');
-      this.resetProgramForm();
-    },
-    
-    resetProgramForm() {
-      this.newProgram = {
-        name: '',
-        type: '',
-        totalUnits: '',
-        duration: '',
-        description: ''
-      };
-    },
-    
-    deleteProgram(id) {
-      if (confirm('Are you sure you want to delete this program?')) {
-        this.programs = this.programs.filter(p => p.id !== id);
-      }
-    },
-    
+    // Lista de programas
+    programs: [],
+    // ⭐ Cargar programas desde la API
+async loadPrograms() {
+  try {
+    const res = await fetch("http://localhost:3000/api/programs");
+    const data = await res.json();
+    this.programs = data.map(p => ({
+      id: p.id,
+      name: p.programName,      // renombrar
+      type: p.programType,      // renombrar
+      totalUnits: p.totalUnits,
+      totalCourses: p.totalCourses
+    }));
+  } catch (error) {
+    console.error("❌ Error loading programs:", error);
+  }
+},
+
+    // ⭐ Añadir programa
+  async addProgram() {
+  try {
+    const payload = {
+      programName: this.newProgram.name,
+      programType: this.newProgram.type,
+      totalUnits: Number(this.newProgram.totalUnits),
+      totalCourses: Number(this.newProgram.totalCourses || 0), // si lo tienes
+      description: this.newProgram.description
+    };
+
+    const res = await fetch("http://localhost:3000/api/programs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert("Error adding program: " + (data.message || JSON.stringify(data)));
+      return;
+    }
+
+    alert("Program added successfully!");
+    this.loadPrograms(); 
+    this.resetProgramForm();
+
+  } catch (error) {
+    console.error("❌ Error adding program:", error);
+  }
+},
+
+   resetProgramForm() {
+  this.newProgram = {
+    name: '',
+    type: '',
+    totalUnits: '',
+    duration: '',
+    description: ''
+  };
+},
+
+    // ⭐ Eliminar programa
+async deleteProgram(id) {
+  if (!confirm("Are you sure you want to delete this program?")) return;
+
+  try {
+    const res = await fetch(`http://localhost:3000/api/programs/${id}`, { 
+      method: "DELETE" 
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert("Error deleting program: " + (data.message || JSON.stringify(data)));
+      return;
+    }
+
+    alert("Program deleted!");
+    this.loadPrograms(); // recargar lista desde DB
+
+  } catch (error) {
+    console.error("❌ Error deleting program:", error);
+  }
+},
+
     // ⭐ DATOS PARA SUBJECTS
     newSubject: {
-      name: '',
-      code: '',
-      units: '',
-      department: '',
-      description: ''
-    },
-    subjects: [
-      { id: 1, name: 'Introduction to Programming', code: 'CS101', units: 4, department: 'Computer Science' },
-      { id: 2, name: 'Calculus I', code: 'MATH101', units: 4, department: 'Mathematics' }
-    ],
-    
-    addSubject() {
-      const newId = this.subjects.length > 0 ? Math.max(...this.subjects.map(s => s.id)) + 1 : 1;
-      this.subjects.push({
-        id: newId,
-        ...this.newSubject
-      });
-      alert('Subject added successfully!');
-      this.resetSubjectForm();
-    },
-    
-    resetSubjectForm() {
-      this.newSubject = {
-        name: '',
-        code: '',
-        units: '',
-        department: '',
-        description: ''
-      };
-    },
-    
-    deleteSubject(id) {
-      if (confirm('Are you sure you want to delete this subject?')) {
-        this.subjects = this.subjects.filter(s => s.id !== id);
-      }
-    },
-    
+  name: '',
+  code: '',
+  units: '',
+  department: '',
+  description: ''
+},
+
+subjects: [],
+
+// ⭐ Cargar materias desde la API
+async loadSubjects() {
+  try {
+    const res = await fetch("http://localhost:3000/api/courses");
+    const data = await res.json();
+
+    this.subjects = data.map(s => ({
+      id: s.id,
+      name: s.name,             // courseName
+      code: s.code,             // courseCode
+      units: s.units || s.credits,
+      department: s.department || "General",
+      description: s.description || ""
+    }));
+
+  } catch (error) {
+    console.error("❌ Error loading subjects:", error);
+  }
+},
+
+// ⭐ Añadir materia
+async addSubject() {
+  try {
+    const payload = {
+      courseCode: this.newSubject.code,
+      courseName: this.newSubject.name,
+      credits: Number(this.newSubject.units) || 3,
+      language: "English",
+      isTransferable: true,
+      maxCapacity: 30
+    };
+
+    const res = await fetch("http://localhost:3000/api/courses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert("Error adding subject: " + (data.message || JSON.stringify(data)));
+      return;
+    }
+
+    alert("Subject added successfully!");
+
+    this.loadSubjects();
+    this.resetSubjectForm();
+
+  } catch (error) {
+    console.error("❌ Error adding subject:", error);
+  }
+},
+
+// ⭐ Reset form
+resetSubjectForm() {
+  this.newSubject = {
+    name: '',
+    code: '',
+    units: '',
+    department: '',
+    description: ''
+  };
+},
+
+// ⭐ Eliminar materia
+async deleteSubject(id) {
+  if (!confirm("Are you sure you want to delete this subject?")) return;
+
+  try {
+    const res = await fetch(`http://localhost:3000/api/courses/${id}`, {
+      method: "DELETE"
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert("Error deleting subject: " + (data.message || JSON.stringify(data)));
+      return;
+    }
+
+    alert("Subject deleted!");
+
+    this.loadSubjects();
+
+  } catch (error) {
+    console.error("❌ Error deleting subject:", error);
+  }
+},
+
     // ⭐ DATOS PARA IMPORT
     selectedFile: null,
     importType: '',
@@ -1482,6 +1661,7 @@ async readExcelFile(file) {
       alert('Template download feature will be implemented with actual Excel generation');
     }
   };
+
 }
 </script>
 

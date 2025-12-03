@@ -15,6 +15,7 @@ model Program {
   programType  String
   totalCourses Int
   totalUnits   Int?
+  description  String?
   students     Student[]
   sessions     Session[]
   programCourses ProgramCourse[]

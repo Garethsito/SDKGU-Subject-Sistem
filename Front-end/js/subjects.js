@@ -70,7 +70,7 @@ function coursesData() {
 
     async loadTeachers() {
       try {
-        const response = await fetch('http://localhost:3000/api/teachers');
+        const response = await fetch('http://localhost:3000/teachers');
         if (!response.ok) throw new Error('Failed to load teachers');
         this.allTeachers = await response.json();
         console.log('Teachers loaded:', this.allTeachers);
