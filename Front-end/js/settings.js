@@ -2,6 +2,9 @@ function settingsData() {
   return {
     init() {
       this.loadActivityLog();
+      this.loadTeachers();
+      this.loadPrograms();
+      this.loadSubjects();
     },
 
     activeTab: 'activity', // Tab por defecto
@@ -222,123 +225,300 @@ function settingsData() {
       const today = new Date().toISOString().split('T')[0];
       return this.activityLog.filter(a => a.date === today && a.type !== 'Login' && a.type !== 'Logout').length;
     },
-    
-    newTeacher: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      department: '',
-      specialization: ''
+    // ⭐ DATOS PARA TEACHERS
+   // ⭐ DATOS PARA TEACHERS
+newTeacher: {
+  teacherIdNumber: '',
+  firstName: '',
+  middleName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  department: '',
+  specialization: '',
+  hireDate: new Date().toISOString()
+},
+
+teachers: [],
+
+// ======================
+// ⭐ Cargar maestros
+// ======================
+async loadTeachers() {
+  try {
+    const res = await fetch("http://localhost:3000/teachers");
+    const data = await res.json();
+    this.teachers = data;
+  } catch (error) {
+    console.error("❌ Error loading teachers:", error);
+  }
+},
+
+// ======================
+// ⭐ Añadir maestro
+// ======================
+async addTeacher() {
+  try {
+    this.newTeacher.hireDate = new Date().toISOString(); // actualizar fecha
+    const res = await fetch("http://localhost:3000/teachers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(this.newTeacher)
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert("Error adding teacher: " + data.message);
+      return;
+    }
+
+    alert("Teacher added successfully!");
+    this.loadTeachers();
+    this.resetTeacherForm();
+
+  } catch (error) {
+    console.error("❌ Error adding teacher:", error);
+  }
+},
+
+resetTeacherForm() {
+  this.newTeacher = {
+    teacherIdNumber: "",
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    department: "",
+    specialization: "",
+    hireDate: new Date().toISOString()
+  };
+},
+
+// ======================
+// ⭐ Eliminar maestro
+// ======================
+async deleteTeacher(id) {
+  if (!confirm("Are you sure you want to delete this teacher?")) return;
+
+  try {
+    const res = await fetch(`http://localhost:3000/teachers/${id}`, { 
+      method: "DELETE" 
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert("Error deleting teacher: " + data.message);
+      return;
+    }
+
+    alert("Teacher deleted!");
+    this.loadTeachers();
+
+  } catch (error) {
+    console.error("❌ Error deleting teacher:", error);
+  }
+},
+
+    // ⭐ DATOS PARA PROGRAMS
+     newProgram: {
+      programName: '',
+      programType: '',
+      totalUnits: 0,
+      totalCourses: 0,
+      description:''
     },
-    teachers: [
-      { id: 1, firstName: 'Robert', lastName: 'Johnson', email: 'r.johnson@sdgku.edu', phone: '+1 (619) 555-0200', department: 'Computer Science', specialization: 'AI & Machine Learning' },
-      { id: 2, firstName: 'Maria', lastName: 'Garcia', email: 'm.garcia@sdgku.edu', phone: '+1 (619) 555-0201', department: 'Mathematics', specialization: 'Statistics' }
-    ],
-    
-    addTeacher() {
-      const newId = this.teachers.length > 0 ? Math.max(...this.teachers.map(t => t.id)) + 1 : 1;
-      this.teachers.push({
-        id: newId,
-        ...this.newTeacher
-      });
-      alert('Teacher added successfully!');
-      this.resetTeacherForm();
-    },
-    
-    resetTeacherForm() {
-      this.newTeacher = {
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        department: '',
-        specialization: ''
-      };
-    },
-    
-    deleteTeacher(id) {
-      if (confirm('Are you sure you want to delete this teacher?')) {
-        this.teachers = this.teachers.filter(t => t.id !== id);
-      }
-    },
-    
-    newProgram: {
-      name: '',
-      type: '',
-      totalUnits: '',
-      duration: '',
-      description: ''
-    },
-    programs: [
-      { id: 1, name: 'Computer Science', type: "Bachelor's", totalUnits: 120, duration: 4, description: 'Comprehensive program in computer science and software development' },
-      { id: 2, name: 'Business Administration', type: 'Associate', totalUnits: 60, duration: 2, description: 'Foundational business principles and practices' }
-    ],
-    
-    addProgram() {
-      const newId = this.programs.length > 0 ? Math.max(...this.programs.map(p => p.id)) + 1 : 1;
-      this.programs.push({
-        id: newId,
-        ...this.newProgram
-      });
-      alert('Program added successfully!');
-      this.resetProgramForm();
-    },
-    
-    resetProgramForm() {
-      this.newProgram = {
-        name: '',
-        type: '',
-        totalUnits: '',
-        duration: '',
-        description: ''
-      };
-    },
-    
-    deleteProgram(id) {
-      if (confirm('Are you sure you want to delete this program?')) {
-        this.programs = this.programs.filter(p => p.id !== id);
-      }
-    },
-    
+    // Lista de programas
+    programs: [],
+    // ⭐ Cargar programas desde la API
+async loadPrograms() {
+  try {
+    const res = await fetch("http://localhost:3000/api/programs");
+    const data = await res.json();
+    this.programs = data.map(p => ({
+      id: p.id,
+      name: p.programName,      // renombrar
+      type: p.programType,      // renombrar
+      totalUnits: p.totalUnits,
+      totalCourses: p.totalCourses
+    }));
+  } catch (error) {
+    console.error("❌ Error loading programs:", error);
+  }
+},
+
+    // ⭐ Añadir programa
+  async addProgram() {
+  try {
+    const payload = {
+      programName: this.newProgram.name,
+      programType: this.newProgram.type,
+      totalUnits: Number(this.newProgram.totalUnits),
+      totalCourses: Number(this.newProgram.totalCourses || 0), // si lo tienes
+      description: this.newProgram.description
+    };
+
+    const res = await fetch("http://localhost:3000/api/programs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert("Error adding program: " + (data.message || JSON.stringify(data)));
+      return;
+    }
+
+    alert("Program added successfully!");
+    this.loadPrograms(); 
+    this.resetProgramForm();
+
+  } catch (error) {
+    console.error("❌ Error adding program:", error);
+  }
+},
+
+   resetProgramForm() {
+  this.newProgram = {
+    name: '',
+    type: '',
+    totalUnits: '',
+    duration: '',
+    description: ''
+  };
+},
+
+    // ⭐ Eliminar programa
+async deleteProgram(id) {
+  if (!confirm("Are you sure you want to delete this program?")) return;
+
+  try {
+    const res = await fetch(`http://localhost:3000/api/programs/${id}`, { 
+      method: "DELETE" 
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert("Error deleting program: " + (data.message || JSON.stringify(data)));
+      return;
+    }
+
+    alert("Program deleted!");
+    this.loadPrograms(); // recargar lista desde DB
+
+  } catch (error) {
+    console.error("❌ Error deleting program:", error);
+  }
+},
+
+    // ⭐ DATOS PARA SUBJECTS
     newSubject: {
-      name: '',
-      code: '',
-      units: '',
-      department: '',
-      description: ''
-    },
-    subjects: [
-      { id: 1, name: 'Introduction to Programming', code: 'CS101', units: 4, department: 'Computer Science' },
-      { id: 2, name: 'Calculus I', code: 'MATH101', units: 4, department: 'Mathematics' }
-    ],
-    
-    addSubject() {
-      const newId = this.subjects.length > 0 ? Math.max(...this.subjects.map(s => s.id)) + 1 : 1;
-      this.subjects.push({
-        id: newId,
-        ...this.newSubject
-      });
-      alert('Subject added successfully!');
-      this.resetSubjectForm();
-    },
-    
-    resetSubjectForm() {
-      this.newSubject = {
-        name: '',
-        code: '',
-        units: '',
-        department: '',
-        description: ''
-      };
-    },
-    
-    deleteSubject(id) {
-      if (confirm('Are you sure you want to delete this subject?')) {
-        this.subjects = this.subjects.filter(s => s.id !== id);
-      }
-    },
-    
+  name: '',
+  code: '',
+  units: '',
+  department: '',
+  description: ''
+},
+
+subjects: [],
+
+// ⭐ Cargar materias desde la API
+async loadSubjects() {
+  try {
+    const res = await fetch("http://localhost:3000/api/courses");
+    const data = await res.json();
+
+    this.subjects = data.map(s => ({
+      id: s.id,
+      name: s.name,             // courseName
+      code: s.code,             // courseCode
+      units: s.units || s.credits,
+      department: s.department || "General",
+      description: s.description || ""
+    }));
+
+  } catch (error) {
+    console.error("❌ Error loading subjects:", error);
+  }
+},
+
+// ⭐ Añadir materia
+async addSubject() {
+  try {
+    const payload = {
+      courseCode: this.newSubject.code,
+      courseName: this.newSubject.name,
+      credits: Number(this.newSubject.units) || 3,
+      language: "English",
+      isTransferable: true,
+      maxCapacity: 30
+    };
+
+    const res = await fetch("http://localhost:3000/api/courses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert("Error adding subject: " + (data.message || JSON.stringify(data)));
+      return;
+    }
+
+    alert("Subject added successfully!");
+
+    this.loadSubjects();
+    this.resetSubjectForm();
+
+  } catch (error) {
+    console.error("❌ Error adding subject:", error);
+  }
+},
+
+// ⭐ Reset form
+resetSubjectForm() {
+  this.newSubject = {
+    name: '',
+    code: '',
+    units: '',
+    department: '',
+    description: ''
+  };
+},
+
+// ⭐ Eliminar materia
+async deleteSubject(id) {
+  if (!confirm("Are you sure you want to delete this subject?")) return;
+
+  try {
+    const res = await fetch(`http://localhost:3000/api/courses/${id}`, {
+      method: "DELETE"
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert("Error deleting subject: " + (data.message || JSON.stringify(data)));
+      return;
+    }
+
+    alert("Subject deleted!");
+
+    this.loadSubjects();
+
+  } catch (error) {
+    console.error("❌ Error deleting subject:", error);
+  }
+},
+
+    // ⭐ DATOS PARA IMPORT
     selectedFile: null,
     importType: '',
     importResult: null,
@@ -360,8 +540,7 @@ function settingsData() {
     
     clearFile() {
       this.selectedFile = null;
-      const input = document.getElementById('fileUpload');
-      if (input) input.value = '';
+      document.getElementById('fileUpload').value = '';
     },
     
     formatFileSize(bytes) {
@@ -372,123 +551,192 @@ function settingsData() {
       return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     },
     
-    async processImport() {
-      if (!this.selectedFile || !this.importType) return;
+   async processImport() {
+  if (!this.selectedFile || !this.importType) return;
 
-      const formData = new FormData();
-      formData.append('file', this.selectedFile);
+  const formData = new FormData();
+  formData.append('file', this.selectedFile);
 
-      try {
-        // Para el caso de grades, procesamos el Excel en el frontend
-        if (this.importType === 'grades') {
-          const data = await this.readExcelFile(this.selectedFile);
-          const results = [];
+  try {
+    // ⭐ Importación especial para GRADES (desde Excel en el frontend)
+    if (this.importType === 'grades') {
+      const data = await this.readExcelFile(this.selectedFile);
+      const results = [];
 
-          for (const row of data) {
-            // Mapear columnas del Excel a propiedades del backend
-            const studentId = row['Students ID Number'];
-            const courseCode = row['Course'];
-            const grade = row['Grade'];
-            const status = row['Status'] || 'Completed'; // valor por defecto si no hay status
+      for (const row of data) {
+        // Mapear columnas del Excel a propiedades del backend
+        const studentId = row['Students ID Number'];
+        const courseCode = row['Course'];
+        const grade = row['Grade'];
 
-            if (!studentId || !courseCode || !grade) {
-              console.warn('Fila incompleta, se omite:', row);
-              continue; // saltar filas incompletas
-            }
+        // 🔍 Normalizar status del Excel
+        let rawStatus = (row['Status'] || '').toString().trim().toLowerCase();
+        let status = 'Completed'; // default
 
-            // Llamar al endpoint de grades
-            const res = await fetch(`http://localhost:3000/api/students/${studentId}/grades`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ courseCode, grade, status })
-            });
-            let result = {};
-            if (res.ok) {
-              result = await res.json();
-            } else {
-              console.error('HTTP error:', res.status, res.statusText);
-              result = { success: false };
-            }
-
-            results.push(result);
-          }
-
-          this.importResult = {
-            success: true,
-            message: 'Grades imported successfully',
-            recordsProcessed: results.length
-          };
-
-          this.importHistory.unshift({
-            id: Date.now(),
-            date: new Date().toLocaleString(),
-            fileName: this.selectedFile.name,
-            type: this.importType,
-            records: results.length,
-            status: 'Success'
-          });
-
-          this.selectedFile = null;
-          this.importType = '';
-
-          return;
+        if (rawStatus === 'f' || rawStatus === 'failed') {
+          status = 'Failed';
+        } 
+        else if (
+          rawStatus === 't' || rawStatus === 'p' || 
+          rawStatus === 'transferred' || rawStatus === 'transfer'
+        ) {
+          status = 'Transferred';
+        } 
+        else if (rawStatus === 'completed' || rawStatus === 'c') {
+          status = 'Completed';
         }
 
-        // Para otros tipos de import (students, teachers, etc.)
-        const url = `${this.apiUrl}/import/${this.importType}`;
-        console.log('📤 Importando archivo...', this.importType);
+        // Validación mínima
+        if (!studentId || !courseCode || !grade) {
+          console.warn('Fila incompleta, se omite:', row);
+          continue;
+        }
 
-        const response = await fetch(url, {
+        // 📤 Enviar al backend
+        const res = await fetch(`http://localhost:3000/api/students/${studentId}/grades`, {
           method: 'POST',
-          body: formData
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ courseCode, grade, status })
         });
 
-        const result = await response.json();
-
-        this.importResult = result;
-        this.importHistory.unshift({
-          id: Date.now(),
-          date: new Date().toLocaleString(),
-          fileName: this.selectedFile.name,
-          type: this.importType,
-          records: result?.recordsProcessed || 0,
-          status: result?.success ? 'Success' : 'Failed'
-        });
-
-        if (result.success) {
-          this.selectedFile = null;
-          this.importType = '';
+        let result = {};
+        if (res.ok) {
+          result = await res.json();
+        } else {
+          console.error('HTTP error:', res.status, res.statusText);
+          result = { success: false };
         }
 
-      } catch (error) {
-        console.error('❌ Error importing file:', error);
-        this.importResult = {
-          success: false,
-          message: 'Error importing file',
-          details: error.message
-        };
+        // ⭐ IMPORTANTE: agregar resultado al arreglo
+        results.push(result);
       }
-    },
 
-    // Método auxiliar para leer Excel en el frontend
-    async readExcelFile(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const sheetName = workbook.SheetNames[0];
-          const sheet = workbook.Sheets[sheetName];
-          const rows = XLSX.utils.sheet_to_json(sheet);
-          resolve(rows);
-        };
-        reader.onerror = (err) => reject(err);
-        reader.readAsArrayBuffer(file);
+      // 🟢 Resultado final
+      this.importResult = {
+        success: true,
+        message: 'Grades imported successfully',
+        recordsProcessed: results.length
+      };
+
+      this.importHistory.unshift({
+        id: Date.now(),
+        date: new Date().toLocaleString(),
+        fileName: this.selectedFile.name,
+        type: this.importType,
+        records: results.length,
+        status: 'Success'
       });
-    },
 
+      this.selectedFile = null;
+      this.importType = '';
+      return;
+    }
+
+    // -------------------------------------------------------------------------------------
+    // ⭐ Importaciones normales (students, teachers, etc.)
+    // -------------------------------------------------------------------------------------
+
+    const url = `${this.apiUrl}/import/${this.importType}`;
+    console.log('📤 Importando archivo...', this.importType);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData
+    });
+
+    const result = await response.json();
+
+    this.importResult = result;
+
+    this.importHistory.unshift({
+      id: Date.now(),
+      date: new Date().toLocaleString(),
+      fileName: this.selectedFile.name,
+      type: this.importType,
+      records: result?.recordsProcessed || 0,
+      status: result?.success ? 'Success' : 'Failed'
+    });
+
+    if (result.success) {
+      this.selectedFile = null;
+      this.importType = '';
+    }
+
+  } 
+  catch (error) {
+    console.error('❌ Error importing file:', error);
+
+    this.importResult = {
+      success: false,
+      message: 'Error importing file',
+      details: error.message || 'Unknown error'
+    };
+  }
+},
+
+// Método auxiliar para leer Excel en el frontend
+async readExcelFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet);
+      resolve(rows);
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsArrayBuffer(file);
+  });
+},
     downloadTemplate() {
       alert('Template download feature will be implemented with actual Excel generation');
     }
+    
   };
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  // Selecciona TODOS los campos de teléfono
+  const phoneInputs = document.querySelectorAll('input[type="tel"]');
+
+  phoneInputs.forEach(input => {
+    input.setAttribute("maxlength", "14"); // Formato (xxx) xxx-xxxx
+
+    // Validación de HTML
+    input.setAttribute("required", true);
+    input.setAttribute("pattern", "\\([0-9]{3}\\) [0-9]{3}-[0-9]{4}");
+
+    // Al escribir
+    input.addEventListener("input", (e) => {
+      let value = e.target.value.replace(/\D/g, ""); // remover NO números
+
+      if (value.length > 10) value = value.slice(0, 10);
+
+      // Aplicar formato (XXX) XXX-XXXX
+      if (value.length > 6) {
+        e.target.value = `(${value.slice(0,3)}) ${value.slice(3,6)}-${value.slice(6)}`;
+      } else if (value.length > 3) {
+        e.target.value = `(${value.slice(0,3)}) ${value.slice(3)}`;
+      } else if (value.length > 0) {
+        e.target.value = `(${value}`;
+      }
+    });
+
+    // Evitar letras
+    input.addEventListener("keypress", (e) => {
+      if (!/[0-9]/.test(e.key)) e.preventDefault();
+    });
+
+    // Validación al enviar
+    input.addEventListener("invalid", () => {
+      input.setCustomValidity("Ingrese un número válido de 10 dígitos (ejemplo: (123) 456-7890)");
+    });
+
+    input.addEventListener("input", () => input.setCustomValidity(""));
+  });
+
+});
+
