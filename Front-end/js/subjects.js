@@ -10,6 +10,11 @@ function coursesData() {
     allTeachers: [],
     validationError: '',
 
+    showSelectSessionModal: false,
+    selectedCourseForSession: null,
+    availableSessions: [],
+    loadingSessions: false,
+
     filters: {
       program: 'all',
       session: 'all',
@@ -42,11 +47,11 @@ function coursesData() {
       await this.loadTeachers();
       await this.fetchCourses();
       this.courses = [...this.allCourses];
-      
+
       // Extract unique programs and sessions for filters
       this.availablePrograms = [...new Set(this.allCourses.map(c => c.program))];
       this.availableSessions = [...new Set(this.allCourses.map(c => c.session))];
-      
+
       // Get total active students
       try {
         const studentsRes = await fetch('http://localhost:3000/api/students/count');
@@ -83,20 +88,20 @@ function coursesData() {
       if (!this.newSession.programId) {
         return [];
       }
-      
+
       const coursesForProgram = this.allCourses.filter(course => {
         // Filtrar por programa seleccionado
-        const programMatch = course.program && 
-                            course.program.toLowerCase().includes(
-                              this.allPrograms.find(p => p.id == this.newSession.programId)?.programName.toLowerCase() || ''
-                            );
+        const programMatch = course.program &&
+          course.program.toLowerCase().includes(
+            this.allPrograms.find(p => p.id == this.newSession.programId)?.programName.toLowerCase() || ''
+          );
         return programMatch;
       });
-      
+
       // Eliminar duplicados por courseCode
       const uniqueCourses = [];
       const seenCodes = new Set();
-      
+
       for (const course of coursesForProgram) {
         if (!seenCodes.has(course.code)) {
           seenCodes.add(course.code);
@@ -107,12 +112,12 @@ function coursesData() {
           });
         }
       }
-      
+
       // Filtrar los que ya están agregados
       const assignedCodes = (this.newSession.coursesWithTeachers || []).map(
         item => item.courseCode
       );
-      
+
       return uniqueCourses.filter(
         course => !assignedCodes.includes(course.code)
       );
@@ -120,20 +125,20 @@ function coursesData() {
 
     addCourseWithTeacher() {
       if (!this.tempSubject) return;
-      
+
       if (!this.newSession.coursesWithTeachers) {
         this.newSession.coursesWithTeachers = [];
       }
-      
+
       // Verificar que no exista ya
       const exists = this.newSession.coursesWithTeachers.some(
         item => item.courseCode === this.tempSubject
       );
-      
+
       if (!exists) {
         // Buscar el curso en allCourses
         const course = this.allCourses.find(c => c.code === this.tempSubject);
-        
+
         this.newSession.coursesWithTeachers.push({
           courseId: course ? parseInt(course.id) : null,
           courseCode: this.tempSubject,
@@ -141,7 +146,7 @@ function coursesData() {
           teacherName: ''
         });
       }
-      
+
       this.tempSubject = '';
     },
 
@@ -153,22 +158,22 @@ function coursesData() {
 
     validateNewSession() {
       this.validationError = '';
-      
+
       if (!this.newSession.programId) {
         this.validationError = 'Please select a program';
         return false;
       }
-      
+
       if (!this.newSession.startDate) {
         this.validationError = 'Please select a start date';
         return false;
       }
-      
+
       if (!this.newSession.endDate) {
         this.validationError = 'Please select an end date';
         return false;
       }
-      
+
       if (!this.newSession.coursesWithTeachers || this.newSession.coursesWithTeachers.length === 0) {
         this.validationError = 'Please select at least one subject';
         return false;
@@ -183,32 +188,32 @@ function coursesData() {
         this.validationError = 'All subjects must have an assigned professor';
         return false;
       }
-      
+
       return true;
     },
 
     async fetchCourses() {
       try {
-        const res = await fetch('http://localhost:3000/api/courses'); 
+        const res = await fetch('http://localhost:3000/api/courses');
         const data = await res.json();
-        
+
         if (!Array.isArray(data)) {
           console.error('❌ Expected array but got:', data);
           this.allCourses = [];
           return;
         }
-        
+
         // Get total active students in the system
         const studentsRes = await fetch('http://localhost:3000/api/students/count');
         const result = await studentsRes.json();
         const totalActiveStudents = result.total;
-        
+
         this.allCourses = data.map(c => {
           const missingCount = c.courseData?.missingStudents?.length || 0;
-          const missingPercent = totalActiveStudents > 0 
-            ? Math.round((missingCount / totalActiveStudents) * 100) 
+          const missingPercent = totalActiveStudents > 0
+            ? Math.round((missingCount / totalActiveStudents) * 100)
             : 0;
-          
+
           return {
             ...c,
             occupancy: c.maxStudents ? Math.round((c.students.length / c.maxStudents) * 100) : 0,
@@ -216,18 +221,18 @@ function coursesData() {
             missingPercent: missingPercent
           };
         });
-        
+
         console.log('✅ Loaded courses:', this.allCourses);
       } catch (error) {
         console.error('❌ Error loading courses from backend:', error);
         this.allCourses = [];
       }
     },
-    
+
     getProgramConfig(program) {
       return this.programConfig[program] || { label: program, color: 'A6192E' };
     },
-    
+
     getCardBg(occupancy) {
       if (occupancy >= 70) return 'rgba(255, 255, 255, 0.6)';
       if (occupancy >= 40) return 'rgba(255, 255, 255, 0.4)';
@@ -243,10 +248,10 @@ function coursesData() {
       this.allCourses.forEach(c => {
         if (c.code === course.code) {
           const missing = c.courseData?.missingStudents?.length || 0;
-          
+
           c.missingCount = missing;
-          c.missingPercent = this.totalActiveStudents > 0 
-            ? Math.round((missing / this.totalActiveStudents) * 100) 
+          c.missingPercent = this.totalActiveStudents > 0
+            ? Math.round((missing / this.totalActiveStudents) * 100)
             : 0;
           c.occupancy = c.maxStudents ? Math.round((c.students.length / c.maxStudents) * 100) : 0;
         }
@@ -276,7 +281,7 @@ function coursesData() {
       const today = new Date();
       const fiveWeeksLater = new Date(today);
       fiveWeeksLater.setDate(fiveWeeksLater.getDate() + 35);
-    
+
       const formatDate = (date) => {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -296,7 +301,7 @@ function coursesData() {
           teacherName: ''
         }] : []
       };
-      
+
       this.tempSubject = '';
       this.validationError = '';
       this.showCreateSessionModal = true;
@@ -328,34 +333,34 @@ function coursesData() {
             };
           })
         };
-        
+
         console.log('Creating session with data:', sessionData);
-        
+
         const response = await fetch('http://localhost:3000/api/sessions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(sessionData)
         });
-        
+
         if (!response.ok) {
           const errorText = await response.text();
           throw new Error(`Failed to create session: ${errorText}`);
         }
-        
+
         this.showToast(`Session ${this.newSession.number} created successfully!`, 'success');
         this.showCreateSessionModal = false;
-        
+
         // Reset form
-        this.newSession = { 
-          number: null, 
-          startDate: '', 
-          endDate: '', 
+        this.newSession = {
+          number: null,
+          startDate: '',
+          endDate: '',
           programId: '',
-          coursesWithTeachers: [] 
+          coursesWithTeachers: []
         };
         this.tempSubject = '';
         this.validationError = '';
-        
+
       } catch (error) {
         console.error('Error creating session:', error);
         this.showToast(error.message || 'Failed to create session', 'error');
@@ -367,6 +372,147 @@ function coursesData() {
       this.toast.type = type;
       this.toast.show = true;
       setTimeout(() => { this.toast.show = false; }, 3000);
+    },
+
+    async addToActiveSession(subject) {
+      if (!subject || !subject.id) {
+        this.showToast('Invalid course selected', 'error');
+        return;
+      }
+
+      const programId = subject.programIds && subject.programIds.length > 0
+        ? subject.programIds[0]
+        : null;
+
+      if (!programId) {
+        this.showToast('Course has no associated program', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:3000/api/enrollment-automation/add-to-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            courseId: parseInt(subject.id),
+            programId: programId
+          })
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+          if (result.message.includes('already exists')) {
+            // Curso ya existe, ofrecer crear Grupo 2
+            if (confirm(`${result.message}\n\nWould you like to create Group 2 for this course?`)) {
+              await this.createGroupTwo(subject, programId);
+            }
+          } else if (result.message.includes('No active session')) {
+            // No hay sesión activa, abrir modal de selección
+            await this.openSessionSelectionModal(subject);
+          } else {
+            this.showToast(result.message, 'error');
+          }
+          return;
+        }
+
+        // Éxito
+        this.showToast(
+          `${subject.code} added to active session! ${result.eligibleStudents} students eligible.`,
+          'success'
+        );
+
+        await this.fetchCourses();
+        this.courses = [...this.allCourses];
+
+        if (result.eligibleStudents > 50) {
+          setTimeout(() => {
+            this.showToast(
+              `⚠️ ${result.eligibleStudents} students need this course. You may need to create Group 2.`,
+              'warning'
+            );
+          }, 2000);
+        }
+
+        this.selectedCourse = null;
+
+      } catch (error) {
+        console.error('Error adding course to session:', error);
+        this.showToast('Failed to add course to session', 'error');
+      }
+    },
+
+    async createGroupTwo(subject, programId) {
+      try {
+        // Primero verificar que tengamos una sesión activa
+        const sessionCheckRes = await fetch('http://localhost:3000/api/enrollment-automation/add-to-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            courseId: parseInt(subject.id),
+            programId: programId,
+            createNewGroup: false  // Solo verificar si existe sesión
+          })
+        });
+
+        const sessionCheck = await sessionCheckRes.json();
+
+        if (!sessionCheck.success) {
+          this.showToast('No active session found. Creating new session first...', 'warning');
+
+          // Redirigir a crear sesión o sugerir al usuario
+          if (confirm('No active session exists. Would you like to create a new session for this course?')) {
+            // Preparar datos y abrir modal de crear sesión
+            this.newSessionTemplate = {
+              id: subject.id,
+              code: subject.code,
+              name: subject.name
+            };
+            this.openCreateSessionModal();
+            return;
+          }
+          return;
+        }
+
+        // Si existe sesión, crear Grupo 2
+        const response = await fetch('http://localhost:3000/api/enrollment-automation/add-to-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            courseId: parseInt(subject.id),
+            programId: programId,
+            createNewGroup: true
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          this.showToast(
+            `${result.message} - ${result.eligibleStudents} students eligible`,
+            'success'
+          );
+
+          await this.fetchCourses();
+          this.courses = [...this.allCourses];
+          this.selectedCourse = null;
+
+          if (result.eligibleStudents > 50) {
+            setTimeout(() => {
+              this.showToast(
+                `You may need to create additional groups. Total demand: ${result.eligibleStudents} students`,
+                'warning'
+              );
+            }, 2000);
+          }
+        } else {
+          this.showToast(result.message, 'error');
+        }
+
+      } catch (error) {
+        console.error('Error creating Group 2:', error);
+        this.showToast('Failed to create Group 2', 'error');
+      }
     },
 
     clearFilters() {
@@ -392,7 +538,7 @@ function coursesData() {
       if (this.filters.occupancy !== 'all') {
         filtered = filtered.filter(c => {
           const perc = c.missingPercent;
-          switch(this.filters.occupancy) {
+          switch (this.filters.occupancy) {
             case 'critical': return perc >= 75;
             case 'low': return perc >= 40 && perc < 75;
             case 'optimal': return perc >= 10 && perc < 40;
@@ -413,9 +559,119 @@ function coursesData() {
       this.courses = filtered;
       this.showFilters = false;
       this.message = `${filtered.length} course${filtered.length !== 1 ? 's' : ''} found`;
-      
+
       console.log('🔍 Applied filters:', this.filters);
       console.log('📊 Filtered results:', filtered.length);
-    }
+    },
+
+    // Método para formatear fechas
+    formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+      });
+    },
+
+    // Método para abrir modal de selección de sesión
+    async openSessionSelectionModal(subject) {
+      this.selectedCourseForSession = subject;
+      this.showSelectSessionModal = true;
+      this.loadingSessions = true;
+      
+      try {
+        // Obtener el programId del curso
+        const programId = subject.programIds && subject.programIds.length > 0
+          ? subject.programIds[0]
+          : null;
+
+        if (!programId) {
+          this.showToast('Course has no associated program', 'error');
+          this.loadingSessions = false;
+          return;
+        }
+
+        // Obtener sesiones activas del mismo programa
+        const response = await fetch(`http://localhost:3000/api/sessions`);
+        const allSessions = await response.json();
+        
+        // Filtrar sesiones activas del mismo programa
+        const now = new Date();
+        this.availableSessions = allSessions
+          .filter(s => 
+            s.programId === programId && 
+            new Date(s.endDate) > now
+          )
+          .map(s => ({
+            ...s,
+            courseCount: s.subjects ? s.subjects.length : 0
+          }));
+
+        console.log('Available sessions:', this.availableSessions);
+        
+      } catch (error) {
+        console.error('Error loading sessions:', error);
+        this.showToast('Failed to load sessions', 'error');
+      } finally {
+        this.loadingSessions = false;
+      }
+    },
+
+    // Método para seleccionar sesión y agregar curso
+    async selectSessionForCourse(session) {
+      if (!this.selectedCourseForSession) return;
+
+      try {
+        const response = await fetch(
+          `http://localhost:3000/api/sessions/${session.id}/courses`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              courseId: parseInt(this.selectedCourseForSession.id),
+              maxStudents: 50
+            })
+          }
+        );
+
+        const result = await response.json();
+
+        if (response.ok) {
+          this.showToast(
+            `${this.selectedCourseForSession.code} added to ${session.sessionName}!`,
+            'success'
+          );
+          
+          this.showSelectSessionModal = false;
+          this.selectedCourse = null;
+          
+          // Recargar cursos
+          await this.fetchCourses();
+          this.courses = [...this.allCourses];
+        } else {
+          throw new Error(result.message || 'Failed to add course');
+        }
+        
+      } catch (error) {
+        console.error('Error adding course to session:', error);
+        this.showToast(error.message || 'Failed to add course to session', 'error');
+      }
+    },
+
+    // Método para crear nueva sesión desde el modal
+    async createNewSessionForCourse() {
+      this.showSelectSessionModal = false;
+      
+      // Preparar template con el curso seleccionado
+      this.newSessionTemplate = {
+        id: this.selectedCourseForSession.id,
+        code: this.selectedCourseForSession.code,
+        name: this.selectedCourseForSession.name
+      };
+      
+      this.openCreateSessionModal();
+    },
+
   }
 }

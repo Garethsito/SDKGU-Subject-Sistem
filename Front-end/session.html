@@ -207,7 +207,7 @@
       <li><a href="session.html" class="block w-full px-4 py-2 rounded bg-[#D41736]"><i class="fa-solid fa-calendar-days mr-2"></i>Sessions</a></li>
       <li><a href="subjects.html" class="block w-full px-4 py-2 rounded hover:bg-[#8E1C2D]"><i class="fa-solid fa-book mr-2"></i>Subjects</a></li>
       <li><a href="students.html" class="block w-full px-4 py-2 rounded hover:bg-[#8E1C2D]"><i class="fa-solid fa-users mr-2"></i>Students</a></li>
-      <li><a href="reports.html" class="block w-full px-4 py-2 rounded hover:bg-[#8E1C2D]"><i class="fa-solid fa-file-lines mr-2"></i>Reports</a></li>
+      <li><a href="reports.html" class="block w-full px-4 py-2 rounded hover:bg-[#8E1C2D]"><i class="fa-solid fa-file-lines mr-2"></i>Academic Analytics</a></li>
       <li><a href="settings.html" class="block w-full px-4 py-2 rounded hover:bg-[#8E1C2D]"><i class="fa-solid fa-gear mr-2"></i>Settings</a></li>
     </ul>
   </aside>
@@ -606,7 +606,12 @@
                 </p>
               </div>
               <div class="flex items-center gap-3">
-                <!-- NUEVO BOTÓN PARA AGREGAR ESTUDIANTES -->
+                <button 
+                  @click="autoEnrollStudents(selectedSubject)"
+                  class="bg-[#D41736] hover:bg-[#A6192E] text-white px-4 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i>
+                  <span>Auto-Enroll</span>
+                </button>
                 <button 
                   @click="openAddStudentModal()"
                   class="bg-[#D41736] hover:bg-[#A6192E] text-white px-4 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
@@ -810,7 +815,244 @@
     </div>
   </div>
 
-  <footer :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'" class="bg-[#2D2828] border-t">
+  <!-- MODAL DE AUTO-ENROLLMENT -->
+  <div x-show="showAutoEnrollModalFlag"
+      x-cloak
+      x-transition.opacity
+      @click.self="closeAutoEnrollModal()"
+      class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-[70]">
+    
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-[#D41736] to-[#A6192E] p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-2xl text-white font-bold flex items-center">
+              <i class="fa-solid fa-wand-magic-sparkles mr-3"></i>
+              Auto-Enrollment Preview
+            </h2>
+            <p class="text-white text-sm mt-1 opacity-90" x-show="autoEnrollData">
+              <i class="fa-solid fa-book mr-1"></i>
+              <span x-text="autoEnrollData?.subject?.code"></span> - 
+              <span x-text="autoEnrollData?.subject?.name"></span>
+            </p>
+          </div>
+          <button @click="closeAutoEnrollModal()" 
+                  class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
+            <i class="fa-solid fa-times text-xl"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary Stats -->
+      <div class="p-6 bg-gray-50 border-b border-gray-200">
+        <div class="grid grid-cols-3 gap-4">
+          <div class="bg-white rounded-lg p-4 border-2 border-[#D41736]">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600 font-medium">Total Eligible</p>
+                <p class="text-3xl font-bold text-[#D41736]" 
+                  x-text="autoEnrollData?.metadata?.totalEligible || 0"></p>
+              </div>
+              <i class="fa-solid fa-users text-4xl text-[#D41736] opacity-20"></i>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg p-4 border-2 border-[#A6192E]">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600 font-medium">Available Seats</p>
+                <p class="text-3xl font-bold text-[#A6192E]" 
+                  x-text="autoEnrollData?.metadata?.availableSeats || 0"></p>
+              </div>
+              <i class="fa-solid fa-chair text-4xl text-[#A6192E] opacity-20"></i>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg p-4 border-2 border-[#252121]">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600 font-medium">To Enroll</p>
+                <p class="text-3xl font-bold text-[#252121]" 
+                  x-text="autoEnrollData?.metadata?.toEnroll || 0"></p>
+              </div>
+              <i class="fa-solid fa-user-plus text-4xl text-[#252121] opacity-20"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Warning de High Demand con botón de Create Group 2 -->
+        <div x-show="autoEnrollData?.metadata?.totalEligible > autoEnrollData?.metadata?.availableSeats"
+            class="mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded"
+            x-cloak>
+          <div class="flex items-start justify-between">
+            <div class="flex items-center flex-1">
+              <i class="fa-solid fa-exclamation-triangle text-yellow-600 text-xl mr-3 flex-shrink-0"></i>
+              <div class="flex-1">
+                <p class="font-bold text-yellow-800">High Demand Alert!</p>
+                <p class="text-sm text-yellow-700">
+                  <span x-text="autoEnrollData?.metadata?.totalEligible - autoEnrollData?.metadata?.availableSeats"></span>
+                  students will remain without enrollment. Consider creating Group 2 after this enrollment.
+                </p>
+              </div>
+            </div>
+            
+            <!-- 🆕 Botón para crear Grupo 2 
+            <button 
+              @click="createGroupTwoFromAutoEnroll()"
+              class="ml-4 px-4 py-2 bg-gradient-to-r from-[#D41736] to-[#A6192E] text-white rounded-lg hover:from-[#A6192E] hover:to-[#D41736] transition font-medium shadow-md whitespace-nowrap flex items-center gap-2">
+              <i class="fa-solid fa-plus-circle"></i>
+              <span>Create Group 2</span>
+            </button>
+          -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Warning si hay POCOS estudiantes (menos de 10) -->
+      <div x-show="autoEnrollData?.metadata?.totalEligible < 10 && autoEnrollData?.metadata?.totalEligible <= autoEnrollData?.metadata?.availableSeats"
+           class="mt-4 bg-red-50 border-l-4 border-red-400 p-4 rounded"
+           x-cloak>
+        <div class="flex items-center">
+          <i class="fa-solid fa-user-group text-red-600 text-xl mr-3"></i>
+          <div>
+            <p class="font-bold text-red-800">Low Enrollment Notice</p>
+            <p class="text-sm text-red-700">
+              Only <span class="font-bold" x-text="autoEnrollData?.metadata?.totalEligible"></span> student<span x-show="autoEnrollData?.metadata?.totalEligible !== 1">s</span> eligible for this course.
+              This is a small group, but you can proceed with enrollment if desired.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Success message si hay buenos números (10+) -->
+      <div x-show="autoEnrollData?.metadata?.totalEligible >= 10 && autoEnrollData?.metadata?.totalEligible <= autoEnrollData?.metadata?.availableSeats"
+           class="mt-4 bg-green-50 border-l-4 border-green-400 p-4 rounded"
+           x-cloak>
+        <div class="flex items-center">
+          <i class="fa-solid fa-check-circle text-green-600 text-xl mr-3"></i>
+          <div>
+            <p class="font-bold text-green-800">Perfect Fit</p>
+            <p class="text-sm text-green-700">All eligible students will be enrolled in this session.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="p-6 pb-4 border-b border-gray-200">
+        <div class="relative">
+          <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+          <input
+            type="text"
+            x-model="autoEnrollData.searchTerm"
+            x-show="autoEnrollData !== null"
+            placeholder="Search students by name, ID, or priority reason..."
+            class="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-[#D41736] transition"
+          />
+        </div>
+      </div>
+
+      <!-- Students List -->
+      <div class="p-6 overflow-y-auto" style="max-height: calc(85vh - 400px); min-height: 300px;">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+          <i class="fa-solid fa-list-check mr-2 text-[#D41736]"></i>
+          Students to be Enrolled 
+          <span class="ml-2 text-sm font-normal text-gray-500">
+            (Showing <span x-text="filteredAutoEnrollStudents.length"></span> of <span x-text="autoEnrollData?.students?.length || 0"></span>)
+          </span>
+        </h3>
+
+
+
+        <div class="space-y-2">
+          <!-- Mensaje cuando NO hay estudiantes -->
+          <template x-if="!autoEnrollData?.students || autoEnrollData.students.length === 0">
+            <div class="bg-red-50 border-2 border-red-200 rounded-lg p-8 text-center">
+              <i class="fa-solid fa-user-slash text-5xl text-red-300 mb-4"></i>
+              <p class="font-bold text-red-800 text-lg mb-2">No Eligible Students</p>
+              <p class="text-sm text-red-600">
+                There are currently no students eligible for this course. This may be because:
+              </p>
+              <ul class="text-sm text-red-600 mt-3 space-y-1 text-left max-w-md mx-auto">
+                <li>• All students have already passed this course</li>
+                <li>• All eligible students are already enrolled</li>
+                <li>• Students are missing prerequisites</li>
+                <li>• Students have used their 2 enrollment attempts</li>
+              </ul>
+            </div>
+          </template>
+
+          <template x-for="(student, index) in filteredAutoEnrollStudents" :key="student.studentId">
+            <div class="bg-white border-2 border-gray-200 hover:border-[#D41736] rounded-lg p-4 transition-all hover:shadow-md">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4 flex-1">
+                  <!-- Número de posición -->
+                  <div class="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-[#D41736] to-[#A6192E] flex items-center justify-center text-white font-bold text-lg shadow-md">
+                    <span x-text="index + 1"></span>
+                  </div>
+
+                  <!-- Info del estudiante -->
+                  <div class="flex-1">
+                    <p class="font-bold text-gray-800 text-lg" 
+                      x-text="`${student.studentFirstName} ${student.studentLastName}`"></p>
+                    <div class="flex items-center gap-4 mt-1">
+                      <p class="text-sm text-gray-600 flex items-center">
+                        <i class="fa-solid fa-id-card mr-1 text-xs"></i>
+                        <span x-text="student.studentNumber"></span>
+                      </p>
+                      <p class="text-sm text-gray-500 flex items-center">
+                        <i class="fa-solid fa-redo mr-1 text-xs"></i>
+                        Attempts: <span class="ml-1 font-semibold" x-text="student.attemptsUsed"></span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Priority Score -->
+                  <div class="flex-shrink-0 text-right">
+                    <div class="inline-flex items-center bg-[#252121] text-white px-4 py-2 rounded-full">
+                      <i class="fa-solid fa-star mr-2"></i>
+                      <span class="font-bold" x-text="student.priority"></span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1" x-text="student.reason"></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- No results -->
+          <template x-if="filteredAutoEnrollStudents.length === 0">
+            <div class="text-center py-12 text-gray-500">
+              <i class="fa-solid fa-search text-5xl mb-4 text-gray-300"></i>
+              <p class="font-medium">No students match your search</p>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Footer con botones -->
+      <div class="flex justify-between items-center gap-3 p-6 bg-gray-50 border-t-2 border-gray-200 sticky bottom-0">
+        <div class="text-sm text-gray-600">
+          <i class="fa-solid fa-info-circle mr-1"></i>
+          Students are sorted by priority (highest to lowest)
+        </div>
+        <div class="flex gap-3">
+          <button @click="closeAutoEnrollModal()" 
+                  class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition">
+            <i class="fa-solid fa-times mr-2"></i>Cancel
+          </button>
+          <button @click="confirmAutoEnroll()" 
+                  :disabled="!autoEnrollData?.students || autoEnrollData.students.length === 0"
+                  class="px-6 py-3 bg-gradient-to-r from-[#D41736] to-[#A6192E] text-white rounded-lg hover:from-[#A6192E] hover:to-[#D41736] font-bold transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+            <i class="fa-solid fa-check-circle mr-2"></i>
+            Confirm Enrollment (<span x-text="autoEnrollData?.metadata?.toEnroll || 0"></span> students)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'" class="bg-[#2D2828] border-t border-[#A6192E]">
     <div class="max-w-7xl mx-auto px-6 py-4">
       <div class="flex justify-between items-center">
         <p class="text-sm text-gray-300">© 2025 San Diego Global Knowledge University</p>

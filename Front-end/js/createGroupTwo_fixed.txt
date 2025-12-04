@@ -1,0 +1,62 @@
+// Temporary file with corrected createGroupTwo function
+
+async createGroupTwo(subject, programId) {
+  try {
+    // Confirmar con el usuario
+    if (!confirm(`Create Group 2 for ${subject.code}?\n\nThis will create an additional group for students who couldn't fit in Group 1.`)) {
+      return;
+    }
+
+    // Crear Grupo 2 directamente
+    const response = await fetch('http://localhost:3000/api/enrollment-automation/add-to-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        courseId: parseInt(subject.id),
+        programId: programId,
+        createNewGroup: true
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      this.showToast(
+        `${result.message} - ${result.eligibleStudents} students eligible`,
+        'success'
+      );
+      
+      await this.fetchCourses();
+      this.courses = [...this.allCourses];
+      this.selectedCourse = null;
+      
+      if (result.eligibleStudents > 50) {
+        setTimeout(() => {
+          this.showToast(
+            `You may need to create additional groups. Total demand: ${result.eligibleStudents} students`,
+            'warning'
+          );
+        }, 2000);
+      }
+    } else {
+      // Si no hay sesión activa, ofrecer crear una
+      if (result.message && result.message.includes('No active session')) {
+        if (confirm('No active session exists. Would you like to create a new session for this course?')) {
+          this.newSessionTemplate = {
+            id: subject.id,
+            code: subject.code,
+            name: subject.name
+          };
+          this.openCreateSessionModal();
+          return;
+        }
+      } else {
+        this.showToast(result.message || 'Failed to create Group 2', 'error');
+      }
+    }
+
+  } catch (error) {
+    console.error('Error creating Group 2:', error);
+    this.showToast('Failed to create Group 2', 'error');
+  }
+},

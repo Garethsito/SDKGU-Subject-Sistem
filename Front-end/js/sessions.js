@@ -10,12 +10,12 @@ function dashboard() {
     message: '',
     openModalFlag: false,
     modalType: '',
-    selectedSession: {}, 
+    selectedSession: {},
     validationError: '',
     editWarning: '',
     isEditLocked: false,
     notifications: [],
-    showDeleteModal: false, 
+    showDeleteModal: false,
     showSubjectsModal: false,
     tempSubject: '',
     showAddStudentModal: false,
@@ -28,18 +28,20 @@ function dashboard() {
     availableCourses: [],
     allPrograms: [],
     allTeachers: [],
+    showAutoEnrollModalFlag: false,
+    autoEnrollData: null,
 
     getTeacherName(teacherId) {
       if (!teacherId) return 'TBD';
       const teacher = this.allTeachers.find(t => t.id === parseInt(teacherId));
       return teacher ? `${teacher.firstName} ${teacher.lastName}` : 'TBD';
     },
-    
+
     get filteredSubjectNames() {
       if (!this.selectedSession.programId) {
         return [];
       }
-      
+
       const coursesForProgram = this.availableCourses
         .filter(course => {
           if (course.programIds && Array.isArray(course.programIds)) {
@@ -47,11 +49,11 @@ function dashboard() {
           }
           return false;
         });
-      
+
       // Eliminar duplicados por courseCode
       const uniqueCourses = [];
       const seenCodes = new Set();
-      
+
       for (const course of coursesForProgram) {
         if (!seenCodes.has(course.code)) {
           seenCodes.add(course.code);
@@ -62,7 +64,7 @@ function dashboard() {
           });
         }
       }
-      
+
       return uniqueCourses;
     },
 
@@ -70,11 +72,11 @@ function dashboard() {
       if (!this.selectedSession.coursesWithTeachers) {
         return this.filteredSubjectNames;
       }
-      
+
       const assignedCodes = this.selectedSession.coursesWithTeachers.map(
         item => item.courseCode
       );
-      
+
       return this.filteredSubjectNames.filter(
         course => !assignedCodes.includes(course.code)
       );
@@ -89,17 +91,17 @@ function dashboard() {
         (student.email && student.email.toLowerCase().includes(term))
       );
     },
-    
+
     get filteredSubjects() {
       if (!this.subjectSearchTerm) return this.allSubjects;
       const term = this.subjectSearchTerm.toLowerCase();
-      return this.allSubjects.filter(s => 
-        s.name.toLowerCase().includes(term) || 
+      return this.allSubjects.filter(s =>
+        s.name.toLowerCase().includes(term) ||
         s.code.toLowerCase().includes(term) ||
         s.teacher.toLowerCase().includes(term)
       );
     },
-    
+
     get filteredStudents() {
       if (!this.selectedSubject) return [];
       if (!this.subjectSearchTerm) return this.selectedSubject.students;
@@ -109,9 +111,9 @@ function dashboard() {
         s.matricula.toLowerCase().includes(term)
       );
     },
-    
+
     allSubjects: [],
-    
+
     filters: {
       program: 'all',
       session: 'all',
@@ -124,7 +126,7 @@ function dashboard() {
 
     allSessions: [],
     sessions: [],
-    
+
     async loadTeachers() {
       try {
         const response = await fetch('http://localhost:3000/teachers');
@@ -148,7 +150,7 @@ function dashboard() {
         this.showNotification('error', 'Error', 'Failed to load programs');
       }
     },
-    
+
     async loadAllCourses() {
       try {
         const response = await fetch('http://localhost:3000/api/courses');
@@ -162,22 +164,22 @@ function dashboard() {
         this.availableCourses = [];
       }
     },
-    
+
     async loadSessions() {
       try {
         const response = await fetch('http://localhost:3000/api/sessions');
         if (!response.ok) throw new Error('Failed to load sessions');
         const sessionsData = await response.json();
-        
+
         this.allSessions = sessionsData.map(session => ({
           ...session,
           chartId: `chart-${session.id}`,
           subject: session.subjects && session.subjects.length > 0 ? session.subjects.join(', ') : 'No courses assigned'
         }));
         this.sessions = [...this.allSessions];
-        
+
         console.log('Sessions loaded:', this.sessions);
-        
+
         this.$nextTick(() => {
           this.sessions.forEach(session => {
             this.initChart(document, session.progress || session.occupancy || 0, session.chartId);
@@ -188,7 +190,7 @@ function dashboard() {
         this.showNotification('error', 'Error', 'Failed to load sessions');
       }
     },
-    
+
     async loadSessionCourses(sessionId) {
       try {
         const response = await fetch(`http://localhost:3000/api/sessions/${sessionId}/courses`);
@@ -200,40 +202,40 @@ function dashboard() {
         this.showNotification('error', 'Error', 'Failed to load session courses');
       }
     },
-    
+
     showNotification(type, title, message) {
       const id = Date.now();
       const notification = { id, type, title, message, show: true };
       this.notifications.push(notification);
       setTimeout(() => this.removeNotification(id), 5000);
     },
-    
+
     removeNotification(id) {
       const index = this.notifications.findIndex(n => n.id === id);
       if (index !== -1) {
-        this.notifications[index].show = false; 
-        setTimeout(() => this.notifications.splice(index, 1), 300); 
+        this.notifications[index].show = false;
+        setTimeout(() => this.notifications.splice(index, 1), 300);
       }
     },
 
     validateSession() {
       this.validationError = '';
-      
+
       if (!this.selectedSession.programId) {
         this.validationError = 'Please select a program';
         return false;
       }
-      
+
       if (!this.selectedSession.startDate) {
         this.validationError = 'Please select a start date';
         return false;
       }
-      
+
       if (!this.selectedSession.endDate) {
         this.validationError = 'Please select an end date';
         return false;
       }
-      
+
       if (!this.selectedSession.coursesWithTeachers || this.selectedSession.coursesWithTeachers.length === 0) {
         this.validationError = 'Please select at least one subject';
         return false;
@@ -248,25 +250,25 @@ function dashboard() {
         this.validationError = 'All subjects must have an assigned professor';
         return false;
       }
-      
+
       return true;
     },
-    
+
     checkEditLock(sessionDate) {
       if (!sessionDate) return false;
-      
+
       // Obtener fecha de hoy en tu zona horaria local
       const today = new Date();
       const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      
+
       // Parsear la fecha de la sesión como YYYY-MM-DD local (no UTC)
       const [year, month, day] = sessionDate.split('-').map(Number);
       const sessionDateLocal = new Date(year, month - 1, day); // mes es 0-indexed
-      
+
       // Calcular diferencia en días
       const diffTime = sessionDateLocal.getTime() - todayLocal.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
+
       console.log('Edit lock check:', {
         today: `${todayLocal.getFullYear()}-${String(todayLocal.getMonth() + 1).padStart(2, '0')}-${String(todayLocal.getDate()).padStart(2, '0')}`,
         sessionDate: sessionDate,
@@ -275,11 +277,11 @@ function dashboard() {
         diffDays: diffDays,
         isLocked: diffDays < 7
       });
-      
+
       // Bloquear si la sesión empieza en menos de 7 días
       return diffDays < 7;
     },
-    
+
     clearFilters() {
       this.filters = {
         program: 'all',
@@ -293,22 +295,22 @@ function dashboard() {
       this.sessions = [...this.allSessions];
       this.message = '';
     },
-    
+
     applyFilters() {
       let filtered = [...this.allSessions];
-      
+
       if (this.filters.program !== 'all') {
         const programName = this.filters.program === 'bachelor' ? "Bachelor's" : 'Associate';
         filtered = filtered.filter(s => s.program === programName);
       }
-      
+
       if (this.filters.month !== 'all') {
         filtered = filtered.filter(s => s.month === this.filters.month);
       }
-      
+
       if (this.filters.occupancy !== 'all') {
         filtered = filtered.filter(s => {
-          switch(this.filters.occupancy) {
+          switch (this.filters.occupancy) {
             case 'critical': return s.occupancy < 40;
             case 'low': return s.occupancy >= 40 && s.occupancy < 60;
             case 'optimal': return s.occupancy >= 60 && s.occupancy < 90;
@@ -317,56 +319,56 @@ function dashboard() {
           }
         });
       }
-      
+
       if (this.filters.subject !== 'all') {
         filtered = filtered.filter(s => s.subject.includes(this.filters.subject));
       }
-      
+
       if (this.filters.session !== 'all') {
         const sessionNumber = parseInt(this.filters.session.replace('session', ''));
         filtered = filtered.filter(s => s.number === sessionNumber);
       }
-      
+
       this.sessions = filtered;
       this.showFilters = false;
-      
+
       const activeFilters = [];
       if (this.filters.program !== 'all') activeFilters.push('Program');
       if (this.filters.month !== 'all') activeFilters.push('Month');
       if (this.filters.occupancy !== 'all') activeFilters.push('Occupancy');
       if (this.filters.subject !== 'all') activeFilters.push('Subject');
       if (this.filters.session !== 'all') activeFilters.push('Session');
-      
+
       if (activeFilters.length > 0) {
         this.message = `Filters applied: ${activeFilters.join(', ')} | Showing ${this.sessions.length} session(s)`;
       } else {
         this.message = '';
       }
     },
-    
+
     async init() {
       console.log('Session.js init() called');
 
       try {
         await this.loadPrograms();
         console.log('Programs loaded:', this.allPrograms.length);
-        
+
         await this.loadAllCourses();
         console.log('Courses loaded:', this.availableCourses.length);
-        
+
         await this.loadTeachers();
         console.log('Teachers loaded:', this.allTeachers.length);
-        
+
         await this.loadSessions();
         console.log('Sessions loaded:', this.sessions.length);
-        
+
         console.log('Init completed successfully');
       } catch (error) {
         console.error('Error during initialization:', error);
         this.showNotification('error', 'Error', 'Failed to initialize dashboard');
       }
     },
-    
+
     async openModal(session = {}, type = 'add') {
       this.modalType = type;
       this.validationError = '';
@@ -377,7 +379,7 @@ function dashboard() {
         const today = new Date();
         const fiveWeeksLater = new Date(today);
         fiveWeeksLater.setDate(fiveWeeksLater.getDate() + 35);
-       
+
         const formatDate = (date) => {
           const year = date.getFullYear();
           const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -385,8 +387,8 @@ function dashboard() {
           return `${year}-${month}-${day}`;
         };
 
-        const nextNumber = this.allSessions.length > 0 
-          ? Math.max(...this.allSessions.map(s => s.number || 0)) + 1 
+        const nextNumber = this.allSessions.length > 0
+          ? Math.max(...this.allSessions.map(s => s.number || 0)) + 1
           : 1;
 
         this.selectedSession = {
@@ -399,26 +401,26 @@ function dashboard() {
           program: '',
           coursesWithTeachers: []
         };
-        
+
         this.openModalFlag = true;
       } else {
         try {
           console.log('Loading session details for ID:', session.id);
-          
+
           const response = await fetch(`http://localhost:3000/api/sessions/${session.id}`);
           if (!response.ok) throw new Error('Failed to load session details');
-          
+
           const sessionData = await response.json();
           console.log('Session data from backend:', sessionData);
-          
+
           // Cargar offerings con sus profesores
-          const coursesWithTeachers = sessionData.offerings 
+          const coursesWithTeachers = sessionData.offerings
             ? sessionData.offerings.map(off => ({
-                courseId: off.courseId,
-                courseCode: off.courseCode,
-                teacherId: off.teacherId ? off.teacherId.toString() : '',
-                teacherName: off.teacher ? `${off.teacher.firstName} ${off.teacher.lastName}` : 'TBD'
-              }))
+              courseId: off.courseId,
+              courseCode: off.courseCode,
+              teacherId: off.teacherId ? off.teacherId.toString() : '',
+              teacherName: off.teacher ? `${off.teacher.firstName} ${off.teacher.lastName}` : 'TBD'
+            }))
             : [];
 
           this.selectedSession = {
@@ -431,27 +433,27 @@ function dashboard() {
             program: sessionData.program,
             coursesWithTeachers: coursesWithTeachers
           };
-          
+
           console.log('Selected session prepared:', this.selectedSession);
-          
+
           // Cargar los cursos de la sesión
           if (type !== 'add') {
             await this.loadSessionCourses(session.id);
           }
-          
+
           // Verificar bloqueo de edición SOLO si es modo EDIT
           if (type === 'edit') {
             console.log('Checking edit lock for date:', this.selectedSession.startDate);
             const isLocked = this.checkEditLock(this.selectedSession.startDate);
-            
+
             if (isLocked) {
               this.isEditLocked = true;
               this.editWarning = 'This session starts in less than 7 days and cannot be edited';
             }
           }
-          
+
           this.openModalFlag = true;
-          
+
         } catch (error) {
           console.error('Error loading session:', error);
           this.showNotification('error', 'Error', 'Failed to load session details');
@@ -459,7 +461,7 @@ function dashboard() {
         }
       }
     },
-    
+
     async saveSession() {
       if (!this.validateSession()) {
         this.showNotification('error', 'Validation Error', this.validationError);
@@ -470,7 +472,7 @@ function dashboard() {
         coursesWithTeachers: this.selectedSession.coursesWithTeachers,
         programId: this.selectedSession.programId
       });
-      
+
       try {
         const sessionData = {
           sessionName: this.selectedSession.sessionName || `Session ${this.selectedSession.number}`,
@@ -487,9 +489,9 @@ function dashboard() {
             };
           })
         };
-        
+
         console.log('Saving session with data:', sessionData);
-        
+
         let response;
         if (this.modalType === 'add') {
           response = await fetch('http://localhost:3000/api/sessions', {
@@ -504,26 +506,26 @@ function dashboard() {
             body: JSON.stringify(sessionData)
           });
         }
-        
+
         if (!response.ok) {
           const errorText = await response.text();
           throw new Error(`Failed to save session: ${errorText}`);
         }
-        
-        this.showNotification('success', 
+
+        this.showNotification('success',
           this.modalType === 'add' ? 'Session Created' : 'Session Updated',
           `Session has been ${this.modalType === 'add' ? 'created' : 'updated'} successfully`
         );
-        
+
         this.closeModal();
         await this.loadSessions();
-        
+
       } catch (error) {
         console.error('Error saving session:', error);
         this.showNotification('error', 'Error', error.message || 'Failed to save session');
       }
     },
-    
+
     requestDelete() {
       this.showDeleteModal = true;
     },
@@ -533,26 +535,26 @@ function dashboard() {
         const response = await fetch(`http://localhost:3000/api/sessions/${this.selectedSession.id}`, {
           method: 'DELETE'
         });
-        
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.message || 'Failed to delete session');
         }
-        
+
         const result = await response.json();
-        
+
         // Mostrar notificación con información de estudiantes removidos
         if (result.studentsRemoved > 0) {
-          this.showNotification('success', 'Session Deleted', 
+          this.showNotification('success', 'Session Deleted',
             `Session ${this.selectedSession.number} and ${result.studentsRemoved} student enrollment(s) have been deleted successfully`);
         } else {
-          this.showNotification('success', 'Session Deleted', 
+          this.showNotification('success', 'Session Deleted',
             `Session ${this.selectedSession.number} has been deleted successfully`);
         }
-        
+
         this.closeModal();
         await this.loadSessions();
-        
+
       } catch (error) {
         console.error('Error deleting session:', error);
         this.showNotification('error', 'Error', error.message || 'Failed to delete session');
@@ -567,7 +569,7 @@ function dashboard() {
         if (response.ok) {
           const courses = await response.json();
           const totalStudents = courses.reduce((sum, course) => sum + course.currentEnrollment, 0);
-          
+
           if (totalStudents > 0) {
             // Hay estudiantes, mostrar advertencia especial
             if (!confirm(`⚠️ WARNING: This session has ${totalStudents} student(s) enrolled.\n\nDeleting this session will also remove ALL student enrollments.\n\nAre you sure you want to continue?`)) {
@@ -578,7 +580,7 @@ function dashboard() {
       } catch (error) {
         console.error('Error checking enrollments:', error);
       }
-      
+
       this.showDeleteModal = true;
     },
 
@@ -588,13 +590,13 @@ function dashboard() {
       this.validationError = '';
       this.editWarning = '';
       this.isEditLocked = false;
-      this.selectedSession = {}; 
+      this.selectedSession = {};
     },
-    
+
     initChart(el, progress, id) {
-      setTimeout(() => { 
+      setTimeout(() => {
         const ctx = document.getElementById(id);
-        if(ctx) {
+        if (ctx) {
           let chartColor;
           if (progress < 40) {
             chartColor = '#252121';
@@ -605,33 +607,33 @@ function dashboard() {
           } else {
             chartColor = '#D41736';
           }
-          
+
           if (ctx.chart) {
             ctx.chart.destroy();
           }
 
           ctx.chart = new Chart(ctx.getContext('2d'), {
             type: 'doughnut',
-            data: { 
-              datasets: [{ 
-                data: [progress, 100-progress], 
-                backgroundColor: [chartColor, '#e5e7eb'], 
-                borderWidth: 0, 
-                borderRadius: 6, 
-                cutout: '75%' 
-              }] 
+            data: {
+              datasets: [{
+                data: [progress, 100 - progress],
+                backgroundColor: [chartColor, '#e5e7eb'],
+                borderWidth: 0,
+                borderRadius: 6,
+                cutout: '75%'
+              }]
             },
-            options: { 
-              responsive: true, 
-              maintainAspectRatio: true, 
-              plugins: { legend: {display: false}, tooltip: {enabled: false} }, 
-              animation: { animateRotate: true, duration: 1000, easing: 'easeOutQuart' } 
+            options: {
+              responsive: true,
+              maintainAspectRatio: true,
+              plugins: { legend: { display: false }, tooltip: { enabled: false } },
+              animation: { animateRotate: true, duration: 1000, easing: 'easeOutQuart' }
             }
           });
         }
-      }, 100); 
+      }, 100);
     },
-    
+
     async openSubjectsModal() {
       if (this.selectedSession.id && this.selectedSession.id !== 'Auto-generated') {
         this.currentSessionId = this.selectedSession.id;
@@ -642,31 +644,115 @@ function dashboard() {
       this.selectedSubject = null;
       this.subjectSearchTerm = '';
     },
-    
+
     closeSubjectsModal() {
       this.showSubjectsModal = false;
       this.subjectsView = 'list';
       this.selectedSubject = null;
       this.subjectSearchTerm = '';
     },
-    
+
     viewStudents(subject) {
       this.selectedSubject = subject;
       this.subjectsView = 'students';
       this.subjectSearchTerm = '';
     },
-    
+
     backToSubjects() {
       this.subjectsView = 'list';
       this.selectedSubject = null;
       this.subjectSearchTerm = '';
     },
-    
+
+    async autoEnrollStudents(subject) {
+      if (!subject || !subject.id) {
+        this.showNotification('error', 'Invalid Subject', 'Please select a valid course');
+        return;
+      }
+
+      if (!this.currentSessionId) {
+        this.showNotification('error', 'No Session Selected', 'Please open a session first');
+        return;
+      }
+
+      const courseId = parseInt(subject.id);
+      const sessionId = this.currentSessionId;
+
+      try {
+        // 1. Obtener estudiantes YA INSCRITOS en esta materia
+        const enrolledStudentIds = new Set(
+          (subject.students || []).map(s => s.id.toString())
+        );
+
+        // 2. Obtener análisis de demanda
+        const analysisRes = await fetch('http://localhost:3000/api/enrollment-automation/analyze');
+
+        if (!analysisRes.ok) {
+          throw new Error('Failed to get enrollment preview');
+        }
+
+        const allAnalyses = await analysisRes.json();
+        const courseAnalysis = allAnalyses.find(a => a.courseId === courseId);
+
+        // 3. Filtrar estudiantes que NO están inscritos
+        let eligibleStudents = [];
+        if (courseAnalysis && courseAnalysis.eligibleStudents) {
+          eligibleStudents = courseAnalysis.eligibleStudents.filter(
+            student => !enrolledStudentIds.has(student.studentId.toString())
+          );
+        }
+
+        // 4. Verificar capacidad actual
+        const currentEnrolled = subject.students?.length || 0;
+        const maxCapacity = parseInt(subject.maxStudents) || 50;
+        const availableSeats = Math.max(0, maxCapacity - currentEnrolled);
+
+        console.log('Capacity check:', {
+          currentEnrolled,
+          maxCapacity,
+          availableSeats,
+          subjectMaxStudents: subject.maxStudents
+        });
+
+        if (availableSeats <= 0) {
+          this.showNotification('error', 'Course Full', 'This course is at maximum capacity. Please create Group 2.');
+          return;
+        }
+
+        // 5. Determinar cuántos estudiantes inscribir
+        const studentsToEnroll = Math.min(eligibleStudents.length, availableSeats);
+
+        // 6. Obtener lista de estudiantes que serán inscritos
+        const studentsPreview = eligibleStudents.slice(0, studentsToEnroll);
+
+        // 7. SIEMPRE mostrar el modal
+        this.showAutoEnrollModal(subject, studentsPreview, {
+          totalEligible: eligibleStudents.length,
+          availableSeats: availableSeats,
+          toEnroll: studentsToEnroll,
+          sessionId: sessionId,
+          courseId: courseId,
+          currentEnrolled: currentEnrolled,
+          maxCapacity: maxCapacity
+        });
+
+      } catch (error) {
+        console.error('Error in auto-enrollment:', error);
+        this.showNotification('error', 'Auto-Enrollment Error', error.message || 'Failed to load enrollment preview');
+      }
+    },
+
+    async createGroupTwoForCourse(subject) {
+      // Aquí puedes redirigir a subjects o crear el grupo directamente
+      this.showNotification('info', 'Coming Soon', 'Group 2 creation will redirect to Subjects page');
+      // TODO: Implementar creación de Grupo 2
+    },
+
     async deleteStudent(enrollmentId) {
       if (!confirm('Are you sure you want to remove this student from the course?')) {
         return;
       }
-      
+
       try {
         const response = await fetch(
           `http://localhost:3000/api/sessions/enrollments/${enrollmentId}`,
@@ -676,7 +762,7 @@ function dashboard() {
         if (!response.ok) throw new Error('Failed to remove student');
 
         this.showNotification('success', 'Student Removed', 'Student removed successfully');
-        
+
         if (this.currentSessionId) {
           await this.loadSessionCourses(this.currentSessionId);
           const updatedSubject = this.allSubjects.find(s => s.id === this.selectedSubject.id);
@@ -686,7 +772,7 @@ function dashboard() {
         }
         // Recargar sesiones para actualizar el porcentaje
         await this.loadSessions();
-        
+
       } catch (error) {
         console.error('Error removing student:', error);
         this.showNotification('error', 'Error', 'Failed to remove student');
@@ -695,20 +781,20 @@ function dashboard() {
 
     addCourseWithTeacher() {
       if (!this.tempSubject) return;
-      
+
       if (!this.selectedSession.coursesWithTeachers) {
         this.selectedSession.coursesWithTeachers = [];
       }
-      
+
       // Verificar que no exista ya
       const exists = this.selectedSession.coursesWithTeachers.some(
         item => item.courseCode === this.tempSubject
       );
-      
+
       if (!exists) {
         // Buscar el curso en availableCourses
         const course = this.availableCourses.find(c => c.code === this.tempSubject);
-        
+
         this.selectedSession.coursesWithTeachers.push({
           courseId: course ? parseInt(course.id) : null,
           courseCode: this.tempSubject,
@@ -716,7 +802,7 @@ function dashboard() {
           teacherName: ''
         });
       }
-      
+
       this.tempSubject = '';
     },
 
@@ -731,33 +817,33 @@ function dashboard() {
         this.showNotification('error', 'Error', 'No session selected');
         return;
       }
-      
+
       if (!this.selectedSubject || !this.selectedSubject.id) {
         this.showNotification('error', 'Error', 'No subject selected');
         return;
       }
-      
+
       console.log('Opening add student modal for:', {
         sessionId: this.currentSessionId,
         courseId: this.selectedSubject.id,
         subject: this.selectedSubject
       });
-      
+
       this.showAddStudentModal = true;
       this.studentSearchTerm = '';
       this.loadingStudents = true;
-      
+
       try {
         const response = await fetch(
           `http://localhost:3000/api/sessions/${this.currentSessionId}/courses/${this.selectedSubject.id}/available-students`
         );
-        
+
         if (!response.ok) {
           const errorText = await response.text();
           console.error('API Error:', errorText);
           throw new Error(`Failed to fetch available students: ${errorText}`);
         }
-        
+
         this.availableStudents = await response.json();
         console.log('Available students loaded:', this.availableStudents);
       } catch (error) {
@@ -792,13 +878,13 @@ function dashboard() {
         }
 
         this.showNotification('success', 'Success', 'Student added successfully');
-        
+
         await this.loadSessionCourses(this.currentSessionId);
         const updatedSubject = this.allSubjects.find(s => s.id === this.selectedSubject.id);
         if (updatedSubject) {
           this.selectedSubject = updatedSubject;
         }
-        
+
         this.availableStudents = this.availableStudents.filter(s => s.id !== studentId);
         // Recargar sesiones para actualizar el porcentaje
         await this.loadSessions();
@@ -824,11 +910,204 @@ function dashboard() {
 
         const result = await response.json();
 
-        this.showNotification('success', 'Notifications Sent', 
+        this.showNotification('success', 'Notifications Sent',
           `Successfully sent ${result.emailsSent} email(s)`);
       } catch (error) {
         console.error('Error sending notifications:', error);
         this.showNotification('error', 'Error', 'Failed to send notifications');
+      }
+    },
+
+    showAutoEnrollModal(subject, students, metadata) {
+      this.autoEnrollData = {
+        subject: subject,
+        students: students,
+        metadata: metadata,
+        searchTerm: ''
+      };
+      this.showAutoEnrollModalFlag = true;
+    },
+
+    closeAutoEnrollModal() {
+      this.showAutoEnrollModalFlag = false;
+      this.autoEnrollData = null;
+    },
+
+    get filteredAutoEnrollStudents() {
+      if (!this.autoEnrollData || !this.autoEnrollData.searchTerm) {
+        return this.autoEnrollData?.students || [];
+      }
+      const term = this.autoEnrollData.searchTerm.toLowerCase();
+      return this.autoEnrollData.students.filter(s =>
+        s.studentFirstName.toLowerCase().includes(term) ||
+        s.studentLastName.toLowerCase().includes(term) ||
+        s.studentNumber.toLowerCase().includes(term) ||
+        s.reason.toLowerCase().includes(term)
+      );
+    },
+
+async confirmAutoEnroll() {
+  if (!this.autoEnrollData || !this.autoEnrollData.metadata) {
+    this.showNotification('error', 'Error', 'No enrollment data available');
+    return;
+  }
+  
+  if (!this.autoEnrollData.students || this.autoEnrollData.students.length === 0) {
+    this.showNotification('info', 'No Students', 'There are no students to enroll');
+    this.closeAutoEnrollModal();
+    return;
+  }
+  
+  const { sessionId, courseId, toEnroll } = this.autoEnrollData.metadata;
+  
+  console.log('Confirming auto-enrollment:', {
+    sessionId,
+    courseId,
+    toEnroll,
+    studentsCount: this.autoEnrollData.students.length,
+    metadata: this.autoEnrollData.metadata
+  });
+
+  // Mostrar notificación de "procesando"
+  this.showNotification('info', 'Processing...', `Enrolling ${toEnroll} student(s). Please wait...`);
+  
+  // Cerrar modal ANTES de empezar el proceso
+  this.closeAutoEnrollModal();
+
+      try {
+        // Realizar la inscripción automática
+        const enrollRes = await fetch('http://localhost:3000/api/enrollment-automation/auto-enroll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: sessionId,
+            courseId: courseId,
+            maxStudents: toEnroll
+          })
+        });
+
+        if (!enrollRes.ok) {
+          throw new Error('Failed to auto-enroll students');
+        }
+
+        const result = await enrollRes.json();
+
+        if (result.success) {
+          this.showNotification(
+            'success',
+            'Auto-Enrollment Complete',
+            `Successfully enrolled ${result.enrolled} student(s)`
+          );
+
+          // Modal ya cerrado arriba, solo recargar datos
+          setTimeout(async () => {
+            try {
+              await this.loadSessionCourses(this.currentSessionId);
+
+              // Actualizar el selectedSubject si existe
+              if (this.selectedSubject) {
+                const updatedSubject = this.allSubjects.find(s => s.id === parseInt(this.selectedSubject.id));
+                if (updatedSubject) {
+                  this.selectedSubject = updatedSubject;
+                }
+              }
+
+              // Recargar sesiones para actualizar porcentajes
+              await this.loadSessions();
+            } catch (error) {
+              console.error('Error reloading data after enrollment:', error);
+            }
+          }, 1000); // Aumentado a 1 segundo para dar tiempo al backend
+
+          // Si quedaron estudiantes sin inscribir, notificar
+          if (result.remaining > 0) {
+            setTimeout(() => {
+              this.showNotification(
+                'warning',
+                'Additional Capacity Needed',
+                `${result.remaining} students still need this course. Consider creating Group 2.`
+              );
+            }, 2000);
+          }
+        } else {
+          this.showNotification('error', 'Enrollment Failed', result.message || 'Unknown error');
+          this.closeAutoEnrollModal();
+        }
+
+      } catch (error) {
+        console.error('Error confirming auto-enrollment:', error);
+        this.showNotification('error', 'Auto-Enrollment Error', error.message || 'Failed to auto-enroll students');
+        this.closeAutoEnrollModal();
+      }
+    },
+
+    // Método para crear Grupo 2 desde Auto-Enrollment
+    async createGroupTwoFromAutoEnroll() {
+      if (!this.autoEnrollData || !this.autoEnrollData.subject) {
+        this.showNotification('error', 'Error', 'No subject selected');
+        return;
+      }
+
+      const subject = this.autoEnrollData.subject;
+      const sessionId = this.autoEnrollData.metadata.sessionId;
+      const courseId = this.autoEnrollData.metadata.courseId;
+
+      // Cerrar el modal de auto-enrollment
+      this.closeAutoEnrollModal();
+
+      try {
+        // Obtener el programId de la sesión actual
+        const sessionRes = await fetch(`http://localhost:3000/api/sessions/${sessionId}`);
+        if (!sessionRes.ok) throw new Error('Failed to get session info');
+        
+        const sessionData = await sessionRes.json();
+        const programId = sessionData.programId;
+
+        // Crear Grupo 2
+        const response = await fetch('http://localhost:3000/api/enrollment-automation/add-to-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            courseId: parseInt(courseId),
+            programId: programId,
+            createNewGroup: true
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          this.showNotification(
+            'success',
+            'Group 2 Created',
+            `${result.message} - ${result.eligibleStudents} students eligible`
+          );
+
+          // Recargar datos
+          await this.loadSessions();
+          
+          // Si estaba abierto el modal de subjects, recargar también
+          if (this.currentSessionId) {
+            await this.loadSessionCourses(this.currentSessionId);
+          }
+
+          // Si hay más de 50 estudiantes todavía, notificar
+          if (result.eligibleStudents > 50) {
+            setTimeout(() => {
+              this.showNotification(
+                'warning',
+                'Additional Groups Needed',
+                `You may need to create additional groups. Total remaining demand: ${result.eligibleStudents} students`
+              );
+            }, 2000);
+          }
+        } else {
+          this.showNotification('error', 'Error', result.message);
+        }
+
+      } catch (error) {
+        console.error('Error creating Group 2:', error);
+        this.showNotification('error', 'Error', 'Failed to create Group 2');
       }
     },
 
