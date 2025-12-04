@@ -119,6 +119,13 @@ function settingsData() {
         }
       }
 
+      // 📘 Materias / Courses
+      if (entity === 'COURSE') {
+        if (code === 'CREATE') return 'Subject Added';
+        if (code === 'DELETE') return 'Subject Removed';
+        if (code === 'UPDATE') return 'Subject Update';
+      }
+
       // 📚 Calificaciones
       if (entity === 'ACADEMIC_RECORD') {
         return 'Grade Update';

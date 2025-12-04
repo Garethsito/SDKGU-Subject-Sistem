@@ -374,6 +374,12 @@
           <select x-model="activityFilters.action" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
             <option value="">All Actions</option>
 
+            <!-- Materias -->
+            <option value="Subject Added">Subject Added</option>
+            <option value="Subject Removed">Subject Removed</option>
+            <option value="Subject Update">Subject Update</option>
+
+
             <!-- Autenticación -->
             <option value="Login">Login</option>
             <option value="Login Failed">Login Failed</option>
@@ -446,7 +452,8 @@
               'bg-purple-200': activity.type === 'Session Update',
               'bg-orange-100': activity.type === 'Teacher Assignment' || activity.type === 'Teacher Update',
               'bg-yellow-100': activity.type === 'Student Added',
-              'bg-rose-100':   activity.type === 'Student Removed' || activity.type === 'Teacher Removed',  
+              'bg-rose-100':   activity.type === 'Student Removed' || activity.type === 'Teacher Removed',
+              'bg-sky-100':    activity.type === 'Subject Added' || activity.type === 'Subject Removed' || activity.type === 'Subject Update',  
               'bg-indigo-100': activity.type === 'Data Import',
               'bg-teal-100':   activity.type === 'Report Request',
               'bg-cyan-100':   activity.type === 'Student Update',
@@ -464,7 +471,8 @@
                 'fa-calendar-check text-purple-700':      activity.type === 'Session Update',
                 'fa-user-tie text-orange-600':            activity.type === 'Teacher Assignment' || activity.type === 'Teacher Update', 
                 'fa-user-plus text-yellow-600':           activity.type === 'Student Added',
-                'fa-user-minus text-rose-600':            activity.type === 'Student Removed' || activity.type === 'Teacher Removed',   
+                'fa-user-minus text-rose-600':            activity.type === 'Student Removed' || activity.type === 'Teacher Removed',
+                'fa-book-open text-sky-600':              activity.type === 'Subject Added' || activity.type === 'Subject Removed' || activity.type === 'Subject Update',   
                 'fa-file-import text-indigo-600':         activity.type === 'Data Import',
                 'fa-file-circle-question text-teal-600':  activity.type === 'Report Request',
                 'fa-user-pen text-cyan-600':              activity.type === 'Student Update',
@@ -496,6 +504,7 @@
                       'bg-orange-100 text-orange-800': activity.type === 'Teacher Assignment' || activity.type === 'Teacher Update',
                       'bg-yellow-100 text-yellow-800': activity.type === 'Student Added',
                       'bg-rose-100 text-rose-800':     activity.type === 'Student Removed' || activity.type === 'Teacher Removed',  
+                      'bg-sky-100 text-sky-800':       activity.type === 'Subject Added' || activity.type === 'Subject Removed' || activity.type === 'Subject Update',
                       'bg-indigo-100 text-indigo-800': activity.type === 'Data Import',
                       'bg-teal-100 text-teal-800':     activity.type === 'Report Request',
                       'bg-cyan-100 text-cyan-800':     activity.type === 'Student Update',
