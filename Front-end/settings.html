@@ -390,6 +390,7 @@
 
             <!-- Cursos / maestros -->
             <option value="Teacher Assignment">Teacher Assignment</option>
+            <option value="Teacher Removed">Teacher Removed</option>
 
             <!-- Otros -->
             <option value="Grade Update">Grade Update</option>
@@ -443,9 +444,9 @@
               'bg-blue-100':   activity.type === 'Grade Update',
               'bg-purple-100': activity.type === 'Session Start',
               'bg-purple-200': activity.type === 'Session Update',
-              'bg-orange-100': activity.type === 'Teacher Assignment',
+              'bg-orange-100': activity.type === 'Teacher Assignment' || activity.type === 'Teacher Update',
               'bg-yellow-100': activity.type === 'Student Added',
-              'bg-rose-100':   activity.type === 'Student Removed',
+              'bg-rose-100':   activity.type === 'Student Removed' || activity.type === 'Teacher Removed',  
               'bg-indigo-100': activity.type === 'Data Import',
               'bg-teal-100':   activity.type === 'Report Request',
               'bg-cyan-100':   activity.type === 'Student Update',
@@ -461,9 +462,9 @@
                 'fa-pen-to-square text-blue-600':         activity.type === 'Grade Update',
                 'fa-calendar-plus text-purple-600':       activity.type === 'Session Start',
                 'fa-calendar-check text-purple-700':      activity.type === 'Session Update',
-                'fa-user-tie text-orange-600':            activity.type === 'Teacher Assignment',
+                'fa-user-tie text-orange-600':            activity.type === 'Teacher Assignment' || activity.type === 'Teacher Update', 
                 'fa-user-plus text-yellow-600':           activity.type === 'Student Added',
-                'fa-user-minus text-rose-600':            activity.type === 'Student Removed',
+                'fa-user-minus text-rose-600':            activity.type === 'Student Removed' || activity.type === 'Teacher Removed',   
                 'fa-file-import text-indigo-600':         activity.type === 'Data Import',
                 'fa-file-circle-question text-teal-600':  activity.type === 'Report Request',
                 'fa-user-pen text-cyan-600':              activity.type === 'Student Update',
@@ -492,9 +493,9 @@
                       'bg-blue-100 text-blue-800':     activity.type === 'Grade Update',
                       'bg-purple-100 text-purple-800': activity.type === 'Session Start',
                       'bg-purple-200 text-purple-900': activity.type === 'Session Update',
-                      'bg-orange-100 text-orange-800': activity.type === 'Teacher Assignment',
+                      'bg-orange-100 text-orange-800': activity.type === 'Teacher Assignment' || activity.type === 'Teacher Update',
                       'bg-yellow-100 text-yellow-800': activity.type === 'Student Added',
-                      'bg-rose-100 text-rose-800':     activity.type === 'Student Removed',
+                      'bg-rose-100 text-rose-800':     activity.type === 'Student Removed' || activity.type === 'Teacher Removed',  
                       'bg-indigo-100 text-indigo-800': activity.type === 'Data Import',
                       'bg-teal-100 text-teal-800':     activity.type === 'Report Request',
                       'bg-cyan-100 text-cyan-800':     activity.type === 'Student Update',
