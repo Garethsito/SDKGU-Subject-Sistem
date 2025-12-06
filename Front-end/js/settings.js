@@ -5,6 +5,7 @@ function settingsData() {
       this.loadTeachers();
       this.loadPrograms();
       this.loadSubjects();
+      this.loadAdministrators(); // 🆕 Agregar esta línea
     },
     open: false,
     activeTab: 'activity', // Tab por defecto
@@ -27,6 +28,7 @@ function settingsData() {
       role: '',
       status: 'Active'
     },
+
     administrators: [
       { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@sdgku.edu', phone: '+1 (619) 555-0100', role: 'Super Admin', status: 'Active' },
       { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@sdgku.edu', phone: '+1 (619) 555-0101', role: 'Admin', status: 'Active' }
@@ -220,67 +222,104 @@ function settingsData() {
       console.log('Activity log data:', this.filteredActivityLogAll);
     },
 
-    addAdministrator() {
-      const newId = this.administrators.length > 0 ? Math.max(...this.administrators.map(a => a.id)) + 1 : 1;
-      this.administrators.push({
-        id: newId,
-        ...this.newAdmin
-      });
-      
-      // Agregar actividad al log (demo)
-      this.activityLog.unshift({
-        id: this.activityLog.length + 1,
-        user: 'Current User', // Cambiar por usuario actual
-        type: 'Student Added',
-        description: `Added new administrator: ${this.newAdmin.firstName} ${this.newAdmin.lastName}`,
-        date: new Date().toISOString().split('T')[0],
-        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        ipAddress: '192.168.1.100',
-        details: {
-          'Name': `${this.newAdmin.firstName} ${this.newAdmin.lastName}`,
-          'Email': this.newAdmin.email,
-          'Role': this.newAdmin.role
-        }
-      });
-      
-      alert('Administrator added successfully!');
-      this.resetAdminForm();
-    },
+   // Actualizar la función loadAdministrators
+async loadAdministrators() {
+  try {
+    const res = await fetch("http://localhost:3000/api/administrators");
+    const data = await res.json();
+    this.administrators = data;
+    console.log('✅ Administrators loaded:', this.administrators.length);
+  } catch (error) {
+    console.error("❌ Error loading administrators:", error);
+  }
+},
+
+// Actualizar la función addAdministrator
+async addAdministrator() {
+  try {
+    // Validación básica
+    if (!this.newAdmin.firstName || !this.newAdmin.lastName || 
+        !this.newAdmin.email || !this.newAdmin.role) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    // Generar username automáticamente si no existe
+    const username = this.newAdmin.email.split('@')[0];
     
-    resetAdminForm() {
-      this.newAdmin = {
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        role: '',
-        status: 'Active'
-      };
-    },
+    // Contraseña temporal (en producción, esto debería ser más seguro)
+    const tempPassword = 'SDGKU' + Math.random().toString(36).substring(7);
+
+    const payload = {
+      firstName: this.newAdmin.firstName,
+      lastName: this.newAdmin.lastName,
+      email: this.newAdmin.email,
+      phone: this.newAdmin.phone,
+      role: this.newAdmin.role,
+      status: this.newAdmin.status || 'Active',
+      username: username,
+      password: tempPassword,
+    };
+
+    const res = await fetch("http://localhost:3000/api/administrators", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert("Error adding administrator: " + (data.message || JSON.stringify(data)));
+      return;
+    }
+
+    alert(`Administrator added successfully!\n\nUsername: ${username}\nTemporary Password: ${tempPassword}\n\nPlease save these credentials and change the password after first login.`);
     
-    deleteAdmin(id) {
-      if (confirm('Are you sure you want to delete this administrator?')) {
-        const admin = this.administrators.find(a => a.id === id);
-        this.administrators = this.administrators.filter(a => a.id !== id);
-        
-        if (admin) {
-          this.activityLog.unshift({
-            id: this.activityLog.length + 1,
-            user: 'Current User',
-            type: 'Student Added',
-            description: `Deleted administrator: ${admin.firstName} ${admin.lastName}`,
-            date: new Date().toISOString().split('T')[0],
-            time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-            ipAddress: '192.168.1.100',
-            details: {
-              'Name': `${admin.firstName} ${admin.lastName}`,
-              'Email': admin.email,
-              'Role': admin.role
-            }
-          });
-        }
-      }
-    },
+    // Recargar la lista
+    await this.loadAdministrators();
+    this.resetAdminForm();
+
+  } catch (error) {
+    console.error("❌ Error adding administrator:", error);
+    alert("Error adding administrator. Please try again.");
+  }
+},
+resetAdminForm(){
+this.newAdmin = {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      role: '',
+      status: 'Active'
+    };
+},
+
+// Actualizar la función deleteAdmin
+async deleteAdmin(id) {
+  if (!confirm("Are you sure you want to delete this administrator?")) return;
+
+  try {
+    const res = await fetch(`http://localhost:3000/api/administrators/${id}`, { 
+      method: "DELETE" 
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert("Error deleting administrator: " + (data.message || JSON.stringify(data)));
+      return;
+    }
+
+    alert("Administrator deleted successfully!");
+    await this.loadAdministrators();
+
+  } catch (error) {
+    console.error("❌ Error deleting administrator:", error);
+    alert("Error deleting administrator. Please try again.");
+  }
+},
     
     // ⭐ MÉTODOS PARA ESTADÍSTICAS
     getTodayLogins() {
@@ -690,63 +729,429 @@ function settingsData() {
           return;
         }
 
-        // ⭐ Importaciones normales (students, teachers, etc.)
-        const url = `${this.apiUrl}/import/${this.importType}`;
-        console.log('📤 Importando archivo...', this.importType);
+        // ⭐ IMPORTACIÓN DE STUDENTS (desde Excel en el frontend)
+    if (this.importType === 'students') {
+      const data = await this.readExcelFile(this.selectedFile);
+      const results = [];
+      const errors = [];
 
-        const response = await fetch(url, {
-          method: 'POST',
-          body: formData
-        });
+      for (const row of data) {
+        try {
+          // Mapear campos del Excel a la estructura del backend
+          const studentData = {
+            studentIdNumber: row['Students ID Number']?.toString().trim(),
+            firstName: row['First Name']?.toString().trim(),
+            middleName: row['Middle Name']?.toString().trim() || null,
+            lastName: row['Last Name']?.toString().trim(),
+            email: row['Email']?.toString().trim() || null,
+            sdgkuEmail: row['SDGKU EMAIL']?.toString().trim() || null,
+            phone: row['Phone #']?.toString().trim() || null,
+            rgmKey: row['RGM#']?.toString().trim() || null,
+            programName: row['Program']?.toString().trim() || 'BSGM',
+            modality: row['Modality']?.toString().trim() || 'Online',
+            cohort: row['Cohort']?.toString().trim() || null,
+            language: row['Language']?.toString().trim() || 'English',
+            status: row['Status']?.toString().trim().toLowerCase() || 'active',
+            startDate: this.parseExcelDate(row['Start Date']),
+            scheduledCompletionDate: this.parseExcelDate(row['Scheduled Completion Date']) || null,
+            graduationDate: this.parseExcelDate(row['Graduation Date']) || null,
+            totalUnits: parseInt(row['Total Units']) || 126,
+            transferredUnits: parseInt(row['Transfered Units']) || 0,
+            unitQuantity: parseInt(row['Unit Quantity']) || 0,
+            totalUnitsEarned: parseInt(row['Total Units Earned']) || 0,
+          };
 
-        const result = await response.json();
+          // Validar campos requeridos
+          if (!studentData.studentIdNumber || !studentData.firstName || !studentData.lastName) {
+            errors.push(`Fila con datos incompletos: ${row['Students ID Number'] || 'Sin ID'}`);
+            continue;
+          }
 
-        this.importResult = result;
+          // Enviar al backend
+          const res = await fetch('http://localhost:3000/api/students/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(studentData)
+          });
 
-        this.importHistory.unshift({
-          id: Date.now(),
-          date: new Date().toLocaleString(),
-          fileName: this.selectedFile.name,
-          type: this.importType,
-          records: result?.recordsProcessed || 0,
-          status: result?.success ? 'Success' : 'Failed'
-        });
+          if (res.ok) {
+            const result = await res.json();
+            results.push(result);
+          } else {
+            const errorData = await res.json();
+            errors.push(`Error en estudiante ${studentData.studentIdNumber}: ${errorData.message}`);
+          }
 
-        if (result.success) {
-          this.selectedFile = null;
-          this.importType = '';
+        } catch (error) {
+          errors.push(`Error procesando fila: ${error.message}`);
         }
-
-      } catch (error) {
-        console.error('❌ Error importing file:', error);
-
-        this.importResult = {
-          success: false,
-          message: 'Error importing file',
-          details: error.message || 'Unknown error'
-        };
       }
-    },
 
-    async readExcelFile(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const sheetName = workbook.SheetNames[0];
-          const sheet = workbook.Sheets[sheetName];
-          const rows = XLSX.utils.sheet_to_json(sheet);
-          resolve(rows);
-        };
-        reader.onerror = (err) => reject(err);
-        reader.readAsArrayBuffer(file);
+      this.importResult = {
+        success: true,
+        message: `estudiantes importados exitosamente`,
+        recordsProcessed: results.length,
+        errors: errors.length > 0 ? errors : undefined
+      };
+
+      this.importHistory.unshift({
+        id: Date.now(),
+        date: new Date().toLocaleString(),
+        fileName: this.selectedFile.name,
+        type: this.importType,
+        records: results.length,
+        status: errors.length > 0 ? 'Partial Success' : 'Success'
       });
-    },
 
-    downloadTemplate() {
-      alert('Template download feature will be implemented with actual Excel generation');
+      this.selectedFile = null;
+      this.importType = '';
+      return;
     }
+
+    // ⭐ IMPORTACIÓN DE TEACHERS
+    if (this.importType === 'teachers') {
+      const data = await this.readExcelFile(this.selectedFile);
+      const results = [];
+      const errors = [];
+
+      for (const row of data) {
+        try {
+          const teacherData = {
+            teacherIdNumber: row['Teacher ID']?.toString().trim(),
+            firstName: row['First Name']?.toString().trim(),
+            middleName: row['Middle Name']?.toString().trim() || null,
+            lastName: row['Last Name']?.toString().trim(),
+            email: row['Email']?.toString().trim() || null,
+            phone: row['Phone']?.toString().trim() || null,
+            department: row['Department']?.toString().trim() || null,
+            specialization: row['Specialization']?.toString().trim() || null,
+          };
+
+          if (!teacherData.firstName || !teacherData.lastName) {
+            errors.push(`Teacher con datos incompletos: ${row['Teacher ID'] || 'Sin ID'}`);
+            continue;
+          }
+
+          const res = await fetch('http://localhost:3000/teachers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(teacherData)
+          });
+
+          if (res.ok) {
+            const result = await res.json();
+            results.push(result);
+          } else {
+            const errorData = await res.json();
+            errors.push(`Error en teacher: ${errorData.message}`);
+          }
+
+        } catch (error) {
+          errors.push(`Error procesando fila: ${error.message}`);
+        }
+      }
+
+      this.importResult = {
+        success: true,
+        message: `${results.length} teachers importados exitosamente`,
+        recordsProcessed: results.length,
+        errors: errors.length > 0 ? errors : undefined
+      };
+
+      this.importHistory.unshift({
+        id: Date.now(),
+        date: new Date().toLocaleString(),
+        fileName: this.selectedFile.name,
+        type: this.importType,
+        records: results.length,
+        status: errors.length > 0 ? 'Partial Success' : 'Success'
+      });
+
+      this.selectedFile = null;
+      this.importType = '';
+      return;
+    }
+
+    // Importaciones normales (otros tipos)
+    const url = `http://localhost:3000/api/import/${this.importType}`;
+    console.log('📤 Importando archivo...', this.importType);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData
+    });
+
+    const result = await response.json();
+
+    this.importResult = result;
+
+    this.importHistory.unshift({
+      id: Date.now(),
+      date: new Date().toLocaleString(),
+      fileName: this.selectedFile.name,
+      type: this.importType,
+      records: result?.recordsProcessed || 0,
+      status: result?.success ? 'Success' : 'Failed'
+    });
+
+    if (result.success) {
+      this.selectedFile = null;
+      this.importType = '';
+    }
+
+  } catch (error) {
+    console.error('❌ Error importing file:', error);
+
+    this.importResult = {
+      success: false,
+      message: 'Error importing file',
+      details: error.message || 'Unknown error'
+    };
+  }
+},
+
+// 🔧 Método auxiliar para leer Excel en el frontend
+async readExcelFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet);
+      resolve(rows);
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsArrayBuffer(file);
+  });
+},
+
+// 🔧 Método auxiliar para parsear fechas de Excel
+parseExcelDate(value) {
+  if (!value) return null;
+  
+  if (typeof value === 'number') {
+    // Fecha serial de Excel
+    return new Date((value - 25569) * 86400 * 1000).toISOString().split('T')[0];
+  } else if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = new Date(value);
+    return isNaN(parsed.getTime()) ? null : parsed.toISOString().split('T')[0];
+  }
+  return null;
+},
+
+   // Agregar esta función al objeto settingsData() en settings.js
+
+downloadTemplate() {
+  if (!this.importType) {
+    alert('Please select a data type first');
+    return;
+  }
+
+  let templateData = [];
+  let fileName = '';
+
+  // 📚 PLANTILLA PARA STUDENTS
+  if (this.importType === 'students') {
+    fileName = 'Students_Import_Template.xlsx';
+    
+    templateData = [
+      {
+        'Students ID Number': '123456789',
+        'First Name': 'John',
+        'Middle Name': 'Michael',
+        'Last Name': 'Doe',
+        'Email': 'john.doe@email.com',
+        'SDGKU EMAIL': 'john.doe@sdgku.edu',
+        'Phone #': '(619) 555-0100',
+        'RGM#': 'RGM001',
+        'Program': 'BSGM',
+        'Modality': 'Online',
+        'Cohort': 'Fall 2024',
+        'Language': 'English',
+        'Status': 'active',
+        'Start Date': '2024-01-15',
+        'Scheduled Completion Date': '2028-05-30',
+        'Graduation Date': '',
+        'Total Units': 126,
+        'Transfered Units': 0,
+        'Unit Quantity': 3,
+        'Total Units Earned': 9
+      },
+      {
+        'Students ID Number': '987654321',
+        'First Name': 'Jane',
+        'Middle Name': 'Marie',
+        'Last Name': 'Smith',
+        'Email': 'jane.smith@email.com',
+        'SDGKU EMAIL': 'jane.smith@sdgku.edu',
+        'Phone #': '(619) 555-0200',
+        'RGM#': 'RGM002',
+        'Program': 'ASSD',
+        'Modality': 'Hybrid',
+        'Cohort': 'Spring 2024',
+        'Language': 'Spanish',
+        'Status': 'active',
+        'Start Date': '2024-03-01',
+        'Scheduled Completion Date': '2026-12-15',
+        'Graduation Date': '',
+        'Total Units': 60,
+        'Transfered Units': 6,
+        'Unit Quantity': 3,
+        'Total Units Earned': 15
+      }
+    ];
+  }
+
+  // 📝 PLANTILLA PARA GRADES
+  else if (this.importType === 'grades') {
+    fileName = 'Grades_Import_Template.xlsx';
+    
+    templateData = [
+      {
+        'Students ID Number': '123456789',
+        'Course': 'MATH 201',
+        'Grade': 'A',
+        'Status': 'Completed'
+      },
+      {
+        'Students ID Number': '123456789',
+        'Course': 'ENGL 201',
+        'Grade': 'B+',
+        'Status': 'Completed'
+      },
+      {
+        'Students ID Number': '123456789',
+        'Course': 'GBUS 301',
+        'Grade': 'IP',
+        'Status': 'In Progress'
+      },
+      {
+        'Students ID Number': '987654321',
+        'Course': 'FSDI 101',
+        'Grade': 'A-',
+        'Status': 'Completed'
+      },
+      {
+        'Students ID Number': '987654321',
+        'Course': 'FSDI 102',
+        'Grade': 'T',
+        'Status': 'Transferred'
+      }
+    ];
+  }
+
+  // 👨‍🏫 PLANTILLA PARA TEACHERS
+  else if (this.importType === 'teachers') {
+    fileName = 'Teachers_Import_Template.xlsx';
+    
+    templateData = [
+      {
+        'Teacher ID': 'TCH-001',
+        'First Name': 'Robert',
+        'Middle Name': 'James',
+        'Last Name': 'Johnson',
+        'Email': 'robert.johnson@sdgku.edu',
+        'Phone': '(619) 555-0300',
+        'Department': 'Business',
+        'Specialization': 'Global Management'
+      },
+      {
+        'Teacher ID': 'TCH-002',
+        'First Name': 'Maria',
+        'Middle Name': 'Elena',
+        'Last Name': 'Garcia',
+        'Email': 'maria.garcia@sdgku.edu',
+        'Phone': '(619) 555-0400',
+        'Department': 'Technology',
+        'Specialization': 'Software Development'
+      }
+    ];
+  }
+
+  // 📖 PLANTILLA PARA SUBJECTS
+  else if (this.importType === 'subjects') {
+    fileName = 'Subjects_Import_Template.xlsx';
+    
+    templateData = [
+      {
+        'Course Code': 'MATH 201',
+        'Course Name': 'College Algebra',
+        'Credits': 3,
+        'Program': 'BSGM',
+        'Language': 'English',
+        'Max Capacity': 30,
+        'Transferable': 'true'
+      },
+      {
+        'Course Code': 'FSDI 101',
+        'Course Name': 'Intro to Web Development',
+        'Credits': 3,
+        'Program': 'ASSD',
+        'Language': 'English',
+        'Max Capacity': 25,
+        'Transferable': 'false'
+      }
+    ];
+  }
+
+  // 📅 PLANTILLA PARA SESSIONS
+  else if (this.importType === 'sessions') {
+    fileName = 'Sessions_Import_Template.xlsx';
+    
+    templateData = [
+      {
+        'Session Name': 'Session 1',
+        'Program': 'BSGM',
+        'Start Date': '2025-01-15',
+        'End Date': '2025-03-15',
+        'Courses': 'MATH 201,ENGL 201,GBUS 301',
+        'Teachers': 'TCH-001,TCH-002,TCH-003'
+      },
+      {
+        'Session Name': 'Session 2',
+        'Program': 'ASSD',
+        'Start Date': '2025-02-01',
+        'End Date': '2025-04-01',
+        'Courses': 'FSDI 101,FSDI 102',
+        'Teachers': 'TCH-004,TCH-005'
+      }
+    ];
+  }
+
+  // ❌ Si no hay plantilla disponible
+  else {
+    alert(`Template for "${this.importType}" is not available yet`);
+    return;
+  }
+
+  // 📦 Crear el archivo Excel
+  try {
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Template');
+
+    // 🎨 Ajustar ancho de columnas automáticamente
+    const maxWidth = 20;
+    const colWidths = Object.keys(templateData[0]).map(key => ({
+      wch: Math.min(Math.max(key.length, 10), maxWidth)
+    }));
+    ws['!cols'] = colWidths;
+
+    // 💾 Descargar el archivo
+    XLSX.writeFile(wb, fileName);
+    
+    console.log(`✅ Template downloaded: ${fileName}`);
+    
+    // Mostrar mensaje de éxito
+    alert(`Template "${fileName}" downloaded successfully!`);
+    
+  } catch (error) {
+    console.error('❌ Error generating template:', error);
+    alert('Error generating template. Please try again.');
+  }
+},
   };
 }
 

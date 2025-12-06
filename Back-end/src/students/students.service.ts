@@ -578,4 +578,96 @@ export class StudentsService {
     
     return 'Not Started';
   }
+
+  // Back-end/src/students/students.service.ts
+// 🆕 Agregar este método al servicio existente
+
+async importStudent(data: any) {
+  try {
+    // 1️⃣ Buscar o crear el programa
+    let program = await this.prisma.program.findUnique({
+      where: { programName: data.programName }
+    });
+
+    if (!program) {
+      // Si el programa no existe, crearlo con valores por defecto
+      program = await this.prisma.program.create({
+        data: {
+          programName: data.programName,
+          programType: data.programName === 'BSGM' ? 'Bachelor' : 'Associate',
+          totalCourses: data.programName === 'BSGM' ? 40 : 20,
+          totalUnits: data.programName === 'BSGM' ? 126 : 60
+        }
+      });
+    }
+
+    // 2️⃣ Verificar si el estudiante ya existe
+    const existingStudent = await this.prisma.student.findUnique({
+      where: { studentIdNumber: data.studentIdNumber }
+    });
+
+    if (existingStudent) {
+      // Si existe, actualizar
+      return await this.prisma.student.update({
+        where: { id: existingStudent.id },
+        data: {
+          firstName: data.firstName,
+          middleName: data.middleName,
+          lastName: data.lastName,
+          email: data.email,
+          sdgkuEmail: data.sdgkuEmail,
+          phone: data.phone,
+          rgmKey: data.rgmKey,
+          programId: program.id,
+          modality: data.modality,
+          cohort: data.cohort,
+          language: data.language,
+          status: data.status,
+          startDate: data.startDate ? new Date(data.startDate) : new Date(),
+          scheduledCompletionDate: data.scheduledCompletionDate ? new Date(data.scheduledCompletionDate) : null,
+          graduationDate: data.graduationDate ? new Date(data.graduationDate) : null,
+          totalUnits: data.totalUnits,
+          transferredUnits: data.transferredUnits,
+          unitQuantity: data.unitQuantity,
+          totalUnitsEarned: data.totalUnitsEarned,
+          enrollmentYear: data.startDate ? new Date(data.startDate).getFullYear() : new Date().getFullYear()
+        }
+      });
+    }
+
+    // 3️⃣ Si no existe, crear nuevo estudiante
+    const studentId = BigInt(data.studentIdNumber);
+    
+    return await this.prisma.student.create({
+      data: {
+        id: studentId,
+        studentIdNumber: data.studentIdNumber,
+        firstName: data.firstName,
+        middleName: data.middleName,
+        lastName: data.lastName,
+        email: data.email,
+        sdgkuEmail: data.sdgkuEmail,
+        phone: data.phone,
+        rgmKey: data.rgmKey,
+        programId: program.id,
+        modality: data.modality || 'Online',
+        cohort: data.cohort,
+        language: data.language || 'English',
+        status: data.status || 'active',
+        startDate: data.startDate ? new Date(data.startDate) : new Date(),
+        scheduledCompletionDate: data.scheduledCompletionDate ? new Date(data.scheduledCompletionDate) : null,
+        graduationDate: data.graduationDate ? new Date(data.graduationDate) : null,
+        totalUnits: data.totalUnits || 126,
+        transferredUnits: data.transferredUnits || 0,
+        unitQuantity: data.unitQuantity || 0,
+        totalUnitsEarned: data.totalUnitsEarned || 0,
+        enrollmentYear: data.startDate ? new Date(data.startDate).getFullYear() : new Date().getFullYear()
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error in importStudent:', error);
+    throw new Error(`Failed to import student: ${error.message}`);
+  }
+}
 }

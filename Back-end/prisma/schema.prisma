@@ -219,6 +219,14 @@ model Login {
   id        Int     @id @default(autoincrement())
   username  String  @unique
   password  String
+  firstName String? // Nuevo
+  lastName  String? // Nuevo
+  email     String? @unique // Nuevo
+  phone     String? // Nuevo
+  role      String  @default("Admin") // Nuevo
+  status    String  @default("Active") // Nuevo
+  createdAt DateTime @default(now()) // Nuevo
+  updatedAt DateTime @updatedAt // Nuevo
 
 }
 
