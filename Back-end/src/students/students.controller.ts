@@ -6,9 +6,9 @@ import { StudentsService } from './students.service';
 export class StudentsController {
   constructor(
     private readonly studentsService: StudentsService,
-  ) {}
+  ) { }
 
-  // ✅ IMPORTANTE: Las rutas específicas DEBEN ir ANTES de las rutas con parámetros
+  // IMPORTANTE: Las rutas específicas DEBEN ir ANTES de las rutas con parámetros
 
   @Get('count')
   async getTotalStudents() {
@@ -32,45 +32,43 @@ export class StudentsController {
   async getMissingSubjects() {
     try {
       const missingSubjects = await this.studentsService.getMissingSubjectsByStudent();
-      console.log('📊 Missing Subjects Response:', missingSubjects);
+      //console.log('Missing Subjects Response:', missingSubjects);
       return { missingSubjects };
     } catch (error) {
-      console.error('❌ Error in missing-subjects endpoint:', error);
-      return { 
-        missingSubjects: { 
-          labels: [], 
-          data: [] 
-        } 
+      console.error('Error in missing-subjects endpoint:', error);
+      return {
+        missingSubjects: {
+          labels: [],
+          data: []
+        }
       };
     }
   }
 
-  // ✅ CORREGIDO: @Get() debe ir ANTES de @Get(':id')
   @Get()
   async getAllStudents() {
     try {
       console.log('🔍 Fetching all students...');
       const students = await this.studentsService.getAllStudents();
-      console.log(`✅ Returning ${students.length} students`);
-      
-      // 🔍 DEBUG: Ver estructura del primer estudiante
+      console.log(`Returning ${students.length} students`);
+
+      // DEBUG: Ver estructura del primer estudiante
       if (students.length > 0) {
-        console.log('📋 Sample student structure:', {
+        console.log('Sample student structure:', {
           id: students[0].id,
           name: `${students[0].firstName} ${students[0].lastName}`,
           program: students[0].program,
           hasGrades: !!students[0].grades
         });
       }
-      
+
       return students;
     } catch (error) {
-      console.error('❌ Error fetching students:', error);
+      console.error('Error fetching students:', error);
       throw error;
     }
   }
 
-  // ✅ Las rutas con parámetros van AL FINAL
   @Get(':id')
   async getStudentById(@Param('id') id: string) {
     try {

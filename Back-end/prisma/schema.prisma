@@ -142,13 +142,14 @@ model CourseOffering {
   course      Course   @relation(fields: [courseId], references: [id])
   courseId    Int
   session     Session  @relation(fields: [sessionId], references: [id])
+  groupNumber Int      @default(1)
   sessionId   Int
   teacher     Teacher? @relation(fields: [teacherId], references: [id])
   teacherId   Int?
   maxStudents Int?
   enrollments Enrollment[]
   
-  @@unique([courseId, sessionId])
+  @@unique([courseId, sessionId, groupNumber])
   @@index([courseId])
   @@index([sessionId])
   @@index([teacherId])
@@ -219,6 +220,18 @@ model Login {
   id        Int     @id @default(autoincrement())
   username  String  @unique
   password  String
+  firstName String? 
+  lastName  String? 
+  email     String? @unique 
+  phone     String? 
+  role      String  @default("Admin")
+  status    String  @default("Active")
+
+  activeToken    String?   @db.Text
+  tokenIssuedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
 }
 
@@ -230,7 +243,7 @@ model EntityType {
   // relacion con activity_log
   activities ActivityLog[]
 
-  @@map("entity_type") // nombre real de la tabla
+  @@map("entity_type") 
 }
 
 model ActivityType {

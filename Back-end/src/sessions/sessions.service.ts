@@ -7,9 +7,9 @@ import { ActivityLogService } from '../activityTimeline/activityTimeline.service
 @Injectable()
 export class SessionsService {
   constructor(
-  private prisma: PrismaService, 
-  private mailService: MailService,
-  private readonly activityLog: ActivityLogService) {}
+    private prisma: PrismaService,
+    private mailService: MailService,
+    private readonly activityLog: ActivityLogService) { }
 
   // Obtener todas las sesiones con información completa
   async getAllSessions() {
@@ -19,7 +19,7 @@ export class SessionsService {
         offerings: {
           include: {
             course: true,
-            teacher: true, 
+            teacher: true,
             enrollments: true
           }
         }
@@ -36,14 +36,14 @@ export class SessionsService {
 
       const month = new Date(session.startDate).toLocaleDateString('en-US', { month: 'long' });
       const subjects = session.offerings.map(off => off.course.courseCode);
-      
+
       // Obtener el primer profesor (principal)
       const mainTeacher = session.offerings.find(off => off.teacher)?.teacher;
-      
+
       // Extraer número de sesión del sessionName (ej: "Session 1" -> 1)
       const sessionNumberMatch = session.sessionName.match(/\d+/);
       const displayNumber = sessionNumberMatch ? parseInt(sessionNumberMatch[0]) : index + 1;
-      
+
       return {
         id: session.id,
         number: displayNumber,
@@ -57,7 +57,7 @@ export class SessionsService {
         occupancy,
         subject: subjects.join(', ') || 'No courses assigned',
         subjects,
-        professor: mainTeacher 
+        professor: mainTeacher
           ? `${mainTeacher.firstName} ${mainTeacher.lastName}`
           : 'TBD',
         teacherId: mainTeacher?.id,
@@ -95,7 +95,7 @@ export class SessionsService {
 
     // Obtener el profesor principal
     const mainTeacher = session.offerings.find(off => off.teacher)?.teacher;
-    
+
     // Obtener array de códigos de curso
     const subjects = session.offerings.map(off => off.course.courseCode);
 
@@ -114,163 +114,149 @@ export class SessionsService {
       programId: session.programId,
       subjects: subjects, // Array de códigos
       teacherId: mainTeacher?.id,
-      professor: mainTeacher 
+      professor: mainTeacher
         ? `${mainTeacher.firstName} ${mainTeacher.lastName}`
         : 'TBD',
       // Datos adicionales
       offerings: session.offerings.map(off => ({
         courseId: off.courseId,
         courseCode: off.course.courseCode,
+        groupNumber: off.groupNumber, // IMPORTANTE: para mostrar sufijos en frontend
         teacherId: off.teacherId,
-        teacher: off.teacher 
+        teacher: off.teacher
       }))
     };
   }
 
- // Crear nueva sesión
+  // Crear nueva sesión
   async createSession(data: any) {
-try {
-console.log('➡ DTO recibido para crear sesión:', data);
+    try {
+      console.log('➡ DTO recibido para crear sesión:', data);
 
-
-// Validar que venga sessionName
-if (!data.sessionName) {
-  throw new BadRequestException('sessionName is required');
-}
-
-// Validar que no exista sessionName duplicado
-const existingSession = await this.prisma.session.findUnique({
-  where: { sessionName: data.sessionName }
-});
-if (existingSession) {
-  throw new BadRequestException(`Session name "${data.sessionName}" already exists`);
-}
-
-// Validar programa
-const program = await this.prisma.program.findUnique({ where: { id: data.programId } });
-if (!program) {
-  throw new NotFoundException(`Program with ID ${data.programId} not found`);
-}
-
-// Determinar año
-const startDate = new Date(data.startDate);
-const year = startDate.getFullYear();
-
-// Validar límite anual de sesiones
-const sessionsThisYear = await this.prisma.session.count({ where: { year } });
-if (sessionsThisYear >= 20) {
-  throw new BadRequestException(`Maximum of 20 sessions per year reached for ${year}`);
-}
-
-// Crear la sesión
-const session = await this.prisma.session.create({
-  data: {
-    sessionName: data.sessionName,
-    year,
-    startDate,
-    endDate: new Date(data.endDate),
-    programId: data.programId
-  }
-});
-
-// Crear offerings si se enviaron cursos
-if (data.courses && Array.isArray(data.courses)) {
-  for (const courseData of data.courses) {
-    const course = await this.prisma.course.findUnique({
-      where: { id: courseData.courseId },
-    });
-    if (!course) continue;
-
-    // Validar profesor si se envió
-    if (courseData.teacherId) {
-      const teacher = await this.prisma.teacher.findUnique({
-        where: { id: courseData.teacherId },
-      });
-      if (!teacher) courseData.teacherId = null;
-    }
-
-    const existingOffering = await this.prisma.courseOffering.findUnique({
-      where: {
-        courseId_sessionId: {
-          courseId: courseData.courseId,
-          sessionId: session.id,
-        },
-      },
-    });
-    if (existingOffering) continue;
-
-    // 👇 Antes solo hacías el create y ya, ahora guardamos el resultado
-    const offering = await this.prisma.courseOffering.create({
-      data: {
-        courseId: courseData.courseId,
-        sessionId: session.id,
-        teacherId: courseData.teacherId || null,
-        maxStudents: course.maxCapacity || 30,
-      },
-    });
-
-    // 🔍 AUDITORÍA: creación de cada courseOffering (acoplado de la rama entrante)
-    await this.activityLog.logActivity({
-      userId: null,
-      entityCode: 'COURSE_OFFERING',
-      entityId: Number(offering.id),
-      activityCode: 'CREATE',
-      description: `CourseOffering ${offering.id} created for course ${course.id} in session ${session.id}`,
-      oldData: null,
-      newData: {
-        id: Number(offering.id),
-        courseId: offering.courseId,
-        sessionId: offering.sessionId,
-        teacherId: offering.teacherId,
-        maxStudents: offering.maxStudents,
-      },
-      isImportant: true,
-    });
-  }
-}
-
-// Retornar sesión con relaciones
-return this.prisma.session.findUnique({
-  where: { id: session.id },
-  include: {
-    program: true,
-    offerings: {
-      include: {
-        course: true,
-        teacher: true
+      if (!data.sessionName) {
+        throw new BadRequestException('sessionName is required');
       }
+
+      const existingSession = await this.prisma.session.findUnique({
+        where: { sessionName: data.sessionName }
+      });
+      if (existingSession) {
+        throw new BadRequestException(`Session name "${data.sessionName}" already exists`);
+      }
+
+      const program = await this.prisma.program.findUnique({ where: { id: data.programId } });
+      if (!program) {
+        throw new NotFoundException(`Program with ID ${data.programId} not found`);
+      }
+
+      const startDate = new Date(data.startDate);
+      const year = startDate.getFullYear();
+
+      const sessionsThisYear = await this.prisma.session.count({ where: { year } });
+      if (sessionsThisYear >= 20) {
+        throw new BadRequestException(`Maximum of 20 sessions per year reached for ${year}`);
+      }
+
+      const session = await this.prisma.session.create({
+        data: {
+          sessionName: data.sessionName,
+          year,
+          startDate,
+          endDate: new Date(data.endDate),
+          programId: data.programId
+        }
+      });
+
+      if (data.courses && Array.isArray(data.courses)) {
+        for (const courseData of data.courses) {
+          const course = await this.prisma.course.findUnique({
+            where: { id: courseData.courseId },
+          });
+          if (!course) continue;
+
+          if (courseData.teacherId) {
+            const teacher = await this.prisma.teacher.findUnique({
+              where: { id: courseData.teacherId },
+            });
+            if (!teacher) courseData.teacherId = null;
+          }
+
+          // 🆕 Buscar si ya existe con groupNumber
+          const existingOffering = await this.prisma.courseOffering.findFirst({
+            where: {
+              courseId: courseData.courseId,
+              sessionId: session.id,
+            },
+            orderBy: { groupNumber: 'desc' }
+          });
+
+          // Si ya existe, crear con groupNumber + 1
+          const groupNumber = existingOffering ? existingOffering.groupNumber + 1 : 1;
+
+          const offering = await this.prisma.courseOffering.create({
+            data: {
+              courseId: courseData.courseId,
+              sessionId: session.id,
+              groupNumber: groupNumber, // Asignar número de grupo
+              teacherId: courseData.teacherId || null,
+              maxStudents: course.maxCapacity || 30,
+            },
+          });
+
+          await this.activityLog.logActivity({
+            userId: null,
+            entityCode: 'COURSE_OFFERING',
+            entityId: Number(offering.id),
+            activityCode: 'CREATE',
+            description: `CourseOffering ${offering.id} (Group ${groupNumber}) created for course ${course.id} in session ${session.id}`,
+            oldData: null,
+            newData: {
+              id: Number(offering.id),
+              courseId: offering.courseId,
+              sessionId: offering.sessionId,
+              groupNumber: offering.groupNumber,
+              teacherId: offering.teacherId,
+              maxStudents: offering.maxStudents,
+            },
+            isImportant: true,
+          });
+        }
+      }
+
+      return this.prisma.session.findUnique({
+        where: { id: session.id },
+        include: {
+          program: true,
+          offerings: {
+            include: {
+              course: true,
+              teacher: true
+            }
+          }
+        }
+      });
+
+    } catch (err) {
+      console.error('Error al crear sesión:', err);
+      if (err.code === 'P2002') {
+        throw new BadRequestException('Duplicate entry detected. Please check the data.');
+      }
+      throw new BadRequestException(err.message || 'Failed to create session');
     }
   }
-});
 
-
-} catch (err) {
-console.error('❌ Error al crear sesión:', err);
-if (err.code === 'P2002') {
-throw new BadRequestException('Duplicate entry detected. Please check the data.');
-}
-throw new BadRequestException(err.message || 'Failed to create session');
-}
-}
-
-
-
-
-  // Actualizar sesión (incluyendo materias y profesores)
   // Actualizar sesión
   async updateSession(id: number, data: any) {
-    const session = await this.prisma.session.findUnique({ 
+    const session = await this.prisma.session.findUnique({
       where: { id },
       include: {
         offerings: true
       }
     });
-    
     if (!session) {
       throw new NotFoundException(`Session with ID ${id} not found`);
     }
 
-    // Datos "antes" de la sesión para el log
     const oldSessionCore = {
       id: session.id,
       sessionName: session.sessionName,
@@ -280,7 +266,6 @@ throw new BadRequestException(err.message || 'Failed to create session');
       programId: session.programId,
     };
 
-    // Calcular año si cambia la fecha
     const updateData: any = {
       sessionName: data.sessionName,
       programId: data.programId,
@@ -296,13 +281,11 @@ throw new BadRequestException(err.message || 'Failed to create session');
       updateData.endDate = new Date(data.endDate);
     }
 
-    // Actualizar sesión
     await this.prisma.session.update({
       where: { id },
       data: updateData
     });
 
-    // Log de actualización de sesión
     const newSessionCore = {
       id: id,
       sessionName: updateData.sessionName ?? session.sessionName,
@@ -313,7 +296,7 @@ throw new BadRequestException(err.message || 'Failed to create session');
     };
 
     await this.activityLog.logActivity({
-      userId: null, // luego puedes meter el id del usuario autenticado
+      userId: null,
       entityCode: 'SESSION',
       entityId: id,
       activityCode: 'UPDATE',
@@ -323,22 +306,27 @@ throw new BadRequestException(err.message || 'Failed to create session');
       isImportant: true,
     });
 
-    // Si se enviaron materias con profesores
     if (data.courses && Array.isArray(data.courses)) {
-      // Obtener los offerings actuales
       const currentOfferings = await this.prisma.courseOffering.findMany({
         where: { sessionId: id },
         include: { enrollments: true }
       });
 
-      // IDs de cursos que vienen en el request
-      const newCourseIds = data.courses.map(c => c.courseId);
-      
-      // Eliminar offerings que YA NO están en la lista
-      // ESTO INCLUYE eliminar primero todos sus enrollments
+      // Crear mapa de cursos con groupNumber
+      const newCourseMap = new Map();
+      data.courses.forEach(c => {
+        const key = `${c.courseId}`;
+        if (!newCourseMap.has(key)) {
+          newCourseMap.set(key, []);
+        }
+        newCourseMap.get(key).push(c);
+      });
+
+      // Eliminar offerings que ya no están
       for (const offering of currentOfferings) {
-        if (!newCourseIds.includes(offering.courseId)) {
-          // 🔍 Log de enrollments que se van a borrar
+        const key = `${offering.courseId}`;
+        if (!newCourseMap.has(key)) {
+          // Eliminar enrollments primero
           for (const enrollment of offering.enrollments) {
             await this.activityLog.logActivity({
               userId: null,
@@ -347,66 +335,65 @@ throw new BadRequestException(err.message || 'Failed to create session');
               activityCode: 'DELETE',
               description: `Enrollment ${enrollment.id} deleted for offering ${offering.id}`,
               oldData: {
-                id:        Number(enrollment.id),
+                id: Number(enrollment.id),
                 studentId: Number(enrollment.studentId),
                 offeringId: enrollment.offeringId,
-                status:    enrollment.status,
+                status: enrollment.status,
               },
               newData: null,
               isImportant: true,
             });
           }
 
-          // Primero eliminar TODOS los enrollments de este offering
           await this.prisma.enrollment.deleteMany({
             where: { offeringId: offering.id }
           });
-          
-          // 🔍 Log de borrado de COURSE_OFFERING
+
           await this.activityLog.logActivity({
             userId: null,
             entityCode: 'COURSE_OFFERING',
             entityId: Number(offering.id),
             activityCode: 'DELETE',
-            description: `CourseOffering ${offering.id} removed from session ${id}`,
+            description: `CourseOffering ${offering.id} (Group ${offering.groupNumber}) removed from session ${id}`,
             oldData: {
-              id:          Number(offering.id),
-              courseId:    offering.courseId,
-              sessionId:   offering.sessionId,
-              teacherId:   offering.teacherId,
+              id: Number(offering.id),
+              courseId: offering.courseId,
+              sessionId: offering.sessionId,
+              groupNumber: offering.groupNumber,
+              teacherId: offering.teacherId,
               maxStudents: offering.maxStudents,
             },
             newData: null,
             isImportant: true,
           });
 
-          // Luego eliminar el offering
           await this.prisma.courseOffering.delete({
             where: { id: offering.id }
           });
-          
-          console.log(`Removed course ${offering.courseId} and its ${offering.enrollments.length} enrollments`);
         }
       }
 
       // Actualizar o crear offerings
       for (const courseData of data.courses) {
-        const course = await this.prisma.course.findUnique({ 
-          where: { id: courseData.courseId } 
+        const course = await this.prisma.course.findUnique({
+          where: { id: courseData.courseId }
         });
-        
+
         if (course) {
-          // Verificar si ya existe
-          const existing = currentOfferings.find(o => o.courseId === courseData.courseId);
-          
+          // Buscar offering existente (primer grupo por defecto)
+          const existing = currentOfferings.find(
+            o => o.courseId === courseData.courseId && o.groupNumber === 1
+          );
+
           if (existing) {
-            // ACTUALIZAR: Solo cambia el profesor, NO toca los estudiantes
+            // Solo actualizar profesor si cambió
             if (existing.teacherId !== courseData.teacherId) {
               const oldOffering = {
-                id:          Number(existing.id),
-                courseId:    existing.courseId,
-                sessionId:   existing.sessionId,
-                teacherId:   existing.teacherId,
+                id: Number(existing.id),
+                courseId: existing.courseId,
+                sessionId: existing.sessionId,
+                groupNumber: existing.groupNumber,
+                teacherId: existing.teacherId,
                 maxStudents: existing.maxStudents,
               };
 
@@ -415,49 +402,50 @@ throw new BadRequestException(err.message || 'Failed to create session');
                 data: { teacherId: courseData.teacherId || null }
               });
 
-              // Log de UPDATE en COURSE_OFFERING (cambio de profesor)
               await this.activityLog.logActivity({
                 userId: null,
                 entityCode: 'COURSE_OFFERING',
                 entityId: Number(existing.id),
                 activityCode: 'UPDATE',
-                description: `Teacher updated for CourseOffering ${existing.id} in session ${id}`,
+                description: `Teacher updated for CourseOffering ${existing.id} (Group ${existing.groupNumber}) in session ${id}`,
                 oldData: oldOffering,
                 newData: {
-                  id:          Number(updatedOffering.id),
-                  courseId:    updatedOffering.courseId,
-                  sessionId:   updatedOffering.sessionId,
-                  teacherId:   updatedOffering.teacherId,
+                  id: Number(updatedOffering.id),
+                  courseId: updatedOffering.courseId,
+                  sessionId: updatedOffering.sessionId,
+                  groupNumber: updatedOffering.groupNumber,
+                  teacherId: updatedOffering.teacherId,
                   maxStudents: updatedOffering.maxStudents,
                 },
                 isImportant: true,
               });
             }
           } else {
-            // CREAR NUEVO: Se crea vacío sin estudiantes
+            // Crear nuevo offering (Grupo 1 si es el primero)
             try {
               const newOffering = await this.prisma.courseOffering.create({
                 data: {
                   courseId: courseData.courseId,
                   sessionId: id,
+                  groupNumber: 1, // Siempre Grupo 1 al agregar por primera vez
                   teacherId: courseData.teacherId || null,
                   maxStudents: course.maxCapacity || 30
                 }
               });
 
-              // Log de CREATE en COURSE_OFFERING
               await this.activityLog.logActivity({
                 userId: null,
                 entityCode: 'COURSE_OFFERING',
                 entityId: Number(newOffering.id),
                 activityCode: 'CREATE',
-                description: `CourseOffering ${newOffering.id} created for course ${course.id} in session ${id}`,
+                description: `CourseOffering ${newOffering.id} (Group ${newOffering.groupNumber}) created for course ${course.id} in session ${id}`,
                 oldData: null,
                 newData: {
-                  id:          Number(newOffering.id),
-                  courseId:    newOffering.courseId,
-                  sessionId:   newOffering.sessionId,
-                  teacherId:   newOffering.teacherId,
+                  id: Number(newOffering.id),
+                  courseId: newOffering.courseId,
+                  sessionId: newOffering.sessionId,
+                  groupNumber: newOffering.groupNumber,
+                  teacherId: newOffering.teacherId,
                   maxStudents: newOffering.maxStudents,
                 },
                 isImportant: true,
@@ -470,7 +458,6 @@ throw new BadRequestException(err.message || 'Failed to create session');
       }
     }
 
-    // Retornar sesión actualizada
     return this.prisma.session.findUnique({
       where: { id },
       include: {
@@ -478,15 +465,14 @@ throw new BadRequestException(err.message || 'Failed to create session');
         offerings: {
           include: {
             course: true,
-            teacher: true 
+            teacher: true
           }
         }
       }
     });
   }
 
-
- // Eliminar sesión
+  // Eliminar sesión
   async deleteSession(id: number) {
     const session = await this.prisma.session.findUnique({
       where: { id },
@@ -505,9 +491,9 @@ throw new BadRequestException(err.message || 'Failed to create session');
 
     // Datos "antes" de la sesión para el log
     const oldSessionData = {
-      id:        session.id,
+      id: session.id,
       sessionName: session.sessionName,
-      year:      session.year,
+      year: session.year,
       startDate: session.startDate?.toISOString() ?? null,
       endDate: session.endDate?.toISOString() ?? null,
       programId: session.programId,
@@ -515,7 +501,7 @@ throw new BadRequestException(err.message || 'Failed to create session');
 
     // Contar estudiantes inscritos
     const totalEnrollments = session.offerings.reduce(
-      (sum, off) => sum + off.enrollments.length, 
+      (sum, off) => sum + off.enrollments.length,
       0
     );
 
@@ -531,10 +517,10 @@ throw new BadRequestException(err.message || 'Failed to create session');
             activityCode: 'DELETE',
             description: `Enrollment ${enrollment.id} deleted when removing session ${id}`,
             oldData: {
-              id:        Number(enrollment.id),
+              id: Number(enrollment.id),
               studentId: Number(enrollment.studentId),
               offeringId: enrollment.offeringId,
-              status:    enrollment.status,
+              status: enrollment.status,
             },
             newData: null,
             isImportant: true,
@@ -557,10 +543,10 @@ throw new BadRequestException(err.message || 'Failed to create session');
         activityCode: 'DELETE',
         description: `CourseOffering ${offering.id} deleted from session ${id}`,
         oldData: {
-          id:          Number(offering.id),
-          courseId:    offering.courseId,
-          sessionId:   offering.sessionId,
-          teacherId:   offering.teacherId,
+          id: Number(offering.id),
+          courseId: offering.courseId,
+          sessionId: offering.sessionId,
+          teacherId: offering.teacherId,
           maxStudents: offering.maxStudents,
         },
         newData: null,
@@ -584,9 +570,17 @@ throw new BadRequestException(err.message || 'Failed to create session');
       isImportant: true,
     });
 
-    await this.prisma.session.delete({
-      where: { id }
-    });
+    // Intentar eliminar la sesión - Si ya fue eliminada, no es error
+    try {
+      await this.prisma.session.delete({
+        where: { id }
+      });
+    } catch (error) {
+      // Si el registro ya no existe (P2025), es OK ya que el objetivo era eliminarlo
+      if (error.code !== 'P2025') {
+        throw error; // Re-lanzar si es otro tipo de error
+      }
+    }
 
     // Retornar información sobre cuántos estudiantes se eliminaron
     return {
@@ -645,7 +639,7 @@ throw new BadRequestException(err.message || 'Failed to create session');
   }
 
   // Agregar materia a sesión con profesor
-    async addCourseToSession(sessionId: number, courseId: number, teacherId?: number, maxStudents?: number) {
+  async addCourseToSession(sessionId: number, courseId: number, teacherId?: number, maxStudents?: number) {
     const session = await this.prisma.session.findUnique({ where: { id: sessionId } });
     if (!session) {
       throw new NotFoundException(`Session with ID ${sessionId} not found`);
@@ -656,21 +650,24 @@ throw new BadRequestException(err.message || 'Failed to create session');
       throw new NotFoundException(`Course with ID ${courseId} not found`);
     }
 
-    const existing = await this.prisma.courseOffering.findUnique({
+    // Buscar el groupNumber más alto existente para este curso en esta sesión
+    const existingOfferings = await this.prisma.courseOffering.findMany({
       where: {
-        courseId_sessionId: { courseId, sessionId }
-      }
+        courseId: courseId,
+        sessionId: sessionId
+      },
+      orderBy: { groupNumber: 'desc' }
     });
 
-    if (existing) {
-      throw new BadRequestException('Course is already assigned to this session');
-    }
+    const nextGroupNumber = existingOfferings.length > 0
+      ? existingOfferings[0].groupNumber + 1
+      : 1;
 
-    // Crear el CourseOffering
     const offering = await this.prisma.courseOffering.create({
       data: {
         courseId,
         sessionId,
+        groupNumber: nextGroupNumber, // Asignar siguiente número de grupo
         teacherId: teacherId || null,
         maxStudents: maxStudents || course.maxCapacity || 30
       },
@@ -681,19 +678,19 @@ throw new BadRequestException(err.message || 'Failed to create session');
       }
     });
 
-    // Registrar en activity_log
     await this.activityLog.logActivity({
-      userId: null, // luego puedes pasar el id del usuario autenticado
+      userId: null,
       entityCode: 'COURSE_OFFERING',
       entityId: Number(offering.id),
       activityCode: 'CREATE',
-      description: `CourseOffering ${offering.id} created for course ${courseId} in session ${sessionId}`,
+      description: `CourseOffering ${offering.id} (Group ${offering.groupNumber}) created for course ${courseId} in session ${sessionId}`,
       oldData: null,
       newData: {
-        id:          Number(offering.id),
-        courseId:    offering.courseId,
-        sessionId:   offering.sessionId,
-        teacherId:   offering.teacherId,
+        id: Number(offering.id),
+        courseId: offering.courseId,
+        sessionId: offering.sessionId,
+        groupNumber: offering.groupNumber,
+        teacherId: offering.teacherId,
         maxStudents: offering.maxStudents,
       },
       isImportant: true,
@@ -702,15 +699,21 @@ throw new BadRequestException(err.message || 'Failed to create session');
     return offering;
   }
 
-
- // Eliminar materia de sesión
-  async removeCourseFromSession(sessionId: number, courseId: number) {
-    const offering = await this.prisma.courseOffering.findUnique({
+  // Eliminar materia de sesión
+  async removeCourseFromSession(sessionId: number, courseId: number, groupNumber: number = 1) {
+    const offering = await this.prisma.courseOffering.findFirst({
       where: {
-        courseId_sessionId: { courseId, sessionId }
+        courseId: courseId,
+        sessionId: sessionId,
+        groupNumber: 1
       },
       include: {
-        enrollments: true
+        enrollments: true,
+        course: {
+          include: {
+            programCourses: true
+          }
+        }
       }
     });
 
@@ -722,28 +725,31 @@ throw new BadRequestException(err.message || 'Failed to create session');
       throw new BadRequestException('Cannot remove course with active enrollments');
     }
 
-    // Registrar en activity_log antes de borrar
     await this.activityLog.logActivity({
-      userId: null, // cuando tengas auth, aquí metes el id del usuario
+      userId: null,
       entityCode: 'COURSE_OFFERING',
       entityId: Number(offering.id),
       activityCode: 'DELETE',
-      description: `CourseOffering ${offering.id} removed from session ${sessionId}`,
+      description: `CourseOffering ${offering.id} (Group ${offering.groupNumber}) removed from session ${sessionId}`,
       oldData: {
-        id:          Number(offering.id),
-        courseId:    offering.courseId,
-        sessionId:   offering.sessionId,
-        teacherId:   offering.teacherId,
+        id: Number(offering.id),
+        courseId: offering.courseId,
+        sessionId: offering.sessionId,
+        groupNumber: offering.groupNumber,
+        teacherId: offering.teacherId,
         maxStudents: offering.maxStudents,
       },
       newData: null,
       isImportant: true,
     });
 
-    // Ahora sí eliminar el offering
     return this.prisma.courseOffering.delete({
       where: {
-        courseId_sessionId: { courseId, sessionId }
+        courseId_sessionId_groupNumber: {
+          courseId,
+          sessionId,
+          groupNumber
+        }
       }
     });
   }
@@ -761,47 +767,77 @@ throw new BadRequestException(err.message || 'Failed to create session');
             student: true
           }
         }
-      }
+      },
+      orderBy: [
+        { course: { courseCode: 'asc' } },
+        { groupNumber: 'asc' }
+      ]
     });
 
-    return offerings.map(off => ({
-      id: off.course.id,
-      offeringId: off.id,
-      name: off.course.courseName,
-      code: off.course.courseCode,
-      teacher: off.teacher 
-        ? `${off.teacher.firstName} ${off.teacher.lastName}` 
-        : 'TBD',
-      teacherId: off.teacherId,
-      maxStudents: off.maxStudents,
-      currentEnrollment: off.enrollments.length,
-      students: off.enrollments.map(enr => ({
-        id: enr.student.id.toString(),
-        enrollmentId: enr.id,
-        name: `${enr.student.firstName} ${enr.student.lastName}`,
-        matricula: enr.student.studentIdNumber || `STU-${enr.student.id.toString().padStart(6, '0')}`,
-        email: enr.student.email || enr.student.sdgkuEmail,
-        status: enr.status === 'enrolled' ? 'active' : 'inactive',
-        enrolledDate: new Date().toISOString().split('T')[0]
-      }))
-    }));
+    return offerings.map(off => {
+      // Crear código con sufijo de grupo si es mayor a 1
+      const courseCode = off.groupNumber > 1
+        ? `${off.course.courseCode}-${off.groupNumber}`
+        : off.course.courseCode;
+
+      const courseName = off.groupNumber > 1
+        ? `${off.course.courseName} (Group ${off.groupNumber})`
+        : off.course.courseName;
+
+      return {
+        id: off.course.id,
+        offeringId: off.id,
+        groupNumber: off.groupNumber,
+        name: courseName,
+        code: courseCode,
+        teacher: off.teacher
+          ? `${off.teacher.firstName} ${off.teacher.lastName}`
+          : 'TBD',
+        teacherId: off.teacherId,
+        maxStudents: off.maxStudents,
+        currentEnrollment: off.enrollments.length,
+        students: off.enrollments.map(enr => ({
+          id: enr.student.id.toString(),
+          enrollmentId: enr.id,
+          name: `${enr.student.firstName} ${enr.student.lastName}`,
+          matricula: enr.student.studentIdNumber || `STU-${enr.student.id.toString().padStart(6, '0')}`,
+          email: enr.student.email || enr.student.sdgkuEmail,
+          status: enr.status === 'enrolled' ? 'active' : 'inactive',
+          enrolledDate: new Date().toISOString().split('T')[0]
+        }))
+      };
+    });
   }
 
   // Agregar estudiante a una materia de la sesión
-  async addStudentToCourse(sessionId: number, courseId: number, studentId: bigint) {
+  async addStudentToCourse(sessionId: number, courseId: number, studentId: bigint, offeringId?: number) {
     const session = await this.prisma.session.findUnique({ where: { id: sessionId } });
     if (!session) {
       throw new NotFoundException(`Session with ID ${sessionId} not found`);
     }
 
-    const offering = await this.prisma.courseOffering.findUnique({
-      where: {
-        courseId_sessionId: { courseId, sessionId }
-      },
-      include: {
-        enrollments: true
-      }
-    });
+    let offering;
+    if (offeringId) {
+      offering = await this.prisma.courseOffering.findUnique({
+        where: { id: offeringId },
+        include: {
+          enrollments: true,
+          course: { include: { programCourses: true } }
+        }
+      });
+    } else {
+      offering = await this.prisma.courseOffering.findFirst({
+        where: {
+          courseId: courseId,
+          sessionId: sessionId,
+          groupNumber: 1
+        },
+        include: {
+          enrollments: true,
+          course: { include: { programCourses: true } }
+        }
+      });
+    }
 
     if (!offering) {
       throw new NotFoundException('Course offering not found');
@@ -864,13 +900,13 @@ throw new BadRequestException(err.message || 'Failed to create session');
       description: `Student ${studentId.toString()} enrolled in course ${courseId} (session ${sessionId})`,
       oldData: null,
       newData: {
-        id:        Number(enrollment.id),
+        id: Number(enrollment.id),
         studentId: Number(enrollment.studentId),
         offeringId: enrollment.offeringId,
-        status:    enrollment.status,
+        status: enrollment.status,
         // info útil extra para el timeline:
         sessionId: sessionId,
-        courseId:  courseId,
+        courseId: courseId,
       },
       isImportant: true,
     });
@@ -907,10 +943,10 @@ throw new BadRequestException(err.message || 'Failed to create session');
       activityCode: 'DELETE',
       description: `Enrollment ${enrollment.id} removed from offering ${enrollment.offeringId}`,
       oldData: {
-        id:        Number(enrollment.id),
+        id: Number(enrollment.id),
         studentId: Number(enrollment.studentId),
         offeringId: enrollment.offeringId,
-        status:    enrollment.status,
+        status: enrollment.status,
       },
       newData: null,
       isImportant: true,
@@ -921,16 +957,16 @@ throw new BadRequestException(err.message || 'Failed to create session');
       where: { id: enrollmentId }
     });
 
-    return { 
-      success: true, 
-      message: 'Student removed successfully' 
+    return {
+      success: true,
+      message: 'Student removed successfully'
     };
   }
 
 
   // Obtener estudiantes disponibles para agregar a una materia
   async getAvailableStudents(sessionId: number, courseId: number) {
-    const session = await this.prisma.session.findUnique({ 
+    const session = await this.prisma.session.findUnique({
       where: { id: sessionId },
       include: {
         program: true
@@ -941,9 +977,11 @@ throw new BadRequestException(err.message || 'Failed to create session');
       throw new NotFoundException(`Session with ID ${sessionId} not found`);
     }
 
-    const offering = await this.prisma.courseOffering.findUnique({
+    const offering = await this.prisma.courseOffering.findFirst({
       where: {
-        courseId_sessionId: { courseId, sessionId }
+        courseId: courseId,
+        sessionId: sessionId,
+        groupNumber: 1
       },
       include: {
         enrollments: true,
@@ -961,11 +999,21 @@ throw new BadRequestException(err.message || 'Failed to create session');
 
     const enrolledStudentIds = offering.enrollments.map(enr => enr.studentId);
 
-    // Obtener IDs de programas relacionados con este curso
-    const programIds = offering.course.programCourses.map(pc => pc.programId);
+    // Obtener curso con programCourses
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      include: {
+        programCourses: true
+      }
+    });
+
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    const programIds = course.programCourses.map(pc => pc.programId);
 
     // Filtrar solo estudiantes del programa de la sesión
-    // (aunque el curso pueda pertenecer a múltiples programas)
     const availableStudents = await this.prisma.student.findMany({
       where: {
         programId: session.programId,
@@ -1016,6 +1064,76 @@ throw new BadRequestException(err.message || 'Failed to create session');
       success: true,
       message: `Successfully sent ${emailsSent} email notification(s)`,
       emailsSent
+    };
+  }
+
+  // Actualizar profesor de un offering
+  async updateOfferingTeacher(offeringId: number, teacherId: number) {
+    const offering = await this.prisma.courseOffering.findUnique({
+      where: { id: offeringId },
+      include: {
+        course: true,
+        session: true,
+        teacher: true
+      }
+    });
+
+    if (!offering) {
+      throw new NotFoundException(`Course offering with ID ${offeringId} not found`);
+    }
+
+    // Verificar que el teacher existe
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { id: teacherId }
+    });
+
+    if (!teacher) {
+      throw new NotFoundException(`Teacher with ID ${teacherId} not found`);
+    }
+
+    const oldData = {
+      id: Number(offering.id),
+      courseId: offering.courseId,
+      sessionId: offering.sessionId,
+      groupNumber: offering.groupNumber,
+      teacherId: offering.teacherId,
+      maxStudents: offering.maxStudents,
+    };
+
+    // Actualizar el offering
+    const updated = await this.prisma.courseOffering.update({
+      where: { id: offeringId },
+      data: { teacherId: teacherId },
+      include: {
+        course: true,
+        session: true,
+        teacher: true
+      }
+    });
+
+    // Log de actividad
+    await this.activityLog.logActivity({
+      userId: null,
+      entityCode: 'COURSE_OFFERING',
+      entityId: Number(updated.id),
+      activityCode: 'UPDATE',
+      description: `Teacher assigned to CourseOffering ${updated.id} (Group ${updated.groupNumber})`,
+      oldData: oldData,
+      newData: {
+        id: Number(updated.id),
+        courseId: updated.courseId,
+        sessionId: updated.sessionId,
+        groupNumber: updated.groupNumber,
+        teacherId: updated.teacherId,
+        maxStudents: updated.maxStudents,
+      },
+      isImportant: true,
+    });
+
+    return {
+      success: true,
+      message: `Teacher ${teacher.firstName} ${teacher.lastName} assigned successfully`,
+      offering: updated
     };
   }
 

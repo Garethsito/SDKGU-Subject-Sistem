@@ -1,29 +1,29 @@
 // src/enrollment/enrollment-automation.controller.ts
 import { Controller, Get, Post, Param, Body, ParseIntPipe } from '@nestjs/common';
-import { 
+import {
   EnrollmentAutomationService,
-  CourseAnalysis 
+  CourseAnalysis
 } from './enrollment-automation.service';
 
 @Controller('api/enrollment-automation')
 export class EnrollmentAutomationController {
   constructor(
     private readonly automationService: EnrollmentAutomationService
-  ) {}
+  ) { }
 
   /**
    * GET /api/enrollment-automation/analyze
    * Analizar demanda de todas las materias
    */
-@Get('analyze')
-async analyzeDemand(): Promise<CourseAnalysis[]> {
-  try {
-    return await this.automationService.analyzeDemandForAllCourses();
-  } catch (error) {
-    console.error('Error analyzing demand:', error);
-    throw error;
+  @Get('analyze')
+  async analyzeDemand(): Promise<CourseAnalysis[]> {
+    try {
+      return await this.automationService.analyzeDemandForAllCourses();
+    } catch (error) {
+      console.error('Error analyzing demand:', error);
+      throw error;
+    }
   }
-}
 
   /**
    * POST /api/enrollment-automation/auto-enroll
@@ -34,11 +34,15 @@ async analyzeDemand(): Promise<CourseAnalysis[]> {
     sessionId: number;
     courseId: number;
     maxStudents?: number;
+    offeringId?: number;
+    groupNumber?: number;
   }) {
     return this.automationService.autoEnrollStudents(
       body.sessionId,
       body.courseId,
-      body.maxStudents || 50
+      body.maxStudents || 50,
+      body.offeringId,
+      body.groupNumber
     );
   }
 

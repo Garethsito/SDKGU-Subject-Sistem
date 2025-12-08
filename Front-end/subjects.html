@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,42 +9,45 @@
   <script src="https://kit.fontawesome.com/337be747ec.js" crossorigin="anonymous"></script>
   <script src="js/subjects.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="js/auth.js"></script>
+  <script> protectPage() </script>
   <style>
-  [x-cloak] { display: none !important; }
-  .modal-filter-btn {
-    @apply px-4 py-2 text-sm font-medium border-b-2 transition-all;
-  }
-  .modal-filter-btn.active {
-    @apply border-[#A6192E] text-[#A6192E] font-bold;
-  }
-  .modal-filter-btn.inactive {
-    @apply border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300;
-  }
+    [x-cloak] {
+      display: none !important;
+    }
+
+    .modal-filter-btn {
+      @apply px-4 py-2 text-sm font-medium border-b-2 transition-all;
+    }
+
+    .modal-filter-btn.active {
+      @apply border-[#A6192E] text-[#A6192E] font-bold;
+    }
+
+    .modal-filter-btn.inactive {
+      @apply border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300;
+    }
   </style>
 </head>
 
 <body x-data="coursesData()" x-init="init()">
 
   <div class="fixed top-20 right-6 z-[9999] space-y-4 max-w-sm">
-    <div x-show="toast.show"
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="opacity-0 transform translate-x-full"
-         x-transition:enter-end="opacity-100 transform translate-x-0"
-         x-transition:leave="transition ease-in duration-200"
-         x-transition:leave-start="opacity-100 transform translate-x-0"
-         x-transition:leave-end="opacity-0 transform translate-x-full"
-         @click="toast.show = false"
-         class="w-full max-w-sm bg-white rounded-lg shadow-lg p-4 flex items-start cursor-pointer border-l-4"
-         :class="{ 'border-green-500': toast.type === 'success', 'border-red-500': toast.type === 'error' }"
-         x-cloak>
+    <div x-show="toast.show" x-transition:enter="transition ease-out duration-300"
+      x-transition:enter-start="opacity-0 transform translate-x-full"
+      x-transition:enter-end="opacity-100 transform translate-x-0" x-transition:leave="transition ease-in duration-200"
+      x-transition:leave-start="opacity-100 transform translate-x-0"
+      x-transition:leave-end="opacity-0 transform translate-x-full" @click="toast.show = false"
+      class="w-full max-w-sm bg-white rounded-lg shadow-lg p-4 flex items-start cursor-pointer border-l-4"
+      :class="{ 'border-green-500': toast.type === 'success', 'border-red-500': toast.type === 'error' }" x-cloak>
       <div class="flex-shrink-0">
         <i class="fa-solid fa-check-circle text-green-500 text-xl" x-show="toast.type === 'success'"></i>
         <i class="fa-solid fa-exclamation-circle text-red-500 text-xl" x-show="toast.type === 'error'"></i>
       </div>
       <div class="ml-3 w-0 flex-1">
-        <p class="text-sm font-medium text-gray-900" 
-           :class="{ 'text-green-800': toast.type === 'success', 'text-red-800': toast.type === 'error' }"
-           x-text="toast.type === 'success' ? 'Success' : 'Error'"></p>
+        <p class="text-sm font-medium text-gray-900"
+          :class="{ 'text-green-800': toast.type === 'success', 'text-red-800': toast.type === 'error' }"
+          x-text="toast.type === 'success' ? 'Success' : 'Error'"></p>
         <p class="mt-1 text-sm text-gray-600" x-text="toast.message"></p>
       </div>
       <button @click="toast.show = false" class="ml-4 flex-shrink-0 text-gray-400 hover:text-gray-500">
@@ -56,31 +60,29 @@
     <div class="px-6 py-4">
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-4">
-          <button @click="open = !open" class="w-10 h-10 flex items-center justify-center hover:bg-[#252121] rounded transition-colors">
+          <button @click="open = !open"
+            class="w-10 h-10 flex items-center justify-center hover:bg-[#252121] rounded transition-colors">
             <span class="text-2xl text-white">☰</span>
           </button>
-          
+
           <div class="absolute right-80">
-            <input type="text" x-model="searchQuery" placeholder="Search" class="w-full bg-gray-100 border border-gray-300 rounded-md px-2 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500 transition shadow-sm placeholder:text-gray-400">
+            <input type="text" x-model="searchQuery" placeholder="Search"
+              class="w-full bg-gray-100 border border-gray-300 rounded-md px-2 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500 transition shadow-sm placeholder:text-gray-400">
           </div>
-          
+
           <div class="fixed right-60">
-            <button @click="showFilters = !showFilters" class="w-10 h-10 flex items-center justify-center text-white bg-[#8E1C2D] border-2 border-[#D41736] hover:bg-[#8E1C2D] hover:border-[#772A34] transition transform duration-300 hover:scale-110 rounded">
+            <button @click="showFilters = !showFilters"
+              class="w-10 h-10 flex items-center justify-center text-white bg-[#8E1C2D] border-2 border-[#D41736] hover:bg-[#8E1C2D] hover:border-[#772A34] transition transform duration-300 hover:scale-110 rounded">
               <i class="fa-solid fa-filter"></i>
             </button>
-            
-            <div 
-              x-show="showFilters"
-              @click.outside="showFilters = false"
-              x-transition:enter="transition ease-out duration-200"
-              x-transition:enter-start="opacity-0 translate-y-1"
-              x-transition:enter-end="opacity-100 translate-y-0"
-              x-transition:leave="transition ease-in duration-150"
-              x-transition:leave-start="opacity-100 translate-y-0"
-              x-transition:leave-end="opacity-0 translate-y-1"
+
+            <div x-show="showFilters" @click.outside="showFilters = false"
+              x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-1"
+              x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150"
+              x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-1"
               class="absolute right-0 top-full w-80 bg-white rounded-lg shadow-xl border-2 border-gray-200 p-6 mt-2"
               x-cloak>
-              
+
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-bold text-gray-800">Filters</h3>
                 <button @click="showFilters = false" class="text-gray-500 hover:text-gray-700">
@@ -92,7 +94,8 @@
                 <!-- Program Filter - Dynamic -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Program</label>
-                  <select x-model="filters.program" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+                  <select x-model="filters.program"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
                     <option value="all">All Programs</option>
                     <template x-for="program in availablePrograms" :key="program">
                       <option :value="program" x-text="program"></option>
@@ -103,7 +106,8 @@
                 <!-- Session Filter - Dynamic -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Academic Session</label>
-                  <select x-model="filters.session" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+                  <select x-model="filters.session"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
                     <option value="all">All Sessions</option>
                     <template x-for="session in availableSessions" :key="session">
                       <option :value="session" x-text="session"></option>
@@ -114,7 +118,8 @@
                 <!-- Demand Level Filter -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Demand Level (Missing)</label>
-                  <select x-model="filters.occupancy" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+                  <select x-model="filters.occupancy"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
                     <option value="all">All Levels</option>
                     <option value="critical">Critical (≥75% missing)</option>
                     <option value="low">High (40-74% missing)</option>
@@ -126,35 +131,36 @@
                 <!-- Prerequisites Filter -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Prerequisites</label>
-                  <select x-model="filters.prerequisites" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+                  <select x-model="filters.prerequisites"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
                     <option value="all">All</option>
                     <option value="yes">With Prerequisites</option>
                     <option value="no">No Prerequisites</option>
                   </select>
                 </div>
-                
+
                 <div class="flex gap-3 pt-4 border-t border-gray-200">
-                  <button @click="clearFilters()" class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition text-sm font-medium">
+                  <button @click="clearFilters()"
+                    class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition text-sm font-medium">
                     Clear All
                   </button>
-                  <button @click="applyFilters()" class="flex-1 px-4 py-2 bg-[#A6192E] text-white rounded-md hover:bg-[#8E1C2D] transition text-sm font-medium">
+                  <button @click="applyFilters()"
+                    class="flex-1 px-4 py-2 bg-[#A6192E] text-white rounded-md hover:bg-[#8E1C2D] transition text-sm font-medium">
                     Apply Filters
                   </button>
                 </div>
               </div>
             </div>
           </div>
-          
-          <button class="w-10 h-10 flex items-center justify-center fixed right-10 hover:bg-[#252121] rounded transition-colors">
+
+          <button
+            class="w-10 h-10 flex items-center justify-center fixed right-10 hover:bg-[#252121] rounded transition-colors">
             <i class="fa-solid fa-circle-user fa-2xl" style="color: #ffffff;"></i>
           </button>
-          
-          <img 
-            src="https://cdn.sdgku.edu/wp-content/uploads/2023/11/cropped-SDGKU_Globe-square.png" 
-            alt="SDGKU Logo"
-            class="w-10 h-10 object-contain"
-          >
-          
+
+          <img src="https://cdn.sdgku.edu/wp-content/uploads/2023/11/cropped-SDGKU_Globe-square.png" alt="SDGKU Logo"
+            class="w-10 h-10 object-contain">
+
           <div>
             <h1 class="text-2xl font-bold text-[#fff]">SDGKU Dashboard</h1>
           </div>
@@ -163,30 +169,30 @@
     </div>
   </header>
 
-  <aside 
-    x-show="open"
-    x-transition:enter="transition transform duration-300"
-    x-transition:enter-start="-translate-x-full opacity-0"
-    x-transition:enter-end="translate-x-0 opacity-100"
-    x-transition:leave="transition transform duration-300"
-    x-transition:leave-start="translate-x-0 opacity-100"
+  <aside x-show="open" x-transition:enter="transition transform duration-300"
+    x-transition:enter-start="-translate-x-full opacity-0" x-transition:enter-end="translate-x-0 opacity-100"
+    x-transition:leave="transition transform duration-300" x-transition:leave-start="translate-x-0 opacity-100"
     x-transition:leave-end="-translate-x-full opacity-0"
-    class="w-60 bg-[#A6192E] text-white h-screen p-4 top-16 fixed z-40"
-    x-cloak>
+    class="w-60 bg-[#A6192E] text-white h-screen p-4 top-16 fixed z-40" x-cloak>
     <ul class="pt-6 space-y-4 text-xl font-medium">
-      <li><a href="index.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-chart-line mr-2"></i>Dashboard</a></li>
-      <li><a href="session.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-calendar-days mr-2"></i>Sessions</a></li>
-      <li><a href="subjects.html" class="block w-full px-4 py-2 rounded bg-[#8E1C2D]"><i class="fa-solid fa-book mr-2"></i>Subjects</a></li>
-      <li><a href="students.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-users mr-2"></i>Students</a></li>
-      <li><a href="reports.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-file-lines mr-2"></i>Academic Analytics</a></li>
-      <li><a href="settings.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-gear mr-2"></i>Settings</a></li>
+      <li><a href="index.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i
+            class="fa-solid fa-chart-line mr-2"></i>Dashboard</a></li>
+      <li><a href="session.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i
+            class="fa-solid fa-calendar-days mr-2"></i>Sessions</a></li>
+      <li><a href="subjects.html" class="block w-full px-4 py-2 rounded bg-[#8E1C2D]"><i
+            class="fa-solid fa-book mr-2"></i>Subjects</a></li>
+      <li><a href="students.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i
+            class="fa-solid fa-users mr-2"></i>Students</a></li>
+      <li><a href="reports.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i
+            class="fa-solid fa-file-lines mr-2"></i>Academic Analytics</a></li>
+      <li><a href="settings.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i
+            class="fa-solid fa-gear mr-2"></i>Settings</a></li>
     </ul>
   </aside>
 
-  <main
-    :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'"
+  <main :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'"
     class="flex-1 p-6 bg-gray-100 min-h-screen pt-20">
-    
+
     <div class="flex justify-between items-center mb-6">
       <div>
         <h1 class="text-3xl font-bold text-gray-800 mb-2">Subjects</h1>
@@ -196,10 +202,9 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20">
       <template x-for="(subject, index) in courses" :key="index">
-        <div 
-          @click="showStudents(subject)"
+        <div @click="showStudents(subject)"
           class="bg-white border-2 border-gray-200 hover:border-[#A6192E] rounded-xl p-4 cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105">
-          
+
           <div class="flex justify-between items-start mb-3">
             <div>
               <h3 class="text-xl font-bold text-gray-800 flex items-center">
@@ -228,7 +233,8 @@
                 </span>
                 <div class="flex gap-1.5 flex-wrap">
                   <template x-for="(prereq, i) in subject.prerequisites" :key="i">
-                    <span class="px-2.5 py-1 bg-gray-100 border border-gray-300 text-gray-700 text-xs font-semibold rounded-full flex items-center">
+                    <span
+                      class="px-2.5 py-1 bg-gray-100 border border-gray-300 text-gray-700 text-xs font-semibold rounded-full flex items-center">
                       <span x-text="prereq"></span>
                     </span>
                   </template>
@@ -247,8 +253,7 @@
               <span class="text-sm font-medium text-gray-700 flex items-center">
                 <i class="fa-solid fa-user-clock mr-1 text-xs"></i>Course Demand (Missing):
               </span>
-              <span class="text-sm font-bold flex items-center gap-1"
-                    :class="{
+              <span class="text-sm font-bold flex items-center gap-1" :class="{
                       'text-[#D41736]': subject.missingPercent >= 75,
                       'text-[#A6192E]': subject.missingPercent >= 40 && subject.missingPercent < 75,
                       'text-[#F69A1C]': subject.missingPercent >= 10 && subject.missingPercent < 40,
@@ -259,15 +264,12 @@
               </span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden shadow-inner">
-              <div 
-                class="h-full transition-all duration-500 rounded-full"
-                :class="{
+              <div class="h-full transition-all duration-500 rounded-full" :class="{
                   'bg-gradient-to-r from-[#D41736] to-[#A6192E]': subject.missingPercent >= 75,
                   'bg-gradient-to-r from-[#A6192E] to-[#8E1C2D]': subject.missingPercent >= 40 && subject.missingPercent < 75,
                   'bg-gradient-to-r from-[#F69A1C] to-yellow-500': subject.missingPercent >= 10 && subject.missingPercent < 40,
                   'bg-gradient-to-r from-blue-500 to-blue-700': subject.missingPercent < 10
-                }"
-                :style="'width: ' + subject.missingPercent + '%'">
+                }" :style="'width: ' + subject.missingPercent + '%'">
               </div>
             </div>
           </div>
@@ -275,29 +277,18 @@
       </template>
     </div>
 
-    <div 
-      x-show="selectedCourse !== null"
-      @click.self="selectedCourse = null"
-      x-transition:enter="transition ease-out duration-300"
-      x-transition:enter-start="opacity-0"
-      x-transition:enter-end="opacity-100"
-      x-transition:leave="transition ease-in duration-200"
-      x-transition:leave-start="opacity-100"
-      x-transition:leave-end="opacity-0"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-      x-cloak>
-      
-      <div 
-        x-show="selectedCourse !== null"
-        @click.stop
-        x-transition:enter="transition ease-out duration-300"
-        x-transition:enter-start="opacity-0 scale-90"
-        x-transition:enter-end="opacity-100 scale-100"
-        x-transition:leave="transition ease-in duration-200"
-        x-transition:leave-start="opacity-100 scale-100"
+    <div x-show="selectedCourse !== null" @click.self="selectedCourse = null"
+      x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+      x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+      x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" x-cloak>
+
+      <div x-show="selectedCourse !== null" @click.stop x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 scale-90" x-transition:enter-end="opacity-100 scale-100"
+        x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 scale-100"
         x-transition:leave-end="opacity-0 scale-90"
         class="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        
+
         <div class="bg-gradient-to-r from-[#4D4E4E] to-[#252121] text-white p-6 flex justify-between items-center">
           <div>
             <h2 class="text-2xl font-bold flex items-center">
@@ -309,13 +300,14 @@
               <span x-text="selectedCourse?.session"></span>
             </p>
           </div>
-          <button @click="selectedCourse = null" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
+          <button @click="selectedCourse = null"
+            class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
             <i class="fa-solid fa-times text-xl"></i>
           </button>
         </div>
 
         <div class="p-6 overflow-y-auto" style="max-height: calc(90vh - 180px);">
-          
+
           <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
               <i class="fa-solid fa-circle-info text-gray-600 mr-2"></i>Session Details
@@ -335,13 +327,13 @@
                 <i class="fa-solid fa-graduation-cap w-4 text-center text-gray-500"></i>
                 <span class="font-medium text-gray-600">Program:</span>
                 <span class="px-3 py-0.5 text-white text-xs font-semibold rounded-full flex items-center"
-                      :style="'background: #' + getProgramConfig(selectedCourse?.program).color">
+                  :style="'background: #' + getProgramConfig(selectedCourse?.program).color">
                   <span x-text="getProgramConfig(selectedCourse?.program).label"></span>
                 </span>
               </div>
             </div>
           </div>
-          
+
           <div class="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-gray-500">
             <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
               <i class="fa-solid fa-users text-gray-600 mr-2"></i>Session Occupancy
@@ -351,28 +343,26 @@
                 <span class="text-sm font-medium text-gray-600 flex items-center">
                   <i class="fa-solid fa-users text-gray-600 mr-1.5"></i>Enrolled (Session)
                 </span>
-                <p class="text-2xl font-bold text-gray-800" 
-                    x-text="selectedCourse?.students.length">
+                <p class="text-2xl font-bold text-gray-800" x-text="selectedCourse?.students.length">
                 </p>
               </div>
               <div class="text-center">
                 <span class="text-sm font-medium text-gray-600 flex items-center">
                   <i class="fa-solid fa-user-check mr-1.5"></i>Max Capacity
                 </span>
-                <p class="text-2xl font-bold text-gray-800" 
-                    x-text="selectedCourse?.maxStudents">
+                <p class="text-2xl font-bold text-gray-800" x-text="selectedCourse?.maxStudents">
                 </p>
               </div>
               <div class="text-right">
                 <span class="text-sm font-medium text-gray-600 flex items-center justify-end">
                   <i class="fa-solid fa-user-plus mr-1.5"></i>Remaining Seats
                 </span>
-                <p class="text-2xl font-bold text-gray-600" 
-                    x-text="selectedCourse?.maxStudents - selectedCourse?.students.length">
+                <p class="text-2xl font-bold text-gray-600"
+                  x-text="selectedCourse?.maxStudents - selectedCourse?.students.length">
                 </p>
               </div>
             </div>
-            
+
             <div>
               <div class="flex justify-between items-center mb-1">
                 <span class="text-sm font-medium text-gray-700 flex items-center">
@@ -383,8 +373,7 @@
                 </span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden shadow-inner">
-                <div 
-                  class="h-full transition-all duration-500 rounded-full bg-[#B22E20]"
+                <div class="h-full transition-all duration-500 rounded-full bg-[#B22E20]"
                   :style="'width: ' + Math.round(((selectedCourse?.maxStudents - selectedCourse?.students.length) / selectedCourse?.maxStudents) * 100) + '%'">
                 </div>
               </div>
@@ -396,24 +385,18 @@
           </h3>
           <div class="mb-4 border-b border-gray-200">
             <nav class="flex -mb-px space-x-6">
-              <button 
-                @click="modalStudentFilter = 'current'" 
-                :class="modalStudentFilter === 'current' ? 'active' : 'inactive'"
-                class="modal-filter-btn">
+              <button @click="modalStudentFilter = 'current'"
+                :class="modalStudentFilter === 'current' ? 'active' : 'inactive'" class="modal-filter-btn">
                 <i class="fa-solid fa-user-graduate mr-1"></i>
                 Enrolled (This Session)
               </button>
-              <button 
-                @click="modalStudentFilter = 'missing'" 
-                :class="modalStudentFilter === 'missing' ? 'active' : 'inactive'"
-                class="modal-filter-btn">
+              <button @click="modalStudentFilter = 'missing'"
+                :class="modalStudentFilter === 'missing' ? 'active' : 'inactive'" class="modal-filter-btn">
                 <i class="fa-solid fa-user-clock mr-1"></i>
                 Missing Course (<span x-text="selectedCourse?.missingCount"></span>)
               </button>
-              <button 
-                @click="modalStudentFilter = 'passed'" 
-                :class="modalStudentFilter === 'passed' ? 'active' : 'inactive'"
-                class="modal-filter-btn">
+              <button @click="modalStudentFilter = 'passed'"
+                :class="modalStudentFilter === 'passed' ? 'active' : 'inactive'" class="modal-filter-btn">
                 <i class="fa-solid fa-user-check mr-1"></i>
                 Already Passed (<span x-text="selectedCourse?.courseData.passedStudents.length"></span>)
               </button>
@@ -430,10 +413,12 @@
             <template x-if="selectedCourse?.students.length > 0">
               <div class="space-y-2">
                 <template x-for="(student, i) in selectedCourse?.students" :key="i">
-                  <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-all hover:border-gray-300">
+                  <div
+                    class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-all hover:border-gray-300">
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-[#A6192E] to-[#8E1C2D] rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md">
+                        <div
+                          class="w-10 h-10 bg-gradient-to-br from-[#A6192E] to-[#8E1C2D] rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md">
                           <span x-text="student.name.charAt(0)"></span>
                         </div>
                         <div>
@@ -445,7 +430,8 @@
                         </div>
                       </div>
                       <div class="text-right">
-                        <button @click="removeStudent(student.id)" class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold hover:bg-red-200 transition-colors">
+                        <button @click="removeStudent(student.id)"
+                          class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold hover:bg-red-200 transition-colors">
                           <i class="fa-solid fa-user-times mr-1"></i>Drop (to Missing)
                         </button>
                       </div>
@@ -468,7 +454,8 @@
                   <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-gray-200 border border-gray-300 rounded-full flex items-center justify-center text-gray-600 font-bold text-lg">
+                        <div
+                          class="w-10 h-10 bg-gray-200 border border-gray-300 rounded-full flex items-center justify-center text-gray-600 font-bold text-lg">
                           <span x-text="student.name.charAt(0)"></span>
                         </div>
                         <div>
@@ -496,25 +483,24 @@
               <div class="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 flex items-center justify-between">
                 <div>
                   <p class="font-bold text-yellow-800">High Demand Alert!</p>
-                  <p class="text-sm text-yellow-700">There are <span x-text="selectedCourse?.missingCount"></span> students missing this course.</p>
+                  <p class="text-sm text-yellow-700">There are <span x-text="selectedCourse?.missingCount"></span>
+                    students missing this course.</p>
                 </div>
                 <div class="flex gap-2">
-                  <!-- Botón Add to Active Session 
-                  <button 
-                    @click="addToActiveSession(selectedCourse)"
+                  <!-- Botón Add to Active Session -->
+                  <button @click="addToActiveSession(selectedCourse)"
                     class="px-4 py-2 bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] text-white rounded-lg transition-all font-medium shadow-md transform hover:scale-105 flex items-center gap-2">
                     <i class="fa-solid fa-calendar-plus"></i>
                     <span>Add to Active Session</span>
-                  </button> 
-                -->
-                <button 
-                  @click="openCreateSessionModal()"
-                  class="px-4 py-2 bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] text-white rounded-lg transition-all font-medium shadow-md transform hover:scale-105">
-                  <i class="fa-solid fa-plus mr-1"></i> Create New Session
-                </button>
-              </div>
+                  </button>
+
+                  <button @click="openCreateSessionModal()"
+                    class="px-4 py-2 bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] text-white rounded-lg transition-all font-medium shadow-md transform hover:scale-105">
+                    <i class="fa-solid fa-plus mr-1"></i> Create New Session
+                  </button>
+                </div>
             </template>
-            
+
             <template x-if="!selectedCourse?.courseData || selectedCourse?.courseData.missingStudents.length === 0">
               <div class="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
                 <i class="fa-solid fa-check-circle text-5xl mb-4 text-green-300"></i>
@@ -524,10 +510,12 @@
             <template x-if="selectedCourse?.courseData && selectedCourse?.courseData.missingStudents.length > 0">
               <div class="space-y-2">
                 <template x-for="(student, i) in selectedCourse?.courseData.missingStudents" :key="student.id">
-                  <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-all hover:border-gray-300">
+                  <div
+                    class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-all hover:border-gray-300">
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-gray-200 border border-gray-300 rounded-full flex items-center justify-center text-gray-600 font-bold text-lg">
+                        <div
+                          class="w-10 h-10 bg-gray-200 border border-gray-300 rounded-full flex items-center justify-center text-gray-600 font-bold text-lg">
                           <span x-text="student.name.charAt(0)"></span>
                         </div>
                         <div>
@@ -539,7 +527,8 @@
                         </div>
                       </div>
                       <div class="text-right">
-                        <button @click="enrollStudent(student)" class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold hover:bg-green-200 transition-colors">
+                        <button @click="enrollStudent(student)"
+                          class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold hover:bg-green-200 transition-colors">
                           <i class="fa-solid fa-plus mr-1"></i>Enroll in Session
                         </button>
                       </div>
@@ -554,54 +543,46 @@
       </div>
     </div>
 
-    <div x-show="showCreateSessionModal"
-        x-transition:enter="transition ease-out duration-300"
-        x-transition:enter-start="opacity-0"
-        x-transition:enter-end="opacity-100"
-        x-transition:leave="transition ease-in duration-200"
-        x-transition:leave-start="opacity-100"
-        x-transition:leave-end="opacity-0"
-        @click.self="showCreateSessionModal = false"
-        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[999] p-4"
-        x-cloak>
-      
-      <div @click.stop
-          class="bg-white rounded-xl shadow-2xl w-[700px] relative overflow-hidden">
-        
+    <div x-show="showCreateSessionModal" x-transition:enter="transition ease-out duration-300"
+      x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+      x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
+      x-transition:leave-end="opacity-0" @click.self="showCreateSessionModal = false"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[999] p-4" x-cloak>
+
+      <div @click.stop class="bg-white rounded-xl shadow-2xl w-[700px] relative overflow-hidden">
+
         <!-- Header -->
         <div class="bg-gradient-to-r from-[#D41736] to-[#A6192E] h-[70px] flex items-center justify-between px-6">
           <h2 class="text-2xl text-white font-bold flex items-center">
             <i class="fa-solid fa-plus-circle mr-2"></i>
             Add New Session
           </h2>
-          <button @click="showCreateSessionModal = false" 
-                  class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
+          <button @click="showCreateSessionModal = false"
+            class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
             <i class="fa-solid fa-times text-xl"></i>
           </button>
         </div>
 
         <!-- Body -->
         <div class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-          
+
           <!-- ID Session, Session # y Program en grid de 3 columnas -->
           <div class="grid grid-cols-3 gap-4">
             <div>
               <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
                 <i class="fa-solid fa-hashtag mr-1 text-xs"></i>ID Session
               </label>
-              <input type="text" 
-                    value="Auto-generated"
-                    class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-50 cursor-not-allowed text-sm" 
-                    readonly>
+              <input type="text" value="Auto-generated"
+                class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-50 cursor-not-allowed text-sm"
+                readonly>
             </div>
 
             <div>
               <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
                 <i class="fa-solid fa-list-ol mr-1 text-xs"></i>Session #
               </label>
-              <input type="number" 
-                    x-model.number="newSession.number" 
-                    class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm">
+              <input type="number" x-model.number="newSession.number"
+                class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm">
             </div>
 
             <div>
@@ -609,7 +590,7 @@
                 <i class="fa-solid fa-graduation-cap mr-1 text-xs"></i>Program<span class="text-[#D41736] ml-1">*</span>
               </label>
               <select x-model="newSession.programId"
-                      class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm">
+                class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm">
                 <option value="">Select Program</option>
                 <template x-for="program in allPrograms" :key="program.id">
                   <option :value="program.id" x-text="program.programName"></option>
@@ -617,37 +598,37 @@
               </select>
             </div>
           </div>
-          
+
           <!-- Start Date y End Date -->
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
                 <i class="fa-solid fa-calendar mr-1 text-xs"></i>Start Date<span class="text-[#D41736] ml-1">*</span>
               </label>
-              <input type="date" 
-                    x-model="newSession.startDate"
-                    class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm">
+              <input type="date" x-model="newSession.startDate"
+                class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm">
             </div>
 
             <div>
               <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
-                <i class="fa-solid fa-calendar-check mr-1 text-xs"></i>End Date<span class="text-[#D41736] ml-1">*</span>
+                <i class="fa-solid fa-calendar-check mr-1 text-xs"></i>End Date<span
+                  class="text-[#D41736] ml-1">*</span>
               </label>
-              <input type="date" 
-                    x-model="newSession.endDate"
-                    class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm">
+              <input type="date" x-model="newSession.endDate"
+                class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm">
             </div>
           </div>
 
           <!-- Subjects & Professors -->
           <div>
             <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
-              <i class="fa-solid fa-book-open mr-1 text-xs"></i>Subjects & Professors<span class="text-[#D41736] ml-1">*</span>
+              <i class="fa-solid fa-book-open mr-1 text-xs"></i>Subjects & Professors<span
+                class="text-[#D41736] ml-1">*</span>
             </label>
-            
+
             <!-- Chips de materias seleccionadas con profesor -->
-            <div x-show="newSession.coursesWithTeachers && newSession.coursesWithTeachers.length > 0" 
-                class="border border-gray-300 rounded-md w-full p-3 mb-2 bg-white min-h-[42px]">
+            <div x-show="newSession.coursesWithTeachers && newSession.coursesWithTeachers.length > 0"
+              class="border border-gray-300 rounded-md w-full p-3 mb-2 bg-white min-h-[42px]">
               <div class="space-y-2">
                 <template x-for="(item, index) in newSession.coursesWithTeachers" :key="index">
                   <div class="flex items-center gap-2 bg-gray-50 p-2 rounded border border-gray-200">
@@ -655,19 +636,16 @@
                       <i class="fa-solid fa-book mr-1"></i>
                       <span x-text="item.courseCode"></span>
                     </span>
-                    
-                    <select 
-                      x-model="item.teacherId"
+
+                    <select x-model="item.teacherId"
                       class="flex-1 border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:border-[#D41736]">
                       <option value="">Select Professor</option>
                       <template x-for="teacher in allTeachers" :key="teacher.id">
                         <option :value="teacher.id" x-text="`${teacher.firstName} ${teacher.lastName}`"></option>
                       </template>
                     </select>
-                    
-                    <button 
-                      @click="removeCourseWithTeacher(index)"
-                      type="button"
+
+                    <button @click="removeCourseWithTeacher(index)" type="button"
                       class="hover:bg-white hover:bg-opacity-20 rounded-full w-6 h-6 flex items-center justify-center bg-gray-500 text-white shrink-0">
                       <i class="fa-solid fa-times text-xs"></i>
                     </button>
@@ -675,14 +653,11 @@
                 </template>
               </div>
             </div>
-            
+
             <!-- Dropdown para agregar materias -->
-            <select
-              x-model="tempSubject"
-              @change="addCourseWithTeacher()"
+            <select x-model="tempSubject" @change="addCourseWithTeacher()"
               class="border border-gray-300 rounded-md w-full p-2 focus:outline-none focus:border-[#D41736] text-sm"
-              :disabled="!newSession.programId"
-              :class="{'bg-gray-50 cursor-not-allowed': !newSession.programId}">
+              :disabled="!newSession.programId" :class="{'bg-gray-50 cursor-not-allowed': !newSession.programId}">
               <option value="">+ Add a subject</option>
               <template x-for="course in getAvailableSubjectsForNewSession()" :key="course.code">
                 <option :value="course.code" x-text="course.name + ' (' + course.code + ')'"></option>
@@ -695,10 +670,8 @@
           </div>
 
           <!-- Validation Error -->
-          <div x-show="validationError" 
-              class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded" 
-              role="alert"
-              x-cloak>
+          <div x-show="validationError" class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded"
+            role="alert" x-cloak>
             <p class="font-bold">Validation Error</p>
             <p x-text="validationError"></p>
           </div>
@@ -707,13 +680,13 @@
 
         <!-- Footer -->
         <div class="flex justify-end gap-3 pt-4 px-6 pb-6 border-t border-gray-200">
-          <button @click="showCreateSessionModal = false" 
-                  class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">
+          <button @click="showCreateSessionModal = false"
+            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">
             Close
           </button>
-          
-          <button @click="saveNewSession()" 
-                  class="px-4 py-2 bg-gradient-to-r from-[#D41736] to-[#A6192E] text-white rounded-md hover:from-[#A6192E] hover:to-[#D41736] font-medium transition">
+
+          <button @click="saveNewSession()"
+            class="px-4 py-2 bg-gradient-to-r from-[#D41736] to-[#A6192E] text-white rounded-md hover:from-[#A6192E] hover:to-[#D41736] font-medium transition">
             <i class="fa-solid fa-save mr-1"></i>Save
           </button>
         </div>
@@ -721,7 +694,8 @@
     </div>
   </main>
 
-  <footer :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'" class="bg-[#2D2828] border-t">
+  <footer :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'"
+    class="bg-[#2D2828] border-t">
     <div class="max-w-7xl mx-auto px-6 py-4">
       <div class="flex justify-between items-center">
         <p class="text-sm text-gray-300">© 2025 San Diego Global Knowledge University</p>
@@ -730,20 +704,17 @@
   </footer>
 
   <!-- Modal de Selección de Sesión -->
-  <div x-show="showSelectSessionModal"
-      x-cloak
-      x-transition.opacity
-      @click.self="showSelectSessionModal = false"
-      class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-[70]">
-    
+  <div x-show="showSelectSessionModal" x-cloak x-transition.opacity @click.self="showSelectSessionModal = false"
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-[70]">
+
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
       <div class="bg-gradient-to-r from-[#D41736] to-[#A6192E] h-16 flex items-center justify-between px-6">
         <h2 class="text-2xl text-white font-bold flex items-center">
           <i class="fa-solid fa-calendar-plus mr-2"></i>
           Select Session for <span class="ml-1" x-text="selectedCourseForSession?.code"></span>
         </h2>
-        <button @click="showSelectSessionModal = false" 
-                class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
+        <button @click="showSelectSessionModal = false"
+          class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
           <i class="fa-solid fa-times text-xl"></i>
         </button>
       </div>
@@ -766,16 +737,16 @@
             <div class="text-center py-8 text-gray-500">
               <i class="fa-solid fa-calendar-xmark text-4xl mb-3 text-gray-300"></i>
               <p>No active sessions available for this program</p>
-              <button @click="createNewSessionForCourse()" 
-                      class="mt-4 px-4 py-2 bg-[#D41736] text-white rounded-lg hover:bg-[#A6192E] transition">
+              <button @click="createNewSessionForCourse()"
+                class="mt-4 px-4 py-2 bg-[#D41736] text-white rounded-lg hover:bg-[#A6192E] transition">
                 <i class="fa-solid fa-plus mr-2"></i>Create New Session
               </button>
             </div>
           </template>
 
-          <template x-for="session in availableSessions" :key="session.id">
+          <template x-for="(session, idx) in availableSessions" :key="'session-' + idx">
             <div class="border-2 border-gray-200 hover:border-[#D41736] rounded-lg p-4 cursor-pointer transition"
-                @click="selectSessionForCourse(session)">
+              @click="selectSessionForCourse(session)">
               <div class="flex items-center justify-between">
                 <div class="flex-1">
                   <h3 class="text-lg font-bold text-gray-800 flex items-center">
@@ -785,7 +756,8 @@
                   <div class="flex items-center gap-4 mt-2 text-sm text-gray-600">
                     <span class="flex items-center">
                       <i class="fa-solid fa-clock mr-1"></i>
-                      <span x-text="formatDate(session.startDate)"></span> - <span x-text="formatDate(session.endDate)"></span>
+                      <span x-text="formatDate(session.startDate)"></span> - <span
+                        x-text="formatDate(session.endDate)"></span>
                     </span>
                     <span class="flex items-center">
                       <i class="fa-solid fa-book mr-1"></i>
@@ -803,13 +775,79 @@
       </div>
 
       <div class="flex justify-end gap-3 p-4 bg-gray-50 border-t">
-        <button @click="showSelectSessionModal = false" 
-                class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">
+        <button @click="showSelectSessionModal = false"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">
           Cancel
         </button>
       </div>
     </div>
   </div>
 
+  <!-- Modal de Asignación de Profesor -->
+  <div x-show="showTeacherAssignmentModal" x-cloak x-transition.opacity @click.self="showTeacherAssignmentModal = false"
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-[80]">
+
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div class="bg-gradient-to-r from-[#D41736] to-[#A6192E] h-16 flex items-center justify-between px-6">
+        <h2 class="text-2xl text-white font-bold flex items-center">
+          <i class="fa-solid fa-chalkboard-user mr-2"></i>
+          Assign Teacher
+        </h2>
+        <button @click="showTeacherAssignmentModal = false"
+          class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
+          <i class="fa-solid fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <div class="p-6">
+        <div class="mb-6">
+          <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+            <p class="text-sm text-gray-600 mb-2">
+              <i class="fa-solid fa-info-circle mr-1"></i>
+              Group Information
+            </p>
+            <div class="space-y-1">
+              <p class="font-semibold text-gray-800">
+                <span x-text="selectedGroupForTeacher?.courseCode"></span>
+                <span x-show="selectedGroupForTeacher?.groupNumber > 1" class="text-[#D41736]"
+                  x-text="'-' + selectedGroupForTeacher?.groupNumber"></span>
+              </p>
+              <p class="text-sm text-gray-600">
+                <i class="fa-solid fa-calendar mr-1"></i>
+                <span x-text="selectedGroupForTeacher?.sessionName"></span>
+              </p>
+            </div>
+          </div>
+
+          <label class="block text-gray-700 text-sm font-medium mb-2">
+            <i class="fa-solid fa-user-tie mr-1"></i>
+            Select Teacher <span class="text-[#D41736]">*</span>
+          </label>
+          <select x-model="selectedTeacherId"
+            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-[#D41736] transition">
+            <option value="">-- Select a teacher --</option>
+            <template x-for="teacher in allTeachers" :key="teacher.id">
+              <option :value="teacher.id" x-text="`${teacher.firstName} ${teacher.lastName}`">
+              </option>
+            </template>
+          </select>
+        </div>
+
+        <div class="flex justify-end gap-3">
+          <button @click="showTeacherAssignmentModal = false"
+            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">
+            Cancel
+          </button>
+          <button @click="assignTeacherToGroup()"
+            class="px-4 py-2 bg-gradient-to-r from-[#D41736] to-[#A6192E] text-white rounded-md hover:from-[#A6192E] hover:to-[#D41736] font-medium transition">
+            <i class="fa-solid fa-check mr-1"></i>
+            Assign Teacher
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
+
 </html>

@@ -1,7 +1,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.services';
-import { Prisma } from '@prisma/client'; 
+import { Prisma } from '@prisma/client';
 
 
 export interface LogActivityParams {
@@ -17,7 +17,7 @@ export interface LogActivityParams {
 
 @Injectable()
 export class ActivityLogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async logActivity(params: LogActivityParams): Promise<void> {
     const {
@@ -32,6 +32,26 @@ export class ActivityLogService {
     } = params;
 
     try {
+      // VALIDAR QUE EXISTAN LOS TIPOS ANTES DE CREAR
+      const entityType = await this.prisma.entityType.findUnique({
+        where: { code: entityCode }
+      });
+
+      const activityType = await this.prisma.activityType.findUnique({
+        where: { code: activityCode }
+      });
+
+      if (!entityType) {
+        console.error(`EntityType "${entityCode}" not found. Please run: npm run seed:activity`);
+        return; // No lanzar error, solo loguear
+      }
+
+      if (!activityType) {
+        console.error(`ActivityType "${activityCode}" not found. Please run: npm run seed:activity`);
+        return;
+      }
+
+      // CREAR EL LOG SOLO SI EXISTEN LOS TIPOS
       await this.prisma.activityLog.create({
         data: {
           userId,
@@ -40,8 +60,6 @@ export class ActivityLogService {
           oldData: oldData ?? undefined,
           newData: newData ?? undefined,
           isImportant,
-
-          // conectamos por code porque en EntityType y ActivityType lo marcaste @unique
           entityType: {
             connect: { code: entityCode },
           },
@@ -52,8 +70,7 @@ export class ActivityLogService {
       });
     } catch (error) {
       console.error('Error logging activity', error);
-      // puedes decidir si lanzar el error o solo loguearlo
-      // throw error;
+      // No lanzar el error para evitar que se caiga la app
     }
   }
 }
