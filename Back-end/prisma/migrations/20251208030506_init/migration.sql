@@ -5,6 +5,7 @@ CREATE TABLE `Program` (
     `programType` VARCHAR(191) NOT NULL,
     `totalCourses` INTEGER NOT NULL,
     `totalUnits` INTEGER NULL,
+    `description` VARCHAR(191) NULL,
 
     UNIQUE INDEX `Program_programName_key`(`programName`),
     PRIMARY KEY (`id`)
@@ -129,6 +130,7 @@ CREATE TABLE `Session` (
 CREATE TABLE `CourseOffering` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `courseId` INTEGER NOT NULL,
+    `groupNumber` INTEGER NOT NULL DEFAULT 1,
     `sessionId` INTEGER NOT NULL,
     `teacherId` INTEGER NULL,
     `maxStudents` INTEGER NULL,
@@ -136,7 +138,7 @@ CREATE TABLE `CourseOffering` (
     INDEX `CourseOffering_courseId_idx`(`courseId`),
     INDEX `CourseOffering_sessionId_idx`(`sessionId`),
     INDEX `CourseOffering_teacherId_idx`(`teacherId`),
-    UNIQUE INDEX `CourseOffering_courseId_sessionId_key`(`courseId`, `sessionId`),
+    UNIQUE INDEX `CourseOffering_courseId_sessionId_groupNumber_key`(`courseId`, `sessionId`, `groupNumber`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -206,7 +208,54 @@ CREATE TABLE `Login` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `username` VARCHAR(191) NOT NULL,
     `password` VARCHAR(191) NOT NULL,
+    `firstName` VARCHAR(191) NULL,
+    `lastName` VARCHAR(191) NULL,
+    `email` VARCHAR(191) NULL,
+    `phone` VARCHAR(191) NULL,
+    `role` VARCHAR(191) NOT NULL DEFAULT 'Admin',
+    `status` VARCHAR(191) NOT NULL DEFAULT 'Active',
+    `activeToken` TEXT NULL,
+    `tokenIssuedAt` DATETIME(3) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `Login_username_key`(`username`),
+    UNIQUE INDEX `Login_email_key`(`email`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `entity_type` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `code` VARCHAR(191) NOT NULL,
+    `label` VARCHAR(191) NOT NULL,
+
+    UNIQUE INDEX `entity_type_code_key`(`code`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `activity_type` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `code` VARCHAR(191) NOT NULL,
+    `label` VARCHAR(191) NOT NULL,
+
+    UNIQUE INDEX `activity_type_code_key`(`code`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `activity_log` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `occurred_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `user_id` INTEGER NULL,
+    `entity_type_id` INTEGER NOT NULL,
+    `entity_id` INTEGER NULL,
+    `activity_type_id` INTEGER NOT NULL,
+    `description` VARCHAR(191) NULL,
+    `old_data` JSON NULL,
+    `new_data` JSON NULL,
+    `is_important` BOOLEAN NOT NULL DEFAULT false,
+
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

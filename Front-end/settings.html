@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en-US">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,42 +12,44 @@
   <script src="js/settings.js"></script>
 
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-<style>
-  [x-cloak] { display: none !important; }
-</style>
+  <script src="js/auth.js"></script>
+  <script> protectPage() </script>
+  <style>
+    [x-cloak] {
+      display: none !important;
+    }
+  </style>
 </head>
 
-<body x-data="settingsData()" x-init="init()"> 
+<body x-data="settingsData()" x-init="init()">
   <!-- Header -->
   <header class="bg-[#2D2828] shadow-md border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
     <div class="px-6 py-4">
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-4">
-          <button @click="open = !open" class="w-10 h-10 flex items-center justify-center hover:bg-[#252121] rounded transition-colors">
+          <button @click="open = !open"
+            class="w-10 h-10 flex items-center justify-center hover:bg-[#252121] rounded transition-colors">
             <span class="text-2xl text-white">☰</span>
           </button>
-          
+
           <div class="absolute right-80">
-            <input type="text" x-model="searchQuery" placeholder="Search" class="w-full bg-gray-100 border border-gray-300 rounded-md px-2 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500 transition shadow-sm placeholder:text-gray-400">
+            <input type="text" x-model="searchQuery" placeholder="Search"
+              class="w-full bg-gray-100 border border-gray-300 rounded-md px-2 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500 transition shadow-sm placeholder:text-gray-400">
           </div>
-          
+
           <div class="fixed right-60">
-            <button @click="showFilters = !showFilters" class="w-10 h-10 flex items-center justify-center text-white bg-[#8E1C2D] border-2 border-[#D41736] hover:bg-[#8E1C2D] hover:border-[#772A34] transition transform duration-300 hover:scale-110 rounded">
+            <button @click="showFilters = !showFilters"
+              class="w-10 h-10 flex items-center justify-center text-white bg-[#8E1C2D] border-2 border-[#D41736] hover:bg-[#8E1C2D] hover:border-[#772A34] transition transform duration-300 hover:scale-110 rounded">
               <i class="fa-solid fa-filter"></i>
             </button>
-            
-            <div 
-              x-show="showFilters"
-              @click.outside="showFilters = false"
-              x-transition:enter="transition ease-out duration-200"
-              x-transition:enter-start="opacity-0 translate-y-1"
-              x-transition:enter-end="opacity-100 translate-y-0"
-              x-transition:leave="transition ease-in duration-150"
-              x-transition:leave-start="opacity-100 translate-y-0"
-              x-transition:leave-end="opacity-0 translate-y-1"
+
+            <div x-show="showFilters" @click.outside="showFilters = false"
+              x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-1"
+              x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150"
+              x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-1"
               class="absolute right-0 top-full w-80 bg-white rounded-lg shadow-xl border-2 border-gray-200 p-6 mt-2"
               style="display: none;">
-              
+
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-bold text-gray-800">Filters</h3>
                 <button @click="showFilters = false" class="text-gray-500 hover:text-gray-700">
@@ -57,7 +60,8 @@
               <div class="space-y-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Program</label>
-                  <select x-model="filters.program" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+                  <select x-model="filters.program"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
                     <option value="all">All Programs</option>
                     <option value="bachelor">Bachelor's</option>
                     <option value="associate">Associate</option>
@@ -66,7 +70,8 @@
 
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Academic Session</label>
-                  <select x-model="filters.session" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+                  <select x-model="filters.session"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
                     <option value="all">All Sessions</option>
                     <option value="session1">Session 1</option>
                     <option value="session2">Session 2</option>
@@ -83,7 +88,8 @@
 
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Occupancy Level</label>
-                  <select x-model="filters.occupancy" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
+                  <select x-model="filters.occupancy"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#A6192E]">
                     <option value="all">All Levels</option>
                     <option value="critical">Critical</option>
                     <option value="low">Low</option>
@@ -93,27 +99,27 @@
                 </div>
 
                 <div class="flex gap-3 pt-4 border-t border-gray-200">
-                  <button @click="clearFilters()" class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition text-sm font-medium">
+                  <button @click="clearFilters()"
+                    class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition text-sm font-medium">
                     Clear All
                   </button>
-                  <button @click="applyFilters()" class="flex-1 px-4 py-2 bg-[#A6192E] text-white rounded-md hover:bg-[#8E1C2D] transition text-sm font-medium">
+                  <button @click="applyFilters()"
+                    class="flex-1 px-4 py-2 bg-[#A6192E] text-white rounded-md hover:bg-[#8E1C2D] transition text-sm font-medium">
                     Apply Filters
                   </button>
                 </div>
               </div>
             </div>
           </div>
-          
-          <button class="w-10 h-10 flex items-center justify-center fixed right-10 hover:bg-[#252121] rounded transition-colors">
+
+          <button
+            class="w-10 h-10 flex items-center justify-center fixed right-10 hover:bg-[#252121] rounded transition-colors">
             <i class="fa-solid fa-circle-user fa-2xl" style="color: #ffffff;"></i>
           </button>
-          
-          <img 
-            src="https://cdn.sdgku.edu/wp-content/uploads/2023/11/cropped-SDGKU_Globe-square.png" 
-            alt="SDGKU Logo"
-            class="w-10 h-10 object-contain"
-          >
-          
+
+          <img src="https://cdn.sdgku.edu/wp-content/uploads/2023/11/cropped-SDGKU_Globe-square.png" alt="SDGKU Logo"
+            class="w-10 h-10 object-contain">
+
           <div>
             <h1 class="text-2xl font-bold text-[#fff]">SDGKU Dashboard</h1>
           </div>
@@ -123,881 +129,866 @@
   </header>
 
   <!-- Sidebar -->
-  <aside 
-    x-show="open"
-    x-transition:enter="transition transform duration-300"
-    x-transition:enter-start="-translate-x-full opacity-0"
-    x-transition:enter-end="translate-x-0 opacity-100"
-    x-transition:leave="transition transform duration-300"
-    x-transition:leave-start="translate-x-0 opacity-100"
+  <aside x-show="open" x-transition:enter="transition transform duration-300"
+    x-transition:enter-start="-translate-x-full opacity-0" x-transition:enter-end="translate-x-0 opacity-100"
+    x-transition:leave="transition transform duration-300" x-transition:leave-start="translate-x-0 opacity-100"
     x-transition:leave-end="-translate-x-full opacity-0"
     class="w-60 bg-[#A6192E] text-white h-screen p-4 top-16 fixed z-40">
-    
+
     <ul class="pt-6 space-y-4 text-xl font-medium">
-      <li><a href="dashboard.html" class="block w-full px-4 py-2 rounded bg-[#8E1C2D]"><i class="fa-solid fa-chart-line mr-2"></i>Dashboard</a></li>
-      <li><a href="session.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-calendar-days mr-2"></i>Sessions</a></li>
-      <li><a href="subjects.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-book mr-2"></i>Subjects</a></li>
-      <li><a href="students.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-users mr-2"></i>Students</a></li>
-      <li><a href="reports.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-file-lines mr-2"></i>Academic Analytics</a></li>
-      <li><a href="settings.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i class="fa-solid fa-gear mr-2"></i>Settings</a></li>
+      <li><a href="index.html" class="block w-full px-4 py-2 rounded bg-[#8E1C2D]"><i
+            class="fa-solid fa-chart-line mr-2"></i>Dashboard</a></li>
+      <li><a href="session.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i
+            class="fa-solid fa-calendar-days mr-2"></i>Sessions</a></li>
+      <li><a href="subjects.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i
+            class="fa-solid fa-book mr-2"></i>Subjects</a></li>
+      <li><a href="students.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i
+            class="fa-solid fa-users mr-2"></i>Students</a></li>
+      <li><a href="reports.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i
+            class="fa-solid fa-file-lines mr-2"></i>Academic Analytics</a></li>
+      <li><a href="settings.html" class="block w-full px-4 py-2 rounded hover:bg-[#971629]"><i
+            class="fa-solid fa-gear mr-2"></i>Settings</a></li>
     </ul>
   </aside>
 
   <!-- Content -->
-<main
-  :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'"
-  class="flex-1 p-6 bg-gray-100 min-h-screen pt-20">
-  
-  <div class="mb-6">
-    <h1 class="text-3xl font-bold text-gray-800 mb-2">Settings</h1>
-    <p class="text-gray-600">Manage system settings, users, and view activity logs</p>
-  </div>
+  <main :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'"
+    class="flex-1 p-6 bg-gray-100 min-h-screen pt-20">
 
-  <!-- Tabs de navegación -->
-  <div class="bg-white rounded-lg shadow mb-6">
-    <div class="border-b border-gray-200">
-      <nav class="flex -mb-px overflow-x-auto">
-        <!-- Activity Log Tab -->
-        <button 
-          @click="activeTab = 'activity'"
-          :class="activeTab === 'activity' ? 'border-[#D41736] text-[#D41736]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-          class="py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
-          <i class="fa-solid fa-clock-rotate-left mr-2"></i>
-          Activity Log
-        </button>
+    <div class="mb-6">
+      <h1 class="text-3xl font-bold text-gray-800 mb-2">Settings</h1>
+      <p class="text-gray-600">Manage system settings, users, and view activity logs</p>
+    </div>
 
-        <!-- Teachers Tab -->
-        <button 
-          @click="activeTab = 'teachers'"
-          :class="activeTab === 'teachers' ? 'border-[#D41736] text-[#D41736]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-          class="py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
-          <i class="fa-solid fa-chalkboard-user mr-2"></i>
-          Teachers
-        </button>
-        
-        <!-- Programs Tab -->
-        <button 
-          @click="activeTab = 'programs'"
-          :class="activeTab === 'programs' ? 'border-[#D41736] text-[#D41736]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-          class="py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
-          <i class="fa-solid fa-graduation-cap mr-2"></i>
-          Programs
-        </button>
-        
-        <!-- Subjects Tab -->
-        <button 
-          @click="activeTab = 'subjects'"
-          :class="activeTab === 'subjects' ? 'border-[#D41736] text-[#D41736]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-          class="py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
-          <i class="fa-solid fa-book mr-2"></i>
-          Subjects
-        </button>
-        
-        <!-- Import Data Tab -->
-        <button 
-          @click="activeTab = 'import'"
-          :class="activeTab === 'import' ? 'border-[#D41736] text-[#D41736]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-          class="py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
-          <i class="fa-solid fa-file-excel mr-2"></i>
-          Import Data
-        </button>
-      </nav>
-    </div>
-  </div>
+    <!-- Tabs de navegación -->
+    <div class="bg-white rounded-lg shadow mb-6">
+      <div class="border-b border-gray-200">
+        <nav class="flex -mb-px overflow-x-auto">
+          <!-- Activity Log Tab -->
+          <button @click="activeTab = 'activity'"
+            :class="activeTab === 'activity' ? 'border-[#D41736] text-[#D41736]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+            <i class="fa-solid fa-clock-rotate-left mr-2"></i>
+            Activity Log
+          </button>
 
-  <!-- ⭐ ACTIVITY LOG TAB -->
-<div x-show="activeTab === 'activity'" class="space-y-6">
-  
-  <!-- Estadísticas rápidas -->
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-    <div class="bg-white rounded-lg shadow p-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm text-gray-600">Total Activities</p>
-          <p class="text-2xl font-bold text-gray-800" x-text="activityLog.length"></p>
-        </div>
-        <i class="fa-solid fa-list-check text-3xl text-blue-500"></i>
-      </div>
-    </div>
-    
-    <div class="bg-white rounded-lg shadow p-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm text-gray-600">Today's Logins</p>
-          <p class="text-2xl font-bold text-gray-800" x-text="getTodayLogins()"></p>
-        </div>
-        <i class="fa-solid fa-right-to-bracket text-3xl text-green-500"></i>
-      </div>
-    </div>
-    
-    <div class="bg-white rounded-lg shadow p-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm text-gray-600">Active Users</p>
-          <p class="text-2xl font-bold text-gray-800" x-text="getActiveUsers()"></p>
-        </div>
-        <i class="fa-solid fa-users text-3xl text-purple-500"></i>
-      </div>
-    </div>
-    
-    <div class="bg-white rounded-lg shadow p-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm text-gray-600">Recent Changes</p>
-          <p class="text-2xl font-bold text-gray-800" x-text="getRecentChanges()"></p>
-        </div>
-        <i class="fa-solid fa-clock text-3xl text-orange-500"></i>
-      </div>
-    </div>
-  </div>
+          <!-- Teachers Tab -->
+          <button @click="activeTab = 'teachers'"
+            :class="activeTab === 'teachers' ? 'border-[#D41736] text-[#D41736]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+            <i class="fa-solid fa-chalkboard-user mr-2"></i>
+            Teachers
+          </button>
 
-  <!-- ⭐ NUEVO: Formulario para agregar administrador -->
-  <div class="bg-white rounded-lg shadow p-6">
-    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-      <i class="fa-solid fa-user-plus text-[#D41736] mr-2"></i>
-      Add New Administrator
-    </h2>
-    
-    <form @submit.prevent="addAdministrator()" class="space-y-4">
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">First Name *</label>
-          <input type="text" x-model="newAdmin.firstName" required
-                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-        </div>
-        
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Last Name *</label>
-          <input type="text" x-model="newAdmin.lastName" required
-                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-        </div>
-        
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Email *</label>
-          <input type="email" x-model="newAdmin.email" required
-                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-        </div>
-        
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
-          <input type="tel" x-model="newAdmin.phone"
-                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-        </div>
-        
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Role *</label>
-          <select x-model="newAdmin.role" required
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-            <option value="">Select Role</option>
-            <option value="Super Admin">Super Admin</option>
-            <option value="Admin">Admin</option>
-            <option value="Manager">Manager</option>
-          </select>
-        </div>
-        
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
-          <select x-model="newAdmin.status"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-          </select>
-        </div>
-      </div>
-      
-      <div class="flex gap-3 pt-4">
-        <button type="submit" class="bg-[#D41736] hover:bg-[#A6192E] text-white px-6 py-2 rounded-lg transition-colors font-semibold">
-          <i class="fa-solid fa-plus mr-2"></i>Add Administrator
-        </button>
-        <button type="button" @click="resetAdminForm()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors">
-          <i class="fa-solid fa-undo mr-2"></i>Clear
-        </button>
-      </div>
-    </form>
-  </div>
-  
-  <!-- ⭐ NUEVO: Lista de administradores -->
-  <div class="bg-white rounded-lg shadow p-6">
-    <h3 class="text-lg font-bold text-gray-800 mb-4">Current Administrators</h3>
-    <div class="overflow-x-auto">
-      <table class="w-full">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
-            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
-            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Phone</th>
-            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Role</th>
-            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
-            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200">
-          <template x-for="admin in administrators" :key="admin.id">
-            <tr class="hover:bg-gray-50">
-              <td class="px-4 py-3 text-sm text-gray-900" x-text="`${admin.firstName} ${admin.lastName}`"></td>
-              <td class="px-4 py-3 text-sm text-gray-600" x-text="admin.email"></td>
-              <td class="px-4 py-3 text-sm text-gray-600" x-text="admin.phone"></td>
-              <td class="px-4 py-3 text-sm text-gray-600" x-text="admin.role"></td>
-              <td class="px-4 py-3">
-                <span :class="admin.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
-                      class="px-2 py-1 text-xs font-semibold rounded-full" x-text="admin.status"></span>
-              </td>
-              <td class="px-4 py-3 text-sm">
-                <button @click="deleteAdmin(admin.id)" class="text-red-600 hover:text-red-800">
-                  <i class="fa-solid fa-trash"></i>
-                </button>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
-    </div>
-  </div>
+          <!-- Programs Tab -->
+          <button @click="activeTab = 'programs'"
+            :class="activeTab === 'programs' ? 'border-[#D41736] text-[#D41736]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+            <i class="fa-solid fa-graduation-cap mr-2"></i>
+            Programs
+          </button>
 
-  <!-- Filtros -->
-  <div x-show="activeTab === 'activity'">
-    <div class="bg-white rounded-lg shadow p-6">
-      <h3 class="text-lg font-bold text-gray-800 mb-4">Filters</h3>
+          <!-- Subjects Tab -->
+          <button @click="activeTab = 'subjects'"
+            :class="activeTab === 'subjects' ? 'border-[#D41736] text-[#D41736]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+            <i class="fa-solid fa-book mr-2"></i>
+            Subjects
+          </button>
+
+          <!-- Import Data Tab -->
+          <button @click="activeTab = 'import'"
+            :class="activeTab === 'import' ? 'border-[#D41736] text-[#D41736]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+            <i class="fa-solid fa-file-excel mr-2"></i>
+            Import Data
+          </button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- ⭐ ACTIVITY LOG TAB -->
+    <div x-show="activeTab === 'activity'" class="space-y-6">
+
+      <!-- Estadísticas rápidas -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">User</label>
-          <select x-model="activityFilters.user" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-            <option value="">All Users</option>
-            <option value="John Doe">John Doe</option>
-            <option value="Jane Smith">Jane Smith</option>
-            <option value="Robert Johnson">Robert Johnson</option>
-          </select>
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-600">Total Activities</p>
+              <p class="text-2xl font-bold text-gray-800" x-text="activityLog.length"></p>
+            </div>
+            <i class="fa-solid fa-list-check text-3xl text-blue-500"></i>
+          </div>
         </div>
-        
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Action Type</label>
-          <select x-model="activityFilters.action" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-            <option value="">All Actions</option>
 
-            <!-- Materias -->
-            <option value="Subject Added">Subject Added</option>
-            <option value="Subject Removed">Subject Removed</option>
-            <option value="Subject Update">Subject Update</option>
-
-
-            <!-- Autenticación -->
-            <option value="Login">Login</option>
-            <option value="Login Failed">Login Failed</option>
-            <option value="Logout">Logout</option>
-
-            <!-- Estudiantes -->
-            <option value="Student Added">Student Added</option>
-            <option value="Student Removed">Student Removed</option>
-            <option value="Student Update">Student Update</option>
-
-            <!-- Sesiones -->
-            <option value="Session Start">Session Start</option>
-            <option value="Session Update">Session Update</option>
-
-            <!-- Cursos / maestros -->
-            <option value="Teacher Assignment">Teacher Assignment</option>
-            <option value="Teacher Removed">Teacher Removed</option>
-
-            <!-- Otros -->
-            <option value="Grade Update">Grade Update</option>
-            <option value="Data Import">Data Import</option>
-            <option value="Report Request">Report Request</option>
-          </select>
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-600">Today's Logins</p>
+              <p class="text-2xl font-bold text-gray-800" x-text="getTodayLogins()"></p>
+            </div>
+            <i class="fa-solid fa-right-to-bracket text-3xl text-green-500"></i>
+          </div>
         </div>
-        
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Date From</label>
-          <input type="date" x-model="activityFilters.dateFrom" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-600">Active Users</p>
+              <p class="text-2xl font-bold text-gray-800" x-text="getActiveUsers()"></p>
+            </div>
+            <i class="fa-solid fa-users text-3xl text-purple-500"></i>
+          </div>
         </div>
-        
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Date To</label>
-          <input type="date" x-model="activityFilters.dateTo" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-600">Recent Changes</p>
+              <p class="text-2xl font-bold text-gray-800" x-text="getRecentChanges()"></p>
+            </div>
+            <i class="fa-solid fa-clock text-3xl text-orange-500"></i>
+          </div>
         </div>
       </div>
-    </div>
-    
-    <div class="flex gap-3 mt-4">
-      <button @click="applyActivityFilters()" class="bg-[#D41736] hover:bg-[#A6192E] text-white px-6 py-2 rounded-lg transition-colors">
-        <i class="fa-solid fa-filter mr-2"></i>Apply Filters
-      </button>
-      <button @click="clearActivityFilters()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors">
-        <i class="fa-solid fa-times mr-2"></i>Clear
-      </button>
-      <button @click="exportActivityLog()" class="bg-[#D41736] hover:bg-[#A6192E] text-white px-6 py-2 rounded-lg transition-colors ml-auto">
-        <i class="fa-solid fa-download mr-2"></i>Export Log
-      </button>
-    </div>
-  </div>
-<!--*********************************************************************************************************************************************************-->
-  <!-- Timeline de actividades -->
-<div>
-  <div class="bg-white rounded-lg shadow p-6">
-    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
-      <i class="fa-solid fa-timeline text-[#D41736] mr-2"></i>
-      Activity Timeline
-    </h3>
-    
-    <div class="space-y-4">
-      <template x-for="(activity, index) in filteredActivityLog" :key="activity.id">
-        <div class="relative pl-8 pb-6 border-l-2 border-gray-200 last:border-l-0 last:pb-0">
-          <!-- Icono de tiempo -->
-          <div
-            class="absolute left-0 top-0 -translate-x-1/2 w-8 h-8 rounded-full flex items-center justify-center"
-            :class="{
+
+      <!-- para agregar administrador -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+          <i class="fa-solid fa-user-plus text-[#D41736] mr-2"></i>
+          Add New Administrator
+        </h2>
+
+        <form @submit.prevent="addAdministrator()" class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">First Name *</label>
+              <input type="text" x-model="newAdmin.firstName" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Last Name *</label>
+              <input type="text" x-model="newAdmin.lastName" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Email *</label>
+              <input type="email" x-model="newAdmin.email" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
+              <input type="tel" x-model="newAdmin.phone"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Role *</label>
+              <select x-model="newAdmin.role" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+                <option value="">Select Role</option>
+                <option value="Super Admin">Super Admin</option>
+                <option value="Admin">Admin</option>
+                <option value="Manager">Manager</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+              <select x-model="newAdmin.status"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex gap-3 pt-4">
+            <button type="submit"
+              class="bg-[#D41736] hover:bg-[#A6192E] text-white px-6 py-2 rounded-lg transition-colors font-semibold">
+              <i class="fa-solid fa-plus mr-2"></i>Add Administrator
+            </button>
+            <button type="button" @click="resetAdminForm()"
+              class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors">
+              <i class="fa-solid fa-undo mr-2"></i>Clear
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Lista de administradores -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Current Administrators</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Phone</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Role</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <template x-for="admin in administrators" :key="admin.id">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-sm text-gray-900" x-text="`${admin.firstName} ${admin.lastName}`"></td>
+                  <td class="px-4 py-3 text-sm text-gray-600" x-text="admin.email"></td>
+                  <td class="px-4 py-3 text-sm text-gray-600" x-text="admin.phone"></td>
+                  <td class="px-4 py-3 text-sm text-gray-600" x-text="admin.role"></td>
+                  <td class="px-4 py-3">
+                    <span :class="admin.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                      class="px-2 py-1 text-xs font-semibold rounded-full" x-text="admin.status"></span>
+                  </td>
+                  <td class="px-4 py-3 text-sm">
+                    <button @click="deleteAdmin(admin.id)" class="text-red-600 hover:text-red-800">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div x-show="activeTab === 'activity'">
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-bold text-gray-800 mb-4">Filters</h3>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">User</label>
+              <select x-model="activityFilters.user"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+                <option value="">All Users</option>
+                <option value="John Doe">John Doe</option>
+                <option value="Jane Smith">Jane Smith</option>
+                <option value="Robert Johnson">Robert Johnson</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Action Type</label>
+              <select x-model="activityFilters.action"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+                <option value="">All Actions</option>
+
+                <!-- Autenticación -->
+                <option value="Login">Login</option>
+                <option value="Login Failed">Login Failed</option>
+                <option value="Logout">Logout</option>
+
+                <!-- Estudiantes -->
+                <option value="Student Added">Student Added</option>
+                <option value="Student Removed">Student Removed</option>
+                <option value="Student Update">Student Update</option>
+
+                <!-- Sesiones -->
+                <option value="Session Start">Session Start</option>
+                <option value="Session Update">Session Update</option>
+
+                <!-- Cursos / maestros -->
+                <option value="Teacher Assignment">Teacher Assignment</option>
+
+                <!-- Otros -->
+                <option value="Grade Update">Grade Update</option>
+                <option value="Data Import">Data Import</option>
+                <option value="Report Request">Report Request</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Date From</label>
+              <input type="date" x-model="activityFilters.dateFrom"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Date To</label>
+              <input type="date" x-model="activityFilters.dateTo"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-3 mt-4">
+          <button @click="applyActivityFilters()"
+            class="bg-[#D41736] hover:bg-[#A6192E] text-white px-6 py-2 rounded-lg transition-colors">
+            <i class="fa-solid fa-filter mr-2"></i>Apply Filters
+          </button>
+          <button @click="clearActivityFilters()"
+            class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors">
+            <i class="fa-solid fa-times mr-2"></i>Clear
+          </button>
+          <button @click="exportActivityLog()"
+            class="bg-[#D41736] hover:bg-[#A6192E] text-white px-6 py-2 rounded-lg transition-colors ml-auto">
+            <i class="fa-solid fa-download mr-2"></i>Export Log
+          </button>
+        </div>
+      </div>
+      <!--*********************************************************************************************************************************************************-->
+      <!-- Timeline de actividades -->
+      <div>
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fa-solid fa-timeline text-[#D41736] mr-2"></i>
+            Activity Timeline
+          </h3>
+
+          <div class="space-y-4">
+            <template x-for="(activity, index) in filteredActivityLog" :key="activity.id">
+              <div class="relative pl-8 pb-6 border-l-2 border-gray-200 last:border-l-0 last:pb-0">
+                <!-- Icono de tiempo -->
+                <div
+                  class="absolute left-0 top-0 -translate-x-1/2 w-8 h-8 rounded-full flex items-center justify-center"
+                  :class="{
               'bg-green-100':  activity.type === 'Login',
               'bg-red-100':    activity.type === 'Logout' || activity.type === 'Login Failed',
               'bg-blue-100':   activity.type === 'Grade Update',
               'bg-purple-100': activity.type === 'Session Start',
               'bg-purple-200': activity.type === 'Session Update',
-              'bg-orange-100': activity.type === 'Teacher Assignment' || activity.type === 'Teacher Update',
+              'bg-orange-100': activity.type === 'Teacher Assignment',
               'bg-yellow-100': activity.type === 'Student Added',
-              'bg-rose-100':   activity.type === 'Student Removed' || activity.type === 'Teacher Removed',
-              'bg-sky-100':    activity.type === 'Subject Added' || activity.type === 'Subject Removed' || activity.type === 'Subject Update',  
+              'bg-rose-100':   activity.type === 'Student Removed',
               'bg-indigo-100': activity.type === 'Data Import',
               'bg-teal-100':   activity.type === 'Report Request',
               'bg-cyan-100':   activity.type === 'Student Update',
               'bg-gray-200':   activity.type === 'Other'
-            }"
-          >
-            <i
-              class="fa-solid"
-              :class="{
+            }">
+                  <i class="fa-solid" :class="{
                 'fa-right-to-bracket text-green-600':     activity.type === 'Login',
                 'fa-right-from-bracket text-red-600':     activity.type === 'Logout',
                 'fa-triangle-exclamation text-red-600':   activity.type === 'Login Failed',
                 'fa-pen-to-square text-blue-600':         activity.type === 'Grade Update',
                 'fa-calendar-plus text-purple-600':       activity.type === 'Session Start',
                 'fa-calendar-check text-purple-700':      activity.type === 'Session Update',
-                'fa-user-tie text-orange-600':            activity.type === 'Teacher Assignment' || activity.type === 'Teacher Update', 
+                'fa-user-tie text-orange-600':            activity.type === 'Teacher Assignment',
                 'fa-user-plus text-yellow-600':           activity.type === 'Student Added',
-                'fa-user-minus text-rose-600':            activity.type === 'Student Removed' || activity.type === 'Teacher Removed',
-                'fa-book-open text-sky-600':              activity.type === 'Subject Added' || activity.type === 'Subject Removed' || activity.type === 'Subject Update',   
+                'fa-user-minus text-rose-600':            activity.type === 'Student Removed',
                 'fa-file-import text-indigo-600':         activity.type === 'Data Import',
                 'fa-file-circle-question text-teal-600':  activity.type === 'Report Request',
                 'fa-user-pen text-cyan-600':              activity.type === 'Student Update',
                 'fa-circle-question text-gray-500':       activity.type === 'Other'
-              }"
-            ></i>
-          </div>
-          
-          <!-- Contenido de la actividad -->
-          <div
-            class="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow"
-            :class="activity.isImportant ? 'border-l-4 border-red-500' : ''"
-          >
-            <div class="flex items-start justify-between mb-2">
-              <div class="flex-1">
-                <div class="flex items-center gap-2 mb-1">
-                  <span class="font-semibold text-gray-800" x-text="activity.user"></span>
+              }"></i>
+                </div>
 
-                  <!-- Pill del tipo -->
-                  <span
-                    class="px-2 py-1 text-xs font-semibold rounded-full"
-                    :class="{
+                <!-- Contenido de la actividad -->
+                <div class="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow"
+                  :class="activity.isImportant ? 'border-l-4 border-red-500' : ''">
+                  <div class="flex items-start justify-between mb-2">
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2 mb-1">
+                        <span class="font-semibold text-gray-800" x-text="activity.user"></span>
+
+                        <!-- Pill del tipo -->
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full" :class="{
                       'bg-green-100 text-green-800':   activity.type === 'Login',
                       'bg-red-100 text-red-800':       activity.type === 'Logout',
                       'bg-red-200 text-red-800':       activity.type === 'Login Failed',
                       'bg-blue-100 text-blue-800':     activity.type === 'Grade Update',
                       'bg-purple-100 text-purple-800': activity.type === 'Session Start',
                       'bg-purple-200 text-purple-900': activity.type === 'Session Update',
-                      'bg-orange-100 text-orange-800': activity.type === 'Teacher Assignment' || activity.type === 'Teacher Update',
+                      'bg-orange-100 text-orange-800': activity.type === 'Teacher Assignment',
                       'bg-yellow-100 text-yellow-800': activity.type === 'Student Added',
-                      'bg-rose-100 text-rose-800':     activity.type === 'Student Removed' || activity.type === 'Teacher Removed',  
-                      'bg-sky-100 text-sky-800':       activity.type === 'Subject Added' || activity.type === 'Subject Removed' || activity.type === 'Subject Update',
+                      'bg-rose-100 text-rose-800':     activity.type === 'Student Removed',
                       'bg-indigo-100 text-indigo-800': activity.type === 'Data Import',
                       'bg-teal-100 text-teal-800':     activity.type === 'Report Request',
                       'bg-cyan-100 text-cyan-800':     activity.type === 'Student Update',
                       'bg-gray-200 text-gray-800':     activity.type === 'Other'
-                    }"
-                    x-text="activity.type"
-                  ></span>
+                    }" x-text="activity.type"></span>
 
-                  <!-- Badge de importante -->
-                  <span
-                    x-show="activity.isImportant"
-                    class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-red-100 text-red-700 uppercase tracking-wide"
-                  >
-                    Important
-                  </span>
-                </div>
+                        <!-- Badge de importante -->
+                        <span x-show="activity.isImportant"
+                          class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-red-100 text-red-700 uppercase tracking-wide">
+                          Important
+                        </span>
+                      </div>
 
-                <!-- Descripción principal -->
-                <p class="text-sm text-gray-700" x-text="activity.description"></p>
+                      <!-- Descripción principal -->
+                      <p class="text-sm text-gray-700" x-text="activity.description"></p>
 
-                <!-- Meta info extra -->
-                <div class="mt-2 text-[11px] text-gray-500 space-y-1">
-                  <div>
-                    <span class="font-semibold">Entity:</span>
-                    <span x-text="activity.entityCode || 'N/A'"></span>
-                  </div>
-                  <div>
-                    <span class="font-semibold">Action:</span>
-                    <span x-text="activity.activityCode || 'N/A'"></span>
-                  </div>
-                </div>
-                
-                <!-- Detalles adicionales si existen (old/new data, etc.) -->
-                <div
-                  x-show="activity.details"
-                  class="mt-2 text-xs text-gray-600 bg-white p-2 rounded border border-gray-200"
-                >
-                  <p class="font-semibold mb-1">Details:</p>
-                  <template x-for="(value, key) in activity.details" :key="key">
-                    <div class="flex gap-2">
-                      <span class="font-semibold" x-text="key + ':'"></span>
-                      <span x-text="value"></span>
+                      <!-- Meta info extra -->
+                      <div class="mt-2 text-[11px] text-gray-500 space-y-1">
+                        <div>
+                          <span class="font-semibold">Entity:</span>
+                          <span x-text="activity.entityCode || 'N/A'"></span>
+                        </div>
+                        <div>
+                          <span class="font-semibold">Action:</span>
+                          <span x-text="activity.activityCode || 'N/A'"></span>
+                        </div>
+                      </div>
+
+                      <!-- Detalles adicionales si existen (old/new data, etc.) -->
+                      <div x-show="activity.details"
+                        class="mt-2 text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
+                        <p class="font-semibold mb-1">Details:</p>
+                        <template x-for="(value, key) in activity.details" :key="key">
+                          <div class="flex gap-2">
+                            <span class="font-semibold" x-text="key + ':'"></span>
+                            <span x-text="value"></span>
+                          </div>
+                        </template>
+                      </div>
                     </div>
-                  </template>
+
+                    <div class="text-right">
+                      <p class="text-xs text-gray-500" x-text="activity.date"></p>
+                      <p class="text-xs font-semibold text-gray-700" x-text="activity.time"></p>
+                      <p class="text-xs text-gray-500 mt-1" x-text="activity.ipAddress || ''"></p>
+                    </div>
+                  </div>
                 </div>
               </div>
-              
-              <div class="text-right">
-                <p class="text-xs text-gray-500" x-text="activity.date"></p>
-                <p class="text-xs font-semibold text-gray-700" x-text="activity.time"></p>
-                <p class="text-xs text-gray-500 mt-1" x-text="activity.ipAddress || ''"></p>
-              </div>
+            </template>
+
+            <!-- Mensaje cuando no hay actividades -->
+            <div x-show="filteredActivityCount === 0" class="text-center py-12 text-gray-500">
+              <i class="fa-solid fa-inbox text-6xl mb-4"></i>
+              <p class="text-lg font-semibold">No activities found</p>
+              <p class="text-sm">Try adjusting your filters</p>
             </div>
           </div>
-        </div>
-      </template>
-      
-      <!-- Mensaje cuando no hay actividades -->
-      <div x-show="filteredActivityCount === 0" class="text-center py-12 text-gray-500">
-        <i class="fa-solid fa-inbox text-6xl mb-4"></i>
-        <p class="text-lg font-semibold">No activities found</p>
-        <p class="text-sm">Try adjusting your filters</p>
-      </div>
-    </div>
-    
-    <!-- Paginación (si más adelante la quieres usar) -->
-    <div class="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
-      <p class="text-sm text-gray-600">
-        Showing
-        <span class="font-semibold"
-              x-text="filteredActivityCount === 0 ? 0 : Math.min(currentPage * itemsPerPage, filteredActivityCount)">
-        </span>
-        of
-        <span class="font-semibold" x-text="filteredActivityCount"></span>
-        activities
-      </p>
 
-      <!-- Si ya no quieres paginación, puedes esconder estos botones -->
-      <div class="flex gap-2">
-        <button
-          @click="currentPage > 1 && currentPage--"
-          :disabled="currentPage === 1"
-          :class="currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'"
-          class="px-4 py-2 border border-gray-300 rounded-lg transition-colors"
-        >
-          Previous
-        </button>
+          <!-- Paginación (si más adelante la quieres usar) -->
+          <div class="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
+            <p class="text-sm text-gray-600">
+              Showing
+              <span class="font-semibold"
+                x-text="filteredActivityCount === 0 ? 0 : Math.min(currentPage * itemsPerPage, filteredActivityCount)">
+              </span>
+              of
+              <span class="font-semibold" x-text="filteredActivityCount"></span>
+              activities
+            </p>
 
-        <button
-          @click="currentPage < Math.ceil(filteredActivityCount / itemsPerPage) && currentPage++"
-          :disabled="currentPage >= Math.ceil(filteredActivityCount / itemsPerPage)"
-          :class="currentPage >= Math.ceil(filteredActivityCount / itemsPerPage) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'"
-          class="px-4 py-2 border border-gray-300 rounded-lg transition-colors"
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-  </div>
-</div>
-<!--*********************************************************************************************************************************************************-->
-  <!-- TEACHERS TAB -->
-  <div x-show="activeTab === 'teachers'" class="space-y-6">
-    <div class="bg-white rounded-lg shadow p-6">
-      <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-        <i class="fa-solid fa-user-plus text-[#D41736] mr-2"></i>
-        Add New Teacher
-      </h2>
-      
-      <form @submit.prevent="addTeacher()" class="space-y-4">
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">First Name *</label>
-            <input type="text" x-model="newTeacher.firstName" required
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-          </div>
-          
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Last Name *</label>
-            <input type="text" x-model="newTeacher.lastName" required
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-          </div>
-          
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Email *</label>
-            <input type="email" x-model="newTeacher.email" required
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-          </div>
-          
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
-            <input type="tel" x-model="newTeacher.phone"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-          </div>
-          
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Department *</label>
-            <input type="text" x-model="newTeacher.department" required
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-          </div>
-          
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Specialization</label>
-            <input type="text" x-model="newTeacher.specialization"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-          </div>
-        </div>
-        
-        <div class="flex gap-3 pt-4">
-          <button type="submit" class="bg-[#D41736] hover:bg-[#A6192E] text-white px-6 py-2 rounded-lg transition-colors font-semibold">
-            <i class="fa-solid fa-plus mr-2"></i>Add Teacher
-          </button>
-          <button type="button" @click="resetTeacherForm()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors">
-            <i class="fa-solid fa-undo mr-2"></i>Clear
-          </button>
-        </div>
-      </form>
-    </div>
-    
-    <!-- Lista de profesores -->
-    <div class="bg-white rounded-lg shadow p-6">
-      <h3 class="text-lg font-bold text-gray-800 mb-4">Current Teachers</h3>
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Phone</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Department</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Specialization</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200">
-            <template x-for="teacher in teachers" :key="teacher.id">
-              <tr class="hover:bg-gray-50">
-                <td class="px-4 py-3 text-sm text-gray-900" x-text="`${teacher.firstName} ${teacher.lastName}`"></td>
-                <td class="px-4 py-3 text-sm text-gray-600" x-text="teacher.email"></td>
-                <td class="px-4 py-3 text-sm text-gray-600" x-text="teacher.phone"></td>
-                <td class="px-4 py-3 text-sm text-gray-600" x-text="teacher.department"></td>
-                <td class="px-4 py-3 text-sm text-gray-600" x-text="teacher.specialization"></td>
-                <td class="px-4 py-3 text-sm">
-                  <button @click="deleteTeacher(teacher.id)" class="text-red-600 hover:text-red-800">
-                    <i class="fa-solid fa-trash"></i>
-                  </button>
-                </td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+            <!-- Si ya no quieres paginación, puedes esconder estos botones -->
+            <div class="flex gap-2">
+              <button @click="currentPage > 1 && currentPage--" :disabled="currentPage === 1"
+                :class="currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'"
+                class="px-4 py-2 border border-gray-300 rounded-lg transition-colors">
+                Previous
+              </button>
 
-  <!-- PROGRAMS TAB -->
-  <div x-show="activeTab === 'programs'" class="space-y-6">
-    <div class="bg-white rounded-lg shadow p-6">
-      <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-        <i class="fa-solid fa-plus text-[#D41736] mr-2"></i>
-        Add New Program
-      </h2>
-      
-      <form @submit.prevent="addProgram()" class="space-y-4">
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Program Name *</label>
-            <input type="text" x-model="newProgram.name" required
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-          </div>
-          
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Program Type *</label>
-            <select x-model="newProgram.type" required
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-              <option value="">Select Type</option>
-              <option value="Bachelor's">Bachelor's</option>
-              <option value="Associate">Associate</option>
-              <option value="Master's">Master's</option>
-              <option value="Doctorate">Doctorate</option>
-            </select>
-          </div>
-          
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Total Units *</label>
-            <input type="number" x-model="newProgram.totalUnits" required
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-          </div>
-          
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Duration (Years) *</label>
-            <input type="number" step="0.5" x-model="newProgram.duration" required
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-          </div>
-          
-          <div class="col-span-2">
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
-            <textarea x-model="newProgram.description" rows="3"
-                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent"></textarea>
-          </div>
-        </div>
-        
-        <div class="flex gap-3 pt-4">
-          <button type="submit" class="bg-[#D41736] hover:bg-[#A6192E] text-white px-6 py-2 rounded-lg transition-colors font-semibold">
-            <i class="fa-solid fa-plus mr-2"></i>Add Program
-          </button>
-          <button type="button" @click="resetProgramForm()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors">
-            <i class="fa-solid fa-undo mr-2"></i>Clear
-          </button>
-        </div>
-      </form>
-    </div>
-    
-    <!-- Lista de programas -->
-    <div class="bg-white rounded-lg shadow p-6">
-      <h3 class="text-lg font-bold text-gray-800 mb-4">Current Programs</h3>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <template x-for="program in programs" :key="program.id">
-          <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-            <div class="flex justify-between items-start mb-2">
-              <h4 class="font-bold text-gray-800" x-text="program.name"></h4>
-              <button @click="deleteProgram(program.id)" class="text-red-600 hover:text-red-800">
-                <i class="fa-solid fa-trash"></i>
+              <button @click="currentPage < Math.ceil(filteredActivityCount / itemsPerPage) && currentPage++"
+                :disabled="currentPage >= Math.ceil(filteredActivityCount / itemsPerPage)"
+                :class="currentPage >= Math.ceil(filteredActivityCount / itemsPerPage) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'"
+                class="px-4 py-2 border border-gray-300 rounded-lg transition-colors">
+                Next
               </button>
             </div>
-            <p class="text-sm text-gray-600 mb-2" x-text="program.type"></p>
-            <div class="flex gap-4 text-sm text-gray-500">
-              <span><i class="fa-solid fa-book mr-1"></i><span x-text="program.totalUnits"></span> units</span>
-              <span><i class="fa-solid fa-clock mr-1"></i><span x-text="program.duration"></span> years</span>
-            </div>
-            <p class="text-sm text-gray-600 mt-2" x-text="program.description"></p>
           </div>
-        </template>
+        </div>
       </div>
     </div>
-  </div>
-
-  <!-- SUBJECTS TAB -->
-  <div x-show="activeTab === 'subjects'" class="space-y-6">
-    <div class="bg-white rounded-lg shadow p-6">
-      <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-        <i class="fa-solid fa-plus text-[#D41736] mr-2"></i>
-        Add New Subject
-      </h2>
-      
-      <form @submit.prevent="addSubject()" class="space-y-4">
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Subject Name *</label>
-            <input type="text" x-model="newSubject.name" required
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-          </div>
-          
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Subject Code *</label>
-            <input type="text" x-model="newSubject.code" required
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-          </div>
-          
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Units *</label>
-            <input type="number" x-model="newSubject.units" required
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-          </div>
-          
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Department</label>
-            <input type="text" x-model="newSubject.department"
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-          </div>
-          
-          <div class="col-span-2">
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
-            <textarea x-model="newSubject.description" rows="3"
-                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent"></textarea>
-          </div>
-        </div>
-        
-        <div class="flex gap-3 pt-4">
-          <button type="submit" class="bg-[#D41736] hover:bg-[#A6192E] text-white px-6 py-2 rounded-lg transition-colors font-semibold">
-            <i class="fa-solid fa-plus mr-2"></i>Add Subject
-          </button>
-          <button type="button" @click="resetSubjectForm()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors">
-            <i class="fa-solid fa-undo mr-2"></i>Clear
-          </button>
-        </div>
-      </form>
     </div>
-    
-    <!-- Lista de materias -->
-    <div class="bg-white rounded-lg shadow p-6">
-      <h3 class="text-lg font-bold text-gray-800 mb-4">Current Subjects</h3>
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Code</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Units</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Department</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200">
-            <template x-for="subject in subjects" :key="subject.id">
-              <tr class="hover:bg-gray-50">
-                <td class="px-4 py-3 text-sm font-semibold text-gray-900" x-text="subject.code"></td>
-                <td class="px-4 py-3 text-sm text-gray-900" x-text="subject.name"></td>
-                <td class="px-4 py-3 text-sm text-gray-600" x-text="subject.units"></td>
-                <td class="px-4 py-3 text-sm text-gray-600" x-text="subject.department"></td>
-                <td class="px-4 py-3 text-sm">
-                  <button @click="deleteSubject(subject.id)" class="text-red-600 hover:text-red-800">
-                    <i class="fa-solid fa-trash"></i>
-                  </button>
-                </td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+    <!--*********************************************************************************************************************************************************-->
+    <!-- TEACHERS TAB -->
+    <div x-show="activeTab === 'teachers'" class="space-y-6">
+      <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+          <i class="fa-solid fa-user-plus text-[#D41736] mr-2"></i>
+          Add New Teacher
+        </h2>
 
-  <!-- IMPORT DATA TAB -->
-  <div x-show="activeTab === 'import'" class="space-y-6">
-    <div class="bg-white rounded-lg shadow p-6">
-      <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-        <i class="fa-solid fa-file-excel text-[#D41736] mr-2"></i>
-        Import Data from Excel
-      </h2>
-      
-      <div class="space-y-6">
-        <!-- Upload area -->
-        <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#D41736] transition-colors">
-          <input type="file" id="fileUpload" @change="handleFileUpload($event)" accept=".xlsx,.xls" class="hidden">
-          <label for="fileUpload" class="cursor-pointer">
-            <i class="fa-solid fa-cloud-arrow-up text-6xl text-gray-400 mb-4"></i>
-            <p class="text-lg font-semibold text-gray-700 mb-2">Click to upload or drag and drop</p>
-            <p class="text-sm text-gray-500">Excel files only (.xlsx, .xls)</p>
-          </label>
-        </div>
-        
-        <!-- Archivo seleccionado -->
-        <div x-show="selectedFile" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <i class="fa-solid fa-file-excel text-3xl text-green-600"></i>
-              <div>
-                <p class="font-semibold text-gray-800" x-text="selectedFile?.name"></p>
-                <p class="text-sm text-gray-600" x-text="formatFileSize(selectedFile?.size)"></p>
-              </div>
+        <form @submit.prevent="addTeacher()" class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">First Name *</label>
+              <input type="text" x-model="newTeacher.firstName" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
             </div>
-            <button @click="clearFile()" class="text-red-600 hover:text-red-800">
-              <i class="fa-solid fa-times text-xl"></i>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Last Name *</label>
+              <input type="text" x-model="newTeacher.lastName" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Email *</label>
+              <input type="email" x-model="newTeacher.email" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
+              <input type="tel" x-model="newTeacher.phone"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Department *</label>
+              <input type="text" x-model="newTeacher.department" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Specialization</label>
+              <input type="text" x-model="newTeacher.specialization"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            </div>
+          </div>
+
+          <div class="flex gap-3 pt-4">
+            <button type="submit"
+              class="bg-[#D41736] hover:bg-[#A6192E] text-white px-6 py-2 rounded-lg transition-colors font-semibold">
+              <i class="fa-solid fa-plus mr-2"></i>Add Teacher
+            </button>
+            <button type="button" @click="resetTeacherForm()"
+              class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors">
+              <i class="fa-solid fa-undo mr-2"></i>Clear
             </button>
           </div>
+        </form>
+      </div>
+
+      <!-- Lista de profesores -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Current Teachers</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Phone</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Department</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Specialization</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <template x-for="teacher in teachers" :key="teacher.id">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-sm text-gray-900" x-text="`${teacher.firstName} ${teacher.lastName}`"></td>
+                  <td class="px-4 py-3 text-sm text-gray-600" x-text="teacher.email"></td>
+                  <td class="px-4 py-3 text-sm text-gray-600" x-text="teacher.phone"></td>
+                  <td class="px-4 py-3 text-sm text-gray-600" x-text="teacher.department"></td>
+                  <td class="px-4 py-3 text-sm text-gray-600" x-text="teacher.specialization"></td>
+                  <td class="px-4 py-3 text-sm">
+                    <button @click="deleteTeacher(teacher.id)" class="text-red-600 hover:text-red-800">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
         </div>
-        
-        <!-- Tipo de datos a importar -->
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Data Type *</label>
-          <select x-model="importType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
-            <option value="">Select data type to import</option>
-            <option value="students">Students</option>
-            <!--<option value="teachers">Teachers</option>
-            <option value="subjects">Subjects</option>
-            <option value="sessions">Sessions</option>-->
-            <option value="grades">Grades</option>
-          </select>
-        </div>
-        
-        <!-- Botones -->
-        <div class="flex gap-3">
-          <button @click="processImport()" :disabled="!selectedFile || !importType"
-                  :class="!selectedFile || !importType ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#A6192E]'"
-                  class="bg-[#D41736] text-white px-6 py-3 rounded-lg transition-colors font-semibold">
-            <i class="fa-solid fa-upload mr-2"></i>Import Data
-          </button>
-          <button @click="downloadTemplate()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-colors">
-           <i class="fa-solid fa-download mr-2"></i>Download Template
-          </button>
-        </div>
-        
-        <!-- Instrucciones -->
-        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h4 class="font-semibold text-gray-800 mb-2 flex items-center">
-            <i class="fa-solid fa-circle-info text-yellow-600 mr-2"></i>
-            Important Instructions
-          </h4>
-          <ul class="text-sm text-gray-700 space-y-1 list-disc list-inside">
-            <li>Download the template file before importing data</li>
-            <li>Do not modify column headers in the template</li>
-            <li>All required fields must be filled</li>
-            <li>Maximum file size: 10MB</li>
-            <li>Supported formats: .xlsx, .xls</li>
-          </ul>
-        </div>
-        
-        <!-- Resultado de importación -->
-        <div x-show="importResult" class="border rounded-lg p-4"
-             :class="importResult?.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'">
-          <div class="flex items-start gap-3">
-            <i class="fa-solid text-2xl mt-1" 
-               :class="importResult?.success ? 'fa-circle-check text-green-600' : 'fa-circle-xmark text-red-600'"></i>
+      </div>
+    </div>
+
+    <!-- PROGRAMS TAB -->
+    <div x-show="activeTab === 'programs'" class="space-y-6">
+      <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+          <i class="fa-solid fa-plus text-[#D41736] mr-2"></i>
+          Add New Program
+        </h2>
+
+        <form @submit.prevent="addProgram()" class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
             <div>
-              <h4 class="font-semibold mb-1" 
-                  :class="importResult?.success ? 'text-green-800' : 'text-red-800'" 
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Program Name *</label>
+              <input type="text" x-model="newProgram.name" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Program Type *</label>
+              <select x-model="newProgram.type" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+                <option value="">Select Type</option>
+                <option value="Bachelor's">Bachelor's</option>
+                <option value="Associate">Associate</option>
+                <option value="Master's">Master's</option>
+                <option value="Doctorate">Doctorate</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Total Units *</label>
+              <input type="number" x-model="newProgram.totalUnits" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Duration (Years) *</label>
+              <input type="number" step="0.5" x-model="newProgram.duration" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            </div>
+
+            <div class="col-span-2">
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+              <textarea x-model="newProgram.description" rows="3"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent"></textarea>
+            </div>
+          </div>
+
+          <div class="flex gap-3 pt-4">
+            <button type="submit"
+              class="bg-[#D41736] hover:bg-[#A6192E] text-white px-6 py-2 rounded-lg transition-colors font-semibold">
+              <i class="fa-solid fa-plus mr-2"></i>Add Program
+            </button>
+            <button type="button" @click="resetProgramForm()"
+              class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors">
+              <i class="fa-solid fa-undo mr-2"></i>Clear
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Lista de programas -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Current Programs</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <template x-for="program in programs" :key="program.id">
+            <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-gray-800" x-text="program.name"></h4>
+                <button @click="deleteProgram(program.id)" class="text-red-600 hover:text-red-800">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+              <p class="text-sm text-gray-600 mb-2" x-text="program.type"></p>
+              <div class="flex gap-4 text-sm text-gray-500">
+                <span><i class="fa-solid fa-book mr-1"></i><span x-text="program.totalUnits"></span> units</span>
+                <span><i class="fa-solid fa-clock mr-1"></i><span x-text="program.duration"></span> years</span>
+              </div>
+              <p class="text-sm text-gray-600 mt-2" x-text="program.description"></p>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUBJECTS TAB -->
+    <div x-show="activeTab === 'subjects'" class="space-y-6">
+      <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+          <i class="fa-solid fa-plus text-[#D41736] mr-2"></i>
+          Add New Subject
+        </h2>
+
+        <form @submit.prevent="addSubject()" class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Subject Name *</label>
+              <input type="text" x-model="newSubject.name" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Subject Code *</label>
+              <input type="text" x-model="newSubject.code" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Units *</label>
+              <input type="number" x-model="newSubject.units" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Department</label>
+              <input type="text" x-model="newSubject.department"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+            </div>
+
+            <div class="col-span-2">
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+              <textarea x-model="newSubject.description" rows="3"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent"></textarea>
+            </div>
+          </div>
+
+          <div class="flex gap-3 pt-4">
+            <button type="submit"
+              class="bg-[#D41736] hover:bg-[#A6192E] text-white px-6 py-2 rounded-lg transition-colors font-semibold">
+              <i class="fa-solid fa-plus mr-2"></i>Add Subject
+            </button>
+            <button type="button" @click="resetSubjectForm()"
+              class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors">
+              <i class="fa-solid fa-undo mr-2"></i>Clear
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Lista de materias -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Current Subjects</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Code</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Units</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Department</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <template x-for="subject in subjects" :key="subject.id">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-sm font-semibold text-gray-900" x-text="subject.code"></td>
+                  <td class="px-4 py-3 text-sm text-gray-900" x-text="subject.name"></td>
+                  <td class="px-4 py-3 text-sm text-gray-600" x-text="subject.units"></td>
+                  <td class="px-4 py-3 text-sm text-gray-600" x-text="subject.department"></td>
+                  <td class="px-4 py-3 text-sm">
+                    <button @click="deleteSubject(subject.id)" class="text-red-600 hover:text-red-800">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- IMPORT DATA TAB -->
+    <div x-show="activeTab === 'import'" class="space-y-6">
+      <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+          <i class="fa-solid fa-file-excel text-[#D41736] mr-2"></i>
+          Import Data from Excel
+        </h2>
+
+        <div class="space-y-6">
+          <!-- Upload area -->
+          <div
+            class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#D41736] transition-colors">
+            <input type="file" id="fileUpload" @change="handleFileUpload($event)" accept=".xlsx,.xls" class="hidden">
+            <label for="fileUpload" class="cursor-pointer">
+              <i class="fa-solid fa-cloud-arrow-up text-6xl text-gray-400 mb-4"></i>
+              <p class="text-lg font-semibold text-gray-700 mb-2">Click to upload or drag and drop</p>
+              <p class="text-sm text-gray-500">Excel files only (.xlsx, .xls)</p>
+            </label>
+          </div>
+
+          <!-- Archivo seleccionado -->
+          <div x-show="selectedFile" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <i class="fa-solid fa-file-excel text-3xl text-green-600"></i>
+                <div>
+                  <p class="font-semibold text-gray-800" x-text="selectedFile?.name"></p>
+                  <p class="text-sm text-gray-600" x-text="formatFileSize(selectedFile?.size)"></p>
+                </div>
+              </div>
+              <button @click="clearFile()" class="text-red-600 hover:text-red-800">
+                <i class="fa-solid fa-times text-xl"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tipo de datos a importar -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Data Type *</label>
+            <select x-model="importType"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D41736] focus:border-transparent">
+              <option value="">Select data type to import</option>
+              <option value="students">Students</option>
+              <!--<option value="teachers">Teachers</option>
+              <option value="subjects">Subjects</option>
+              <option value="sessions">Sessions</option>-->
+              <option value="grades">Grades</option>
+            </select>
+          </div>
+
+          <!-- Botones -->
+          <div class="flex gap-3">
+            <button @click="processImport()" :disabled="!selectedFile || !importType"
+              :class="!selectedFile || !importType ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#A6192E]'"
+              class="bg-[#D41736] text-white px-6 py-3 rounded-lg transition-colors font-semibold">
+              <i class="fa-solid fa-upload mr-2"></i>Import Data
+            </button>
+            <button @click="downloadTemplate()"
+              class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-colors">
+              <i class="fa-solid fa-download mr-2"></i>Download Template
+            </button>
+          </div>
+
+          <!-- Instrucciones -->
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <h4 class="font-semibold text-gray-800 mb-2 flex items-center">
+              <i class="fa-solid fa-circle-info text-yellow-600 mr-2"></i>
+              Important Instructions
+            </h4>
+            <ul class="text-sm text-gray-700 space-y-1 list-disc list-inside">
+              <li>Download the template file before importing data</li>
+              <li>Do not modify column headers in the template</li>
+              <li>All required fields must be filled</li>
+              <li>Maximum file size: 10MB</li>
+              <li>Supported formats: .xlsx, .xls</li>
+            </ul>
+          </div>
+
+          <!-- Resultado de importación -->
+          <div x-show="importResult" class="border rounded-lg p-4"
+            :class="importResult?.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'">
+            <div class="flex items-start gap-3">
+              <i class="fa-solid text-2xl mt-1"
+                :class="importResult?.success ? 'fa-circle-check text-green-600' : 'fa-circle-xmark text-red-600'"></i>
+              <div>
+                <h4 class="font-semibold mb-1" :class="importResult?.success ? 'text-green-800' : 'text-red-800'"
                   x-text="importResult?.message"></h4>
-              <p class="text-sm" 
-                 :class="importResult?.success ? 'text-green-700' : 'text-red-700'" 
-                 x-text="importResult?.details"></p>
+                <p class="text-sm" :class="importResult?.success ? 'text-green-700' : 'text-red-700'"
+                  x-text="importResult?.details"></p>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-    
-    <!-- Historial de importaciones -->
-    <div class="bg-white rounded-lg shadow p-6">
-      <h3 class="text-lg font-bold text-gray-800 mb-4">Import History</h3>
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">File Name</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Type</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Records</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200">
-            <template x-for="history in importHistory" :key="history.id">
-              <tr class="hover:bg-gray-50">
-                <td class="px-4 py-3 text-sm text-gray-900" x-text="history.date"></td>
-                <td class="px-4 py-3 text-sm text-gray-600" x-text="history.fileName"></td>
-                <td class="px-4 py-3 text-sm text-gray-600" x-text="history.type"></td>
-                <td class="px-4 py-3 text-sm text-gray-600" x-text="history.records"></td>
-                <td class="px-4 py-3">
-                  <span :class="history.status === 'Success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
-                        class="px-2 py-1 text-xs font-semibold rounded-full" x-text="history.status"></span>
-                </td>
+
+      <!-- Historial de importaciones -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Import History</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">File Name</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Type</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Records</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
               </tr>
-            </template>
-          </tbody>
-        </table>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <template x-for="history in importHistory" :key="history.id">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-sm text-gray-900" x-text="history.date"></td>
+                  <td class="px-4 py-3 text-sm text-gray-600" x-text="history.fileName"></td>
+                  <td class="px-4 py-3 text-sm text-gray-600" x-text="history.type"></td>
+                  <td class="px-4 py-3 text-sm text-gray-600" x-text="history.records"></td>
+                  <td class="px-4 py-3">
+                    <span
+                      :class="history.status === 'Success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                      class="px-2 py-1 text-xs font-semibold rounded-full" x-text="history.status"></span>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
-  </div>
-</main>
-  <footer :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'" class="bg-[#2D2828] border-t">
+  </main>
+  <footer :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'"
+    class="bg-[#2D2828] border-t">
     <div class="max-w-7xl mx-auto px-6 py-4">
       <div class="flex justify-between items-center">
         <p class="text-sm text-gray-300">© 2025 San Diego Global Knowledge University</p>
@@ -1005,4 +996,5 @@
     </div>
   </footer>
 </body>
+
 </html>

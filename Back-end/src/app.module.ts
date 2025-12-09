@@ -1,6 +1,8 @@
 // src/app.module.ts
 
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -20,6 +22,6 @@ import { EnrollmentAutomationModule } from './enrollment/enrollment-automation.m
 @Module({
   imports: [AuthModule, StudentsModule, SessionsModule, CoursesModule, ProgramsModule, TeachersModule, ScheduleModule.forRoot(), MailModule, NotificationsModule, GradesModule, EnrollmentAutomationModule,AdministratorsModule,],
   controllers: [AppController],
-  providers: [AppService, PrismaService],
+  providers: [AppService, PrismaService, { provide: APP_GUARD, useClass: JwtAuthGuard }],
 })
-export class AppModule {}
+export class AppModule { }

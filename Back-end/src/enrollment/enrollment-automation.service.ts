@@ -26,9 +26,7 @@ export interface CourseAnalysis {
 export class EnrollmentAutomationService {
   constructor(private prisma: PrismaService) { }
 
-  /**
-   * 🎯 MÉTODO PRINCIPAL: Analizar demanda y determinar qué materias abrir
-   */
+  //MÉTODO PRINCIPAL: Analizar demanda y determinar qué materias abrir
   async analyzeDemandForAllCourses(): Promise<CourseAnalysis[]> {
     // 1. Obtener todos los cursos
     const allCourses = await this.prisma.course.findMany({
@@ -84,9 +82,7 @@ export class EnrollmentAutomationService {
     return analyses.sort((a, b) => b.totalDemand - a.totalDemand);
   }
 
-  /**
-   * 🔍 Obtener estudiantes elegibles para un curso
-   */
+  //Obtener estudiantes elegibles para un curso
   private async getEligibleStudentsForCourse(
     course: any,
     allStudents: any[]
@@ -151,9 +147,7 @@ export class EnrollmentAutomationService {
     return eligible.sort((a, b) => b.priority - a.priority);
   }
 
-  /**
-   * ✅ Verificar si el estudiante cumple prerequisitos
-   */
+  //Verificar si el estudiante cumple prerequisitos
   private async hasCompletedPrerequisites(
     student: any,
     course: any
@@ -184,9 +178,7 @@ export class EnrollmentAutomationService {
     return true;
   }
 
-  /**
-   * 🎖️ Calcular prioridad del estudiante
-   */
+  //Calcular prioridad del estudiante
   private calculateStudentPriority(student: any, attempts: number): number {
     let priority = 1000; // Base
 
@@ -208,9 +200,7 @@ export class EnrollmentAutomationService {
     return Math.round(priority);
   }
 
-  /**
-   * 📝 Obtener razón de prioridad
-   */
+  //Obtener razón de prioridad
   private getPriorityReason(student: any, attempts: number): string {
     const completionPercentage = (student.totalUnits && student.totalUnits > 0) ? Math.round((student.totalUnitsEarned / student.totalUnits) * 100) : 0;
 
@@ -225,13 +215,13 @@ export class EnrollmentAutomationService {
     return `Regular student - ${completionPercentage}% complete`;
   }
 
-  /**
-   * 🚀 INSCRIBIR AUTOMÁTICAMENTE estudiantes a un curso en una sesión
-   */
+  // INSCRIBIR AUTOMÁTICAMENTE estudiantes a un curso en una sesión
   async autoEnrollStudents(
     sessionId: number,
     courseId: number,
-    maxStudents: number = 50
+    maxStudents: number = 50,
+    offeringId?: number,
+    groupNumber?: number
   ): Promise<any> {
     // 1. Obtener análisis del curso
     const allAnalyses = await this.analyzeDemandForAllCourses();
@@ -244,12 +234,36 @@ export class EnrollmentAutomationService {
       };
     }
 
-    // 2. Verificar que existe el CourseOffering
-    const offering = await this.prisma.courseOffering.findUnique({
-      where: {
-        courseId_sessionId: { courseId, sessionId }
-      }
-    });
+    // 2. Buscar el CourseOffering específico o el Group 1 por defecto
+    let offering;
+
+    if (offeringId) {
+      // Si se proporciona offeringId, usar ese
+      offering = await this.prisma.courseOffering.findUnique({
+        where: { id: offeringId },
+        include: { enrollments: true }
+      });
+    } else if (groupNumber) {
+      // Si se proporciona groupNumber, buscar ese grupo
+      offering = await this.prisma.courseOffering.findFirst({
+        where: {
+          courseId: courseId,
+          sessionId: sessionId,
+          groupNumber: groupNumber
+        },
+        include: { enrollments: true }
+      });
+    } else {
+      // Por defecto, buscar Group 1
+      offering = await this.prisma.courseOffering.findFirst({
+        where: {
+          courseId: courseId,
+          sessionId: sessionId,
+          groupNumber: 1
+        },
+        include: { enrollments: true }
+      });
+    }
 
     if (!offering) {
       return {
@@ -258,25 +272,62 @@ export class EnrollmentAutomationService {
       };
     }
 
-    // 3. Inscribir a los primeros N estudiantes (hasta maxStudents)
-    const studentsToEnroll = courseAnalysis.eligibleStudents.slice(0, maxStudents);
+    // VERIFICAR CAPACIDAD DISPONIBLE DEL GRUPO ESPECÍFICO
+    const currentEnrollment = offering.enrollments.length;
+    const maxCapacity = offering.maxStudents || 50;
+    const availableSeats = maxCapacity - currentEnrollment;
+
+    if (availableSeats <= 0) {
+      return {
+        success: false,
+        message: `Group ${offering.groupNumber} is at full capacity (${currentEnrollment}/${maxCapacity})`
+      };
+    }
+
+    // AJUSTAR maxStudents para no exceder capacidad
+    const actualMaxStudents = Math.min(maxStudents, availableSeats);
+
+    // OBTENER TODOS LOS GRUPOS DE ESTA MATERIA EN ESTA SESIÓN
+    const allGroupsForCourse = await this.prisma.courseOffering.findMany({
+      where: {
+        courseId: courseId,
+        sessionId: sessionId
+      },
+      include: {
+        enrollments: true
+      }
+    });
+
+    // OBTENER IDs DE ESTUDIANTES YA INSCRITOS EN CUALQUIER GRUPO
+    const enrolledStudentIds = new Set(
+      allGroupsForCourse.flatMap(group =>
+        group.enrollments.map(e => e.studentId.toString())
+      )
+    );
+
+    // 3. FILTRAR estudiantes que NO están en ningún grupo
+    const studentsToEnroll = courseAnalysis.eligibleStudents
+      .filter(sp => !enrolledStudentIds.has(sp.studentId))
+      .slice(0, actualMaxStudents);
+
     const enrolled: any[] = [];
     const errors: string[] = [];
 
     for (const sp of studentsToEnroll) {
       try {
-        // Verificar si ya está inscrito
-        const existing = await this.prisma.enrollment.findUnique({
+        // Verificar si ya está inscrito (doble check)
+        const existing = await this.prisma.enrollment.findFirst({
           where: {
-            studentId_offeringId: {
-              studentId: BigInt(sp.studentId),
-              offeringId: offering.id
+            studentId: BigInt(sp.studentId),
+            offering: {
+              courseId: courseId,
+              sessionId: sessionId
             }
           }
         });
 
         if (existing) {
-          errors.push(`${sp.studentFirstName} ${sp.studentLastName} already enrolled`);
+          errors.push(`${sp.studentFirstName} ${sp.studentLastName} already enrolled in another group`);
           continue;
         }
 
@@ -305,15 +356,13 @@ export class EnrollmentAutomationService {
     return {
       success: true,
       enrolled: enrolled.length,
-      remaining: courseAnalysis.totalDemand - enrolled.length,
+      remaining: courseAnalysis.totalDemand - enrolledStudentIds.size - enrolled.length,
       students: enrolled,
       errors: errors.length > 0 ? errors : undefined
     };
   }
 
-  /**
-   * 🎯 Agregar curso a sesión activa del programa
-   */
+  //Agregar curso a sesión activa del programa
   async addCourseToActiveSession(
     courseId: number,
     programId: number,
@@ -355,37 +404,48 @@ export class EnrollmentAutomationService {
       };
     }
 
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId }
+    });
+
+    if (!course) {
+      return {
+        success: false,
+        message: 'Course not found'
+      };
+    }
+
     // 3. Si createNewGroup es true, SIEMPRE crear un nuevo grupo
     if (createNewGroup) {
-      // Contar cuántos grupos ya existen
-      const existingGroupsCount = activeSession.offerings.length;
-
-      const course = await this.prisma.course.findUnique({
-        where: { id: courseId }
+      // Buscar el groupNumber más alto existente para este curso en esta sesión
+      const existingGroups = await this.prisma.courseOffering.findMany({
+        where: {
+          courseId: courseId,
+          sessionId: activeSession.id
+        },
+        orderBy: { groupNumber: 'desc' }
       });
 
-      if (!course) {
-        return {
-          success: false,
-          message: 'Course not found'
-        };
-      }
+      const nextGroupNumber = existingGroups.length > 0
+        ? existingGroups[0].groupNumber + 1
+        : 1;
 
       // Crear nuevo CourseOffering (Grupo adicional)
       const newOffering = await this.prisma.courseOffering.create({
         data: {
           courseId: courseId,
           sessionId: activeSession.id,
+          groupNumber: nextGroupNumber,
           maxStudents: 50
         }
       });
 
       return {
         success: true,
-        message: `Group ${existingGroupsCount + 1} created for ${course.courseCode} in ${activeSession.sessionName}`,
+        message: `Group ${nextGroupNumber} created for ${course.courseCode} in ${activeSession.sessionName}`,
         sessionId: activeSession.id,
         offeringId: newOffering.id,
-        groupNumber: existingGroupsCount + 1,
+        groupNumber: nextGroupNumber,
         eligibleStudents: courseAnalysis.totalDemand,
         groupsNeeded: courseAnalysis.groupsNeeded
       };
@@ -404,21 +464,11 @@ export class EnrollmentAutomationService {
     }
 
     // 5. Crear nuevo CourseOffering si no existe (Grupo 1)
-    const course = await this.prisma.course.findUnique({
-      where: { id: courseId }
-    });
-
-    if (!course) {
-      return {
-        success: false,
-        message: 'Course not found'
-      };
-    }
-
     const newOffering = await this.prisma.courseOffering.create({
       data: {
         courseId: courseId,
         sessionId: activeSession.id,
+        groupNumber: 1,
         maxStudents: 50
       }
     });

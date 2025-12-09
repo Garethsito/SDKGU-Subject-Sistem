@@ -6,6 +6,12 @@ function dashboard() {
     open: false,
     showFilters: false,
     currentSessionId: null,
+    showTeacherAssignmentModal: false,
+    selectedGroupForTeacher: null,
+    selectedTeacherId: '',
+    showEnrollmentOptionsModal: false,
+    enrollmentOption: 'current', // 'current', 'all', 'distribute'
+    pendingEnrollmentData: null,
     searchQuery: '',
     message: '',
     openModalFlag: false,
@@ -413,11 +419,15 @@ function dashboard() {
           const sessionData = await response.json();
           console.log('Session data from backend:', sessionData);
 
-          // Cargar offerings con sus profesores
+          // Cargar offerings con sus profesores y groupNumber
           const coursesWithTeachers = sessionData.offerings
             ? sessionData.offerings.map(off => ({
               courseId: off.courseId,
               courseCode: off.courseCode,
+              groupNumber: off.groupNumber || 1,
+              displayCode: off.groupNumber > 1
+                ? `${off.courseCode}-${off.groupNumber}`
+                : off.courseCode,
               teacherId: off.teacherId ? off.teacherId.toString() : '',
               teacherName: off.teacher ? `${off.teacher.firstName} ${off.teacher.lastName}` : 'TBD'
             }))
@@ -656,6 +666,7 @@ function dashboard() {
       this.selectedSubject = subject;
       this.subjectsView = 'students';
       this.subjectSearchTerm = '';
+      this.currentOfferingId = subject.offeringId;
     },
 
     backToSubjects() {
@@ -677,16 +688,23 @@ function dashboard() {
 
       const courseId = parseInt(subject.id);
       const sessionId = this.currentSessionId;
+      const groupNumber = subject.groupNumber || 1;
+      const offeringId = subject.offeringId;
 
       try {
-        // 1. Obtener estudiantes YA INSCRITOS en esta materia
-        const enrolledStudentIds = new Set(
-          (subject.students || []).map(s => s.id.toString())
-        );
+        // 1. Obtener TODOS los grupos de este curso en esta sesión
+        const allGroupsRes = await fetch(`http://localhost:3000/api/sessions/${sessionId}/courses`);
+        const allCourses = await allGroupsRes.json();
+        const allGroupsForCourse = allCourses.filter(c => c.id === courseId);
 
-        // 2. Obtener análisis de demanda
+        // 2. Obtener IDs de TODOS los estudiantes ya inscritos en CUALQUIER grupo
+        const enrolledStudentIds = new Set();
+        allGroupsForCourse.forEach(group => {
+          group.students.forEach(s => enrolledStudentIds.add(s.id.toString()));
+        });
+
+        // 3. Obtener análisis de demanda TOTAL
         const analysisRes = await fetch('http://localhost:3000/api/enrollment-automation/analyze');
-
         if (!analysisRes.ok) {
           throw new Error('Failed to get enrollment preview');
         }
@@ -694,7 +712,7 @@ function dashboard() {
         const allAnalyses = await analysisRes.json();
         const courseAnalysis = allAnalyses.find(a => a.courseId === courseId);
 
-        // 3. Filtrar estudiantes que NO están inscritos
+        // 4. Filtrar estudiantes que NO están inscritos en NINGÚN grupo
         let eligibleStudents = [];
         if (courseAnalysis && courseAnalysis.eligibleStudents) {
           eligibleStudents = courseAnalysis.eligibleStudents.filter(
@@ -702,38 +720,45 @@ function dashboard() {
           );
         }
 
-        // 4. Verificar capacidad actual
+        // 5. Verificar capacidad SOLO del grupo actual
         const currentEnrolled = subject.students?.length || 0;
         const maxCapacity = parseInt(subject.maxStudents) || 50;
         const availableSeats = Math.max(0, maxCapacity - currentEnrolled);
 
-        console.log('Capacity check:', {
-          currentEnrolled,
-          maxCapacity,
-          availableSeats,
-          subjectMaxStudents: subject.maxStudents
+        console.log('Auto-enroll metrics:', {
+          courseId,
+          groupNumber,
+          totalEligible: eligibleStudents.length,
+          enrolledInAllGroups: enrolledStudentIds.size,
+          currentGroupEnrolled: currentEnrolled,
+          currentGroupCapacity: maxCapacity,
+          currentGroupAvailable: availableSeats
         });
 
         if (availableSeats <= 0) {
-          this.showNotification('error', 'Course Full', 'This course is at maximum capacity. Please create Group 2.');
+          this.showNotification('error', 'Course Full', 'This group is at maximum capacity. Please create another group.');
           return;
         }
 
-        // 5. Determinar cuántos estudiantes inscribir
+        // 6. Determinar cuántos estudiantes inscribir en ESTE grupo
         const studentsToEnroll = Math.min(eligibleStudents.length, availableSeats);
 
-        // 6. Obtener lista de estudiantes que serán inscritos
+        // 7. Obtener lista de estudiantes que serán inscritos
         const studentsPreview = eligibleStudents.slice(0, studentsToEnroll);
 
-        // 7. SIEMPRE mostrar el modal
+        // 8. Mostrar modal con información correcta
         this.showAutoEnrollModal(subject, studentsPreview, {
-          totalEligible: eligibleStudents.length,
-          availableSeats: availableSeats,
-          toEnroll: studentsToEnroll,
+          totalEligible: eligibleStudents.length, // Estudiantes que AÚN no están en ningún grupo
+          availableSeats: availableSeats, // Capacidad solo de este grupo
+          toEnroll: studentsToEnroll, // Cantidad a inscribir en este grupo
           sessionId: sessionId,
           courseId: courseId,
-          currentEnrolled: currentEnrolled,
-          maxCapacity: maxCapacity
+          groupNumber: groupNumber,
+          offeringId: offeringId,
+          currentEnrolled: currentEnrolled, // Inscritos en este grupo
+          maxCapacity: maxCapacity, // Capacidad de este grupo
+          totalEnrolledAllGroups: enrolledStudentIds.size, // Total inscritos en todos los grupos
+          allGroups: allGroupsForCourse // Todos los grupos disponibles
         });
 
       } catch (error) {
@@ -765,7 +790,8 @@ function dashboard() {
 
         if (this.currentSessionId) {
           await this.loadSessionCourses(this.currentSessionId);
-          const updatedSubject = this.allSubjects.find(s => s.id === this.selectedSubject.id);
+
+          const updatedSubject = this.allSubjects.find(s => s.offeringId === this.currentOfferingId);
           if (updatedSubject) {
             this.selectedSubject = updatedSubject;
           }
@@ -880,7 +906,8 @@ function dashboard() {
         this.showNotification('success', 'Success', 'Student added successfully');
 
         await this.loadSessionCourses(this.currentSessionId);
-        const updatedSubject = this.allSubjects.find(s => s.id === this.selectedSubject.id);
+
+        const updatedSubject = this.allSubjects.find(s => s.offeringId === this.currentOfferingId);
         if (updatedSubject) {
           this.selectedSubject = updatedSubject;
         }
@@ -946,51 +973,40 @@ function dashboard() {
       );
     },
 
-async confirmAutoEnroll() {
-  if (!this.autoEnrollData || !this.autoEnrollData.metadata) {
-    this.showNotification('error', 'Error', 'No enrollment data available');
-    return;
-  }
-  
-  if (!this.autoEnrollData.students || this.autoEnrollData.students.length === 0) {
-    this.showNotification('info', 'No Students', 'There are no students to enroll');
-    this.closeAutoEnrollModal();
-    return;
-  }
-  
-  const { sessionId, courseId, toEnroll } = this.autoEnrollData.metadata;
-  
-  console.log('Confirming auto-enrollment:', {
-    sessionId,
-    courseId,
-    toEnroll,
-    studentsCount: this.autoEnrollData.students.length,
-    metadata: this.autoEnrollData.metadata
-  });
+    async executeAutoEnroll(option) {
+      if (!this.pendingEnrollmentData && !this.autoEnrollData) {
+        this.showNotification('error', 'Error', 'No enrollment data available');
+        return;
+      }
 
-  // Mostrar notificación de "procesando"
-  this.showNotification('info', 'Processing...', `Enrolling ${toEnroll} student(s). Please wait...`);
-  
-  // Cerrar modal ANTES de empezar el proceso
-  this.closeAutoEnrollModal();
+      const enrollData = this.pendingEnrollmentData || this.autoEnrollData;
+      const { sessionId, courseId, toEnroll, offeringId, groupNumber } = enrollData.metadata;
+
+      this.showNotification('info', 'Processing...', `Enrolling students. Please wait...`);
+
+      // Cerrar modales
+      this.showEnrollmentOptionsModal = false;
+      this.closeAutoEnrollModal();
 
       try {
-        // Realizar la inscripción automática
-        const enrollRes = await fetch('http://localhost:3000/api/enrollment-automation/auto-enroll', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId: sessionId,
-            courseId: courseId,
-            maxStudents: toEnroll
-          })
-        });
+        let result;
 
-        if (!enrollRes.ok) {
-          throw new Error('Failed to auto-enroll students');
+        switch (option) {
+          case 'current':
+            // Opción 1: Llenar solo el grupo actual
+            result = await this.enrollInCurrentGroup(enrollData);
+            break;
+
+          case 'all':
+            // Opción 2: Llenar todos los grupos disponibles
+            result = await this.enrollInAllGroups(enrollData);
+            break;
+
+          case 'distribute':
+            // Opción 3: Distribuir equitativamente
+            result = await this.enrollDistributed(enrollData);
+            break;
         }
-
-        const result = await enrollRes.json();
 
         if (result.success) {
           this.showNotification(
@@ -999,45 +1015,294 @@ async confirmAutoEnroll() {
             `Successfully enrolled ${result.enrolled} student(s)`
           );
 
-          // Modal ya cerrado arriba, solo recargar datos
+          // Recargar y mantener el modal del grupo correcto
           setTimeout(async () => {
             try {
               await this.loadSessionCourses(this.currentSessionId);
 
-              // Actualizar el selectedSubject si existe
-              if (this.selectedSubject) {
-                const updatedSubject = this.allSubjects.find(s => s.id === parseInt(this.selectedSubject.id));
+              // Si estábamos en un grupo específico, mantener ese modal abierto
+              if (offeringId && this.selectedSubject) {
+                const updatedSubject = this.allSubjects.find(s => s.offeringId === offeringId);
                 if (updatedSubject) {
                   this.selectedSubject = updatedSubject;
+                  // Mantener la vista de estudiantes abierta
+                  this.subjectsView = 'students';
                 }
               }
 
-              // Recargar sesiones para actualizar porcentajes
               await this.loadSessions();
             } catch (error) {
               console.error('Error reloading data after enrollment:', error);
             }
-          }, 1000); // Aumentado a 1 segundo para dar tiempo al backend
+          }, 1000);
 
-          // Si quedaron estudiantes sin inscribir, notificar
           if (result.remaining > 0) {
             setTimeout(() => {
               this.showNotification(
                 'warning',
                 'Additional Capacity Needed',
-                `${result.remaining} students still need this course. Consider creating Group 2.`
+                `${result.remaining} students still need this course. Consider creating another group.`
               );
             }, 2000);
           }
         } else {
           this.showNotification('error', 'Enrollment Failed', result.message || 'Unknown error');
-          this.closeAutoEnrollModal();
         }
 
       } catch (error) {
-        console.error('Error confirming auto-enrollment:', error);
+        console.error('Error executing auto-enrollment:', error);
         this.showNotification('error', 'Auto-Enrollment Error', error.message || 'Failed to auto-enroll students');
+      } finally {
+        this.pendingEnrollmentData = null;
+      }
+    },
+
+    async enrollInCurrentGroup(enrollData) {
+      const { sessionId, courseId, offeringId, groupNumber, toEnroll } = enrollData.metadata;
+
+      const response = await fetch('http://localhost:3000/api/enrollment-automation/auto-enroll', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: sessionId,
+          courseId: courseId,
+          offeringId: offeringId,
+          groupNumber: groupNumber,
+          maxStudents: toEnroll
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to auto-enroll students');
+
+      return await response.json();
+    },
+
+    async enrollInAllGroups(enrollData) {
+      const { sessionId, courseId, totalEligible } = enrollData.metadata;
+
+      try {
+        // Obtener todos los grupos
+        const coursesRes = await fetch(`http://localhost:3000/api/sessions/${sessionId}/courses`);
+        const courses = await coursesRes.json();
+        const existingGroups = courses.filter(c => c.id === parseInt(courseId));
+
+        // Calcular capacidad total disponible
+        let totalCapacity = 0;
+        const groupsWithCapacity = [];
+
+        for (const group of existingGroups) {
+          const available = group.maxStudents - group.currentEnrollment;
+          if (available > 0) {
+            totalCapacity += available;
+            groupsWithCapacity.push({
+              offeringId: group.offeringId,
+              groupNumber: group.groupNumber,
+              availableSeats: available
+            });
+          }
+        }
+
+        const studentsToEnroll = Math.min(totalEligible, totalCapacity);
+
+        console.log('Fill all groups:', {
+          totalEligible,
+          totalCapacity,
+          studentsToEnroll,
+          groups: groupsWithCapacity.length
+        });
+
+        // Llenar grupos secuencialmente
+        let totalEnrolled = 0;
+        let remainingStudents = studentsToEnroll;
+
+        for (const group of groupsWithCapacity) {
+          if (remainingStudents <= 0) break;
+
+          const studentsForThisGroup = Math.min(remainingStudents, group.availableSeats);
+
+          console.log(`Filling group ${group.groupNumber} with ${studentsForThisGroup} students`);
+
+          const response = await fetch('http://localhost:3000/api/enrollment-automation/auto-enroll', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sessionId: sessionId,
+              courseId: courseId,
+              offeringId: group.offeringId,
+              groupNumber: group.groupNumber,
+              maxStudents: studentsForThisGroup
+            })
+          });
+
+          if (!response.ok) {
+            console.error(`Failed to enroll in group ${group.groupNumber}`);
+            continue;
+          }
+
+          const result = await response.json();
+          totalEnrolled += result.enrolled || 0;
+          remainingStudents -= result.enrolled || 0;
+
+          console.log(`Enrolled ${result.enrolled} in group ${group.groupNumber}, ${remainingStudents} remaining`);
+        }
+
+        return {
+          success: true,
+          enrolled: totalEnrolled,
+          remaining: totalEligible - totalEnrolled
+        };
+
+      } catch (error) {
+        console.error('Error filling all groups:', error);
+        throw error;
+      }
+    },
+
+    async enrollDistributed(enrollData) {
+      const { sessionId, courseId, totalEligible } = enrollData.metadata;
+
+      try {
+        // 1. Obtener todos los grupos con capacidad disponible
+        const coursesRes = await fetch(`http://localhost:3000/api/sessions/${sessionId}/courses`);
+        const courses = await coursesRes.json();
+        const existingGroups = courses.filter(c => c.id === parseInt(courseId));
+
+        if (existingGroups.length === 0) {
+          throw new Error('No groups found for this course');
+        }
+
+        // 2. Calcular capacidad disponible por grupo
+        const groupsWithCapacity = existingGroups.map(group => ({
+          offeringId: group.offeringId,
+          groupNumber: group.groupNumber,
+          currentEnrollment: group.currentEnrollment,
+          maxStudents: group.maxStudents || 50,
+          availableSeats: (group.maxStudents || 50) - group.currentEnrollment
+        })).filter(g => g.availableSeats > 0);
+
+        if (groupsWithCapacity.length === 0) {
+          throw new Error('All groups are at full capacity');
+        }
+
+        console.log('Distribution plan:', {
+          totalStudents: totalEligible,
+          availableGroups: groupsWithCapacity.length,
+          groupCapacities: groupsWithCapacity
+        });
+
+        // 3. Calcular distribución equitativa basada en TOTAL DE ESTUDIANTES ELEGIBLES
+        const totalCapacity = groupsWithCapacity.reduce((sum, g) => sum + g.availableSeats, 0);
+        const studentsToDistribute = Math.min(totalEligible, totalCapacity);
+
+        // Dividir equitativamente entre grupos
+        const baseStudentsPerGroup = Math.floor(studentsToDistribute / groupsWithCapacity.length);
+        const remainder = studentsToDistribute % groupsWithCapacity.length;
+
+        console.log('Distribution calculation:', {
+          totalCapacity,
+          studentsToDistribute,
+          basePerGroup: baseStudentsPerGroup,
+          remainder
+        });
+
+        // 4. Distribuir estudiantes
+        let totalEnrolled = 0;
+
+        for (let i = 0; i < groupsWithCapacity.length; i++) {
+          const group = groupsWithCapacity[i];
+
+          // Asignar base + 1 extra para los primeros grupos (para distribuir el remainder)
+          let studentsForThisGroup = baseStudentsPerGroup;
+          if (i < remainder) {
+            studentsForThisGroup += 1;
+          }
+
+          // No exceder la capacidad del grupo
+          studentsForThisGroup = Math.min(studentsForThisGroup, group.availableSeats);
+
+          if (studentsForThisGroup <= 0) continue;
+
+          console.log(`Enrolling ${studentsForThisGroup} students in group ${group.groupNumber}`);
+
+          // Inscribir en este grupo específico
+          const response = await fetch('http://localhost:3000/api/enrollment-automation/auto-enroll', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sessionId: sessionId,
+              courseId: courseId,
+              offeringId: group.offeringId,
+              groupNumber: group.groupNumber,
+              maxStudents: studentsForThisGroup
+            })
+          });
+
+          if (!response.ok) {
+            console.error(`Failed to enroll in group ${group.groupNumber}`);
+            continue;
+          }
+
+          const result = await response.json();
+          totalEnrolled += result.enrolled || 0;
+
+          console.log(`Enrolled ${result.enrolled} in group ${group.groupNumber}`);
+        }
+
+        return {
+          success: true,
+          enrolled: totalEnrolled,
+          remaining: totalEligible - totalEnrolled
+        };
+
+      } catch (error) {
+        console.error('Error in distribute enrollment:', error);
+        throw error;
+      }
+    },
+
+    async confirmAutoEnroll() {
+      if (!this.autoEnrollData || !this.autoEnrollData.metadata) {
+        this.showNotification('error', 'Error', 'No enrollment data available');
+        return;
+      }
+
+      if (!this.autoEnrollData.students || this.autoEnrollData.students.length === 0) {
+        this.showNotification('info', 'No Students', 'There are no students to enroll');
         this.closeAutoEnrollModal();
+        return;
+      }
+
+      const currentOfferingId = this.autoEnrollData.metadata.offeringId;
+      const currentGroupNumber = this.autoEnrollData.metadata.groupNumber;
+
+      // Verificar cuántos grupos existen para esta materia
+      const { sessionId, courseId } = this.autoEnrollData.metadata;
+
+      try {
+        const coursesRes = await fetch(`http://localhost:3000/api/sessions/${sessionId}/courses`);
+        const courses = await coursesRes.json();
+
+        const existingGroups = courses.filter(c => c.id === parseInt(courseId));
+
+        // Si hay más de un grupo, mostrar opciones
+        if (existingGroups.length > 1) {
+          this.pendingEnrollmentData = {
+            ...this.autoEnrollData,
+            existingGroups: existingGroups,
+            currentOfferingId: currentOfferingId,
+            currentGroupNumber: currentGroupNumber
+          };
+
+          this.closeAutoEnrollModal();
+          this.showEnrollmentOptionsModal = true;
+          this.enrollmentOption = 'current'; // Opción por defecto
+        } else {
+          // Solo hay un grupo, proceder directamente
+          await this.executeAutoEnroll('current');
+        }
+      } catch (error) {
+        console.error('Error checking groups:', error);
+        this.showNotification('error', 'Error', 'Failed to check existing groups');
       }
     },
 
@@ -1051,63 +1316,133 @@ async confirmAutoEnroll() {
       const subject = this.autoEnrollData.subject;
       const sessionId = this.autoEnrollData.metadata.sessionId;
       const courseId = this.autoEnrollData.metadata.courseId;
+      const maxCapacity = this.autoEnrollData.metadata.maxCapacity || 50;
 
       // Cerrar el modal de auto-enrollment
       this.closeAutoEnrollModal();
 
       try {
-        // Obtener el programId de la sesión actual
+        // Obtener información de la sesión actual
         const sessionRes = await fetch(`http://localhost:3000/api/sessions/${sessionId}`);
         if (!sessionRes.ok) throw new Error('Failed to get session info');
-        
+
         const sessionData = await sessionRes.json();
-        const programId = sessionData.programId;
 
-        // Crear Grupo 2
-        const response = await fetch('http://localhost:3000/api/enrollment-automation/add-to-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            courseId: parseInt(courseId),
-            programId: programId,
-            createNewGroup: true
-          })
-        });
+        // Obtener el número de grupo más alto existente
+        const coursesRes = await fetch(`http://localhost:3000/api/sessions/${sessionId}/courses`);
+        const courses = await coursesRes.json();
 
-        const result = await response.json();
+        const existingGroups = courses.filter(c => c.id === parseInt(courseId));
+        const nextGroupNumber = existingGroups.length > 0
+          ? Math.max(...existingGroups.map(g => g.groupNumber || 1)) + 1
+          : 2;
 
-        if (result.success) {
-          this.showNotification(
-            'success',
-            'Group 2 Created',
-            `${result.message} - ${result.eligibleStudents} students eligible`
-          );
+        // GUARDAR INFORMACIÓN PARA CREAR EL GRUPO DESPUÉS
+        this.selectedGroupForTeacher = {
+          sessionId: sessionId,
+          sessionName: sessionData.sessionName,
+          courseCode: subject.code,
+          courseId: courseId,
+          programId: sessionData.programId,
+          groupNumber: nextGroupNumber,
+          maxCapacity: maxCapacity,
+          isPendingCreation: true // Indicador de que aún no se ha creado
+        };
 
-          // Recargar datos
-          await this.loadSessions();
-          
-          // Si estaba abierto el modal de subjects, recargar también
-          if (this.currentSessionId) {
-            await this.loadSessionCourses(this.currentSessionId);
+        // Abrir modal de selección de profesor
+        this.selectedTeacherId = '';
+        this.showTeacherAssignmentModal = true;
+
+        this.showNotification(
+          'info',
+          'Assign Teacher',
+          `Please assign a teacher for Group ${nextGroupNumber}`
+        );
+
+      } catch (error) {
+        console.error('Error preparing new group:', error);
+        this.showNotification('error', 'Error', 'Failed to prepare new group');
+      }
+    },
+
+    async assignTeacherToGroup() {
+      if (!this.selectedTeacherId) {
+        this.showNotification('error', 'Validation Error', 'Please select a teacher');
+        return;
+      }
+
+      if (!this.selectedGroupForTeacher) {
+        this.showNotification('error', 'Error', 'No group information available');
+        return;
+      }
+
+      try {
+        let offeringId = this.selectedGroupForTeacher.offeringId;
+
+        // Si el grupo está pendiente de creación, crearlo primero
+        if (this.selectedGroupForTeacher.isPendingCreation) {
+          const createResponse = await fetch('http://localhost:3000/api/enrollment-automation/add-to-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              courseId: parseInt(this.selectedGroupForTeacher.courseId),
+              programId: this.selectedGroupForTeacher.programId,
+              createNewGroup: true
+            })
+          });
+
+          const createResult = await createResponse.json();
+
+          if (!createResult.success) {
+            throw new Error(createResult.message || 'Failed to create new group');
           }
 
-          // Si hay más de 50 estudiantes todavía, notificar
-          if (result.eligibleStudents > 50) {
-            setTimeout(() => {
-              this.showNotification(
-                'warning',
-                'Additional Groups Needed',
-                `You may need to create additional groups. Total remaining demand: ${result.eligibleStudents} students`
-              );
-            }, 2000);
+          offeringId = createResult.offeringId;
+          this.showNotification('success', 'Group Created', `Group ${createResult.groupNumber} has been created`);
+        }
+
+        // Ahora asignar el profesor al offering
+        const response = await fetch(
+          `http://localhost:3000/api/sessions/${this.selectedGroupForTeacher.sessionId}/offerings/${offeringId}/teacher`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              teacherId: parseInt(this.selectedTeacherId)
+            })
           }
-        } else {
-          this.showNotification('error', 'Error', result.message);
+        );
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to assign teacher');
+        }
+
+        const groupName = this.selectedGroupForTeacher.groupNumber > 1
+          ? `${this.selectedGroupForTeacher.courseCode}-${this.selectedGroupForTeacher.groupNumber}`
+          : this.selectedGroupForTeacher.courseCode;
+
+        this.showNotification(
+          'success',
+          'Teacher Assigned',
+          `Teacher assigned to ${groupName} successfully!`
+        );
+
+        // Cerrar modal
+        this.showTeacherAssignmentModal = false;
+        this.selectedGroupForTeacher = null;
+        this.selectedTeacherId = '';
+
+        // Recargar datos
+        await this.loadSessions();
+
+        if (this.currentSessionId) {
+          await this.loadSessionCourses(this.currentSessionId);
         }
 
       } catch (error) {
-        console.error('Error creating Group 2:', error);
-        this.showNotification('error', 'Error', 'Failed to create Group 2');
+        console.error('Error assigning teacher:', error);
+        this.showNotification('error', 'Error', error.message || 'Failed to assign teacher');
       }
     },
 

@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.services';
 
 @Injectable()
 export class StudentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async countStudents(): Promise<number> {
     const total = await this.prisma.student.count();
@@ -53,20 +53,20 @@ export class StudentsService {
     });
 
     return sessions.map(s => {
-      const totalEnrolled = s.offerings.reduce((sum, offering) => 
+      const totalEnrolled = s.offerings.reduce((sum, offering) =>
         sum + offering._count.enrollments, 0
       );
 
-      const totalCapacity = s.offerings.reduce((sum, offering) => 
+      const totalCapacity = s.offerings.reduce((sum, offering) =>
         sum + (offering.maxStudents || 30), 0
       );
 
-      const occupancy = totalCapacity > 0 
-        ? Math.round((totalEnrolled / totalCapacity) * 100) 
+      const occupancy = totalCapacity > 0
+        ? Math.round((totalEnrolled / totalCapacity) * 100)
         : 0;
 
       const firstTeacher = s.offerings[0]?.teacher;
-      const professorName = firstTeacher 
+      const professorName = firstTeacher
         ? `${firstTeacher.firstName} ${firstTeacher.lastName}`
         : 'N/A';
 
@@ -76,10 +76,10 @@ export class StudentsService {
         id: s.id,
         name: s.sessionName,
         program: s.program?.programName || 'N/A',
-        month: s.startDate.toLocaleString('en-US', { 
-          month: 'long', 
-          year: 'numeric', 
-          timeZone: 'UTC' 
+        month: s.startDate.toLocaleString('en-US', {
+          month: 'long',
+          year: 'numeric',
+          timeZone: 'UTC'
         }),
         occupancy: occupancy,
         status: new Date(s.endDate) > new Date() ? 'active' : 'ended',
@@ -125,7 +125,7 @@ export class StudentsService {
     }
 
     const growthRate = ((currentYearEnrollments - lastYearEnrollments) / lastYearEnrollments) * 100;
-    
+
     return Math.round(growthRate * 10) / 10;
   }
 
@@ -133,7 +133,7 @@ export class StudentsService {
     try {
       console.log('🔍 Starting getMissingSubjectsByStudent...');
 
-      // 1️⃣ Obtener todos los cursos con sus programas
+      // Obtener todos los cursos con sus programas
       const allCourses = await this.prisma.course.findMany({
         include: {
           programCourses: {
@@ -147,17 +147,17 @@ export class StudentsService {
         }
       });
 
-      console.log(`📚 Total courses found: ${allCourses.length}`);
+      console.log(`Total courses found: ${allCourses.length}`);
 
       if (allCourses.length === 0) {
-        console.log('⚠️ No courses found in database');
+        console.log('No courses found in database');
         return { labels: [], data: [] };
       }
 
-      // 2️⃣ Obtener todos los estudiantes activos con sus relaciones
+      // Obtener todos los estudiantes activos con sus relaciones
       const allStudents = await this.prisma.student.findMany({
-        where: { 
-          status: 'active' 
+        where: {
+          status: 'active'
         },
         include: {
           enrollments: {
@@ -182,14 +182,14 @@ export class StudentsService {
         }
       });
 
-      console.log(`👥 Total active students: ${allStudents.length}`);
+      console.log(`Total active students: ${allStudents.length}`);
 
       if (allStudents.length === 0) {
-        console.log('⚠️ No active students found');
+        console.log('No active students found');
         return { labels: [], data: [] };
       }
 
-      // 3️⃣ Calcular estudiantes faltantes por cada curso
+      // Calcular estudiantes faltantes por cada curso
       const missingData = allCourses.map(course => {
         // Obtener los IDs de los programas que incluyen este curso
         const programIds = course.programCourses.map(pc => pc.programId);
@@ -205,7 +205,7 @@ export class StudentsService {
         }
 
         // Estudiantes del programa que deberían tomar este curso
-        const studentsInProgram = allStudents.filter(student => 
+        const studentsInProgram = allStudents.filter(student =>
           programIds.includes(student.programId)
         );
 
@@ -240,7 +240,7 @@ export class StudentsService {
         };
       });
 
-      console.log('📊 Missing data calculated:', missingData.slice(0, 3));
+      //console.log('Missing data calculated:', missingData.slice(0, 3));
 
       // 4️⃣ Filtrar y ordenar: Top 6 cursos con más estudiantes faltantes
       const topMissing = missingData
@@ -248,13 +248,13 @@ export class StudentsService {
         .sort((a, b) => b.missing - a.missing)
         .slice(0, 6);
 
-      console.log('✅ Top 6 courses with missing students:', topMissing);
+      //console.log('Top 6 courses with missing students:', topMissing);
 
       if (topMissing.length === 0) {
-        console.log('✅ All students have completed all required courses!');
-        return { 
-          labels: ['No Data'], 
-          data: [0] 
+        console.log('All students have completed all required courses!');
+        return {
+          labels: ['No Data'],
+          data: [0]
         };
       }
 
@@ -264,10 +264,10 @@ export class StudentsService {
       };
 
     } catch (error) {
-      console.error('❌ Error in getMissingSubjectsByStudent:', error);
-      return { 
-        labels: [], 
-        data: [] 
+      console.error('Error in getMissingSubjectsByStudent:', error);
+      return {
+        labels: [],
+        data: []
       };
     }
   }
@@ -313,31 +313,31 @@ export class StudentsService {
       ]
     });
 
-    console.log(`📊 Processing ${students.length} students...`);
+    console.log(`Processing ${students.length} students...`);
 
     return students.map(student => {
-      // ✅ OBTENER CURSOS DEL PROGRAMA DEL ESTUDIANTE
+      // OBTENER CURSOS DEL PROGRAMA DEL ESTUDIANTE
       const programCourseIds = student.program?.programCourses?.map(pc => pc.courseId) || [];
-      
-      // ✅ FILTRAR SOLO RECORDS QUE PERTENECEN AL PROGRAMA
-      const completedRecords = student.records.filter(r => 
+
+      // FILTRAR SOLO RECORDS QUE PERTENECEN AL PROGRAMA
+      const completedRecords = student.records.filter(r =>
         ['passed', 'completed', 'transferred', 'completado'].includes(r.status?.toLowerCase() || '') &&
         programCourseIds.includes(r.courseId) // ⭐ FILTRO AÑADIDO
       );
-      
-      // ✅ CALCULAR CRÉDITOS SOLO DE CURSOS DEL PROGRAMA
+
+      // CALCULAR CRÉDITOS SOLO DE CURSOS DEL PROGRAMA
       const unitsEarned = completedRecords.reduce((sum, record) => {
         const course = record.course;
         return sum + (course.credits || 3);
       }, 0);
 
-      // ✅ Process grades
+      // Process grades
       const grades = {};
-      
-      // 1️⃣ FIRST: Add enrollments (courses in progress)
+
+      // FIRST: Add enrollments (courses in progress)
       student.enrollments.forEach(enrollment => {
         const courseId = enrollment.offering.courseId;
-        
+
         grades[courseId] = {
           grade: null,
           letter: 'IP',
@@ -348,11 +348,11 @@ export class StudentsService {
           isEnrolled: true
         };
       });
-      
-      // 2️⃣ THEN: Process records (overwrites enrollments if completed)
+
+      // THEN: Process records (overwrites enrollments if completed)
       student.records.forEach(record => {
         const numericGrade = this.convertGradeToNumeric(record.grade);
-        
+
         grades[record.courseId] = {
           grade: numericGrade,
           letter: record.grade || '-',
@@ -364,9 +364,9 @@ export class StudentsService {
         };
       });
 
-      // 🔍 DEBUG: Log first student
+      // DEBUG: Log first student
       if (student.id === students[0]?.id) {
-        console.log('📋 Sample student calculation:', {
+        console.log('Sample student calculation:', {
           studentId: student.studentIdNumber,
           programCourses: programCourseIds.length,
           completedInProgram: completedRecords.length,
@@ -394,13 +394,13 @@ export class StudentsService {
         language: student.language || 'English',
         totalUnits: student.totalUnits,
         transferredUnits: student.transferredUnits,
-        totalUnitsEarned: unitsEarned, // ✅ AHORA SOLO CUENTA CURSOS DEL PROGRAMA
+        totalUnitsEarned: unitsEarned,
         startDate: student.startDate.toISOString().split('T')[0],
-        scheduledCompletionDate: student.scheduledCompletionDate 
-          ? student.scheduledCompletionDate.toISOString().split('T')[0] 
+        scheduledCompletionDate: student.scheduledCompletionDate
+          ? student.scheduledCompletionDate.toISOString().split('T')[0]
           : 'TBD',
-        graduationDate: student.graduationDate 
-          ? student.graduationDate.toISOString().split('T')[0] 
+        graduationDate: student.graduationDate
+          ? student.graduationDate.toISOString().split('T')[0]
           : 'TBD',
         grades: grades
       };
@@ -448,27 +448,27 @@ export class StudentsService {
       throw new NotFoundException(`Student with ID ${studentId} not found`);
     }
 
-    // ✅ OBTENER CURSOS DEL PROGRAMA DEL ESTUDIANTE
+    // OBTENER CURSOS DEL PROGRAMA DEL ESTUDIANTE
     const programCourseIds = student.program?.programCourses?.map(pc => pc.courseId) || [];
-    
-    // ✅ FILTRAR SOLO RECORDS QUE PERTENECEN AL PROGRAMA
-    const completedRecords = student.records.filter(r => 
+
+    // FILTRAR SOLO RECORDS QUE PERTENECEN AL PROGRAMA
+    const completedRecords = student.records.filter(r =>
       ['passed', 'completed', 'transferred', 'completado'].includes(r.status?.toLowerCase() || '') &&
       programCourseIds.includes(r.courseId) // ⭐ FILTRO AÑADIDO
     );
-    
-    // ✅ CALCULAR CRÉDITOS SOLO DE CURSOS DEL PROGRAMA
+
+    // CALCULAR CRÉDITOS SOLO DE CURSOS DEL PROGRAMA
     const unitsEarned = completedRecords.reduce((sum, record) => {
       return sum + (record.course.credits || 3);
     }, 0);
 
-    // ✅ Procesar grades igual que en getAllStudents
+    // Procesar grades igual que en getAllStudents
     const grades = {};
-    
-    // 1️⃣ FIRST: Add enrollments (courses in progress)
+
+    // FIRST: Add enrollments (courses in progress)
     student.enrollments.forEach(enrollment => {
       const courseId = enrollment.offering.courseId;
-      
+
       grades[courseId] = {
         grade: null,
         letter: 'IP',
@@ -479,11 +479,11 @@ export class StudentsService {
         isEnrolled: true
       };
     });
-    
-    // 2️⃣ THEN: Process records (overwrites enrollments if completed)
+
+    // THEN: Process records (overwrites enrollments if completed)
     student.records.forEach(record => {
       const numericGrade = this.convertGradeToNumeric(record.grade);
-      
+
       grades[record.courseId] = {
         grade: numericGrade,
         letter: record.grade || '-',
@@ -512,7 +512,7 @@ export class StudentsService {
       language: student.language || 'English',
       totalUnits: student.totalUnits,
       transferredUnits: student.transferredUnits,
-      totalUnitsEarned: unitsEarned, // ✅ AHORA SOLO CUENTA CURSOS DEL PROGRAMA
+      totalUnitsEarned: unitsEarned,
       startDate: student.startDate.toISOString().split('T')[0],
       scheduledCompletionDate: student.scheduledCompletionDate?.toISOString().split('T')[0] || 'TBD',
       graduationDate: student.graduationDate?.toISOString().split('T')[0] || 'TBD',
@@ -520,17 +520,17 @@ export class StudentsService {
     };
   }
 
-  // ✅ MEJORADO: Convertir grade a numérico
+  // Convertir grade a numérico
   private convertGradeToNumeric(grade: string | null): number | null {
     if (!grade) return null;
-    
+
     // Si ya es numérico, retornarlo
     const numeric = parseFloat(grade);
     if (!isNaN(numeric)) return numeric;
-    
+
     // Si es T o P, no tiene valor numérico
     if (grade === 'T' || grade === 'P') return null;
-    
+
     // Mapeo de letras a números
     const gradeMap: { [key: string]: number } = {
       'A+': 97, 'A': 95, 'A-': 92,
@@ -539,43 +539,43 @@ export class StudentsService {
       'D+': 68, 'D': 65, 'D-': 62,
       'F': 50
     };
-    
+
     return gradeMap[grade.toUpperCase()] || null;
   }
 
-  // ✅ MEJORADO: Mapear status correctamente
+  // Mapear status correctamente
   private mapStatus(status: string | null): string {
     if (!status) return 'Not Started';
-    
+
     const statusLower = status.toLowerCase().trim();
     // Enrolled (curso actual)
     if (statusLower === 'enrolled' || statusLower === 'inscrito') {
       return 'In Progress';
     }
-    
+
     // Transferred
     if (statusLower === 'transferred' || statusLower === 'transferido') {
       return 'Transferred';
     }
-    
+
     // Completed
-    if (statusLower === 'completed' || statusLower === 'completado' || 
-        statusLower === 'passed' || statusLower === 'aprobado') {
+    if (statusLower === 'completed' || statusLower === 'completado' ||
+      statusLower === 'passed' || statusLower === 'aprobado') {
       return 'Completed';
     }
-    
+
     // In Progress
-    if (statusLower === 'in progress' || statusLower === 'pendiente' || 
-        statusLower === 'pending') {
+    if (statusLower === 'in progress' || statusLower === 'pendiente' ||
+      statusLower === 'pending') {
       return 'In Progress';
     }
-    
+
     // Failed
-    if (statusLower === 'failed' || statusLower === 'reprobado' || 
-        statusLower === 'fail') {
+    if (statusLower === 'failed' || statusLower === 'reprobado' ||
+      statusLower === 'fail') {
       return 'Failed';
     }
-    
+
     return 'Not Started';
   }
 

@@ -1,10 +1,10 @@
 // sessions/sessions.controller.ts
-import { Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Patch, Body, Param, ParseIntPipe } from '@nestjs/common';
 import { SessionsService } from './sessions.service';
 
 @Controller('api/sessions')
 export class SessionsController {
-  constructor(private readonly sessionsService: SessionsService) {}
+  constructor(private readonly sessionsService: SessionsService) { }
 
   // Obtener todas las sesiones
   @Get()
@@ -58,9 +58,9 @@ export class SessionsController {
   @Post(':id/courses')
   async addCourseToSession(
     @Param('id', ParseIntPipe) id: number,
-    @Body() data: { courseId: number; maxStudents?: number }
+    @Body() data: { courseId: number; maxStudents?: number; teacherId?: number }
   ) {
-    return this.sessionsService.addCourseToSession(id, data.courseId, data.maxStudents);
+    return this.sessionsService.addCourseToSession(id, data.courseId, data.teacherId, data.maxStudents);
   }
 
   // Eliminar materia de sesión
@@ -86,12 +86,13 @@ export class SessionsController {
   async addStudentToCourse(
     @Param('sessionId', ParseIntPipe) sessionId: number,
     @Param('courseId', ParseIntPipe) courseId: number,
-    @Body() data: { studentId: string }
+    @Body() data: { studentId: string; offeringId?: number }
   ) {
     return this.sessionsService.addStudentToCourse(
-      sessionId, 
-      courseId, 
-      BigInt(data.studentId)
+      sessionId,
+      courseId,
+      BigInt(data.studentId),
+      data.offeringId
     );
   }
 
@@ -108,5 +109,14 @@ export class SessionsController {
   async sendNotifications(@Param('id', ParseIntPipe) id: number) {
     return this.sessionsService.sendSessionNotifications(id);
   }
-  
+
+  // Actualizar profesor de un offering específico
+  @Patch(':sessionId/offerings/:offeringId/teacher')
+  async updateOfferingTeacher(
+    @Param('sessionId', ParseIntPipe) sessionId: number,
+    @Param('offeringId', ParseIntPipe) offeringId: number,
+    @Body() data: { teacherId: number }
+  ) {
+    return this.sessionsService.updateOfferingTeacher(offeringId, data.teacherId);
+  }
 }

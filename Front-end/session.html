@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en-US">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,36 +11,35 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="js/sessions.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-<style>
-  [x-cloak] { display: none !important; }
-  .truncate-subjects {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-</style>
+  <script src="js/auth.js"></script>
+  <script> protectPage() </script>
+  <style>
+    [x-cloak] {
+      display: none !important;
+    }
+
+    .truncate-subjects {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  </style>
 </head>
-<body x-data="dashboard()" x-init="init()"> 
-  
+
+<body x-data="dashboard()" x-init="init()">
+
   <div class="fixed top-20 right-6 z-[9999] space-y-4 max-w-sm">
     <template x-for="notification in notifications" :key="notification.id">
-      <div 
-        x-show="notification.show" 
-        x-transition:enter="transition ease-out duration-300"
-        x-transition:enter-start="opacity-0 translate-x-full"
-        x-transition:enter-end="opacity-100 translate-x-0"
-        x-transition:leave="transition ease-in duration-300"
-        x-transition:leave-start="opacity-100 translate-x-0"
-        x-transition:leave-end="opacity-0 translate-x-full"
-        @click="removeNotification(notification.id)"
-        :class="{
+      <div x-show="notification.show" x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 translate-x-full" x-transition:enter-end="opacity-100 translate-x-0"
+        x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-x-0"
+        x-transition:leave-end="opacity-0 translate-x-full" @click="removeNotification(notification.id)" :class="{
           'bg-[#A6192E] border-[#8E1C2D]': notification.type === 'success',
           'bg-[#D41736] border-[#A6192E]': notification.type === 'error',
           'bg-[#F69A1C] border-[#E35E26]': notification.type === 'warning'
-        }"
-        class="border-l-4 p-4 rounded-lg shadow-xl cursor-pointer text-white">
+        }" class="border-l-4 p-4 rounded-lg shadow-xl cursor-pointer text-white">
         <div class="flex items-center">
           <i class="mr-2" :class="{
             'fa-solid fa-check-circle': notification.type === 'success',
@@ -52,36 +52,34 @@
       </div>
     </template>
   </div>
-  
+
   <header class="bg-[#2D2828] shadow-md border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
     <div class="px-6 py-4">
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-4">
-          <button @click="open = !open" class="w-10 h-10 flex items-center justify-center hover:bg-[#252121] rounded transition-colors">
+          <button @click="open = !open"
+            class="w-10 h-10 flex items-center justify-center hover:bg-[#252121] rounded transition-colors">
             <span class="text-2xl text-white">☰</span>
           </button>
-          
+
           <div class="absolute right-80">
-            <input type="text" x-model="searchQuery" placeholder="Search" class="w-full bg-gray-100 border border-gray-300 rounded-md px-2 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#D41736] transition shadow-sm placeholder:text-gray-400">
+            <input type="text" x-model="searchQuery" placeholder="Search"
+              class="w-full bg-gray-100 border border-gray-300 rounded-md px-2 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#D41736] transition shadow-sm placeholder:text-gray-400">
           </div>
-          
+
           <div class="fixed right-60">
-            <button @click="showFilters = !showFilters" class="w-10 h-10 flex items-center justify-center text-white bg-[#A6192E] border-2 border-[#D41736] hover:bg-[#8E1C2D] hover:border-[#A6192E] transition transform duration-300 hover:scale-110 rounded">
+            <button @click="showFilters = !showFilters"
+              class="w-10 h-10 flex items-center justify-center text-white bg-[#A6192E] border-2 border-[#D41736] hover:bg-[#8E1C2D] hover:border-[#A6192E] transition transform duration-300 hover:scale-110 rounded">
               <i class="fa-solid fa-filter"></i>
             </button>
-            
-            <div 
-              x-show="showFilters"
-              @click.outside="showFilters = false"
-              x-transition:enter="transition ease-out duration-200"
-              x-transition:enter-start="opacity-0 translate-y-1"
-              x-transition:enter-end="opacity-100 translate-y-0"
-              x-transition:leave="transition ease-in duration-150"
-              x-transition:leave-start="opacity-100 translate-y-0"
-              x-transition:leave-end="opacity-0 translate-y-1"
+
+            <div x-show="showFilters" @click.outside="showFilters = false"
+              x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-1"
+              x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150"
+              x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-1"
               class="absolute right-0 top-full w-80 bg-white rounded-lg shadow-xl border-2 border-gray-200 p-6 mt-2"
               x-cloak>
-              
+
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-bold text-gray-800">Filters</h3>
                 <button @click="showFilters = false" class="text-gray-500 hover:text-gray-700">
@@ -92,7 +90,8 @@
               <div class="space-y-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Program</label>
-                  <select x-model="filters.program" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#D41736]">
+                  <select x-model="filters.program"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#D41736]">
                     <option value="all">All Programs</option>
                     <option value="bachelor">Bachelor's</option>
                     <option value="associate">Associate</option>
@@ -101,7 +100,8 @@
 
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Academic Session</label>
-                  <select x-model="filters.session" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#D41736]">
+                  <select x-model="filters.session"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#D41736]">
                     <option value="all">All Sessions</option>
                     <option value="session1">Session 1</option>
                     <option value="session2">Session 2</option>
@@ -118,7 +118,8 @@
 
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Month</label>
-                  <select x-model="filters.month" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#D41736]">
+                  <select x-model="filters.month"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#D41736]">
                     <option value="all">All months</option>
                     <option value="January">January</option>
                     <option value="February">February</option>
@@ -137,7 +138,8 @@
 
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Occupancy Level</label>
-                  <select x-model="filters.occupancy" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#D41736]">
+                  <select x-model="filters.occupancy"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#D41736]">
                     <option value="all">All Levels</option>
                     <option value="critical">Critical</option>
                     <option value="low">Low</option>
@@ -148,7 +150,8 @@
 
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-                  <select x-model="filters.subject" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#D41736]">
+                  <select x-model="filters.subject"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#D41736]">
                     <option value="all">All Subjects</option>
                     <option value="MATH 201">MATH 201</option>
                     <option value="MATH 202">MATH 202</option>
@@ -162,27 +165,27 @@
                 </div>
 
                 <div class="flex gap-3 pt-4 border-t border-gray-200">
-                  <button @click="clearFilters()" class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition text-sm font-medium">
+                  <button @click="clearFilters()"
+                    class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition text-sm font-medium">
                     Clear All
                   </button>
-                  <button @click="applyFilters()" class="flex-1 px-4 py-2 bg-[#D41736] text-white rounded-md hover:bg-[#A6192E] transition text-sm font-medium">
+                  <button @click="applyFilters()"
+                    class="flex-1 px-4 py-2 bg-[#D41736] text-white rounded-md hover:bg-[#A6192E] transition text-sm font-medium">
                     Apply Filters
                   </button>
                 </div>
               </div>
             </div>
           </div>
-          
-          <button class="w-10 h-10 flex items-center justify-center fixed right-10 hover:bg-[#252121] rounded transition-colors">
+
+          <button
+            class="w-10 h-10 flex items-center justify-center fixed right-10 hover:bg-[#252121] rounded transition-colors">
             <i class="fa-solid fa-circle-user fa-2xl" style="color: #ffffff;"></i>
           </button>
-          
-          <img 
-            src="https://cdn.sdgku.edu/wp-content/uploads/2023/11/cropped-SDGKU_Globe-square.png" 
-            alt="SDGKU Logo"
-            class="w-10 h-10 object-contain"
-          >
-          
+
+          <img src="https://cdn.sdgku.edu/wp-content/uploads/2023/11/cropped-SDGKU_Globe-square.png" alt="SDGKU Logo"
+            class="w-10 h-10 object-contain">
+
           <div>
             <h1 class="text-2xl font-bold text-[#fff]">SDGKU Dashboard</h1>
           </div>
@@ -191,62 +194,70 @@
     </div>
   </header>
 
-  <aside 
-    x-show="open"
-    x-transition:enter="transition transform duration-300"
-    x-transition:enter-start="-translate-x-full opacity-0"
-    x-transition:enter-end="translate-x-0 opacity-100"
-    x-transition:leave="transition transform duration-300"
-    x-transition:leave-start="translate-x-0 opacity-100"
+  <aside x-show="open" x-transition:enter="transition transform duration-300"
+    x-transition:enter-start="-translate-x-full opacity-0" x-transition:enter-end="translate-x-0 opacity-100"
+    x-transition:leave="transition transform duration-300" x-transition:leave-start="translate-x-0 opacity-100"
     x-transition:leave-end="-translate-x-full opacity-0"
-    class="w-60 bg-[#A6192E] text-white h-screen p-4 top-16 fixed z-40"
-    x-cloak>
-    
+    class="w-60 bg-[#A6192E] text-white h-screen p-4 top-16 fixed z-40" x-cloak>
+
     <ul class="pt-6 space-y-4 text-xl font-medium">
-      <li><a href="dashboard.html" class="block w-full px-4 py-2 rounded hover:bg-[#8E1C2D]"><i class="fa-solid fa-chart-line mr-2"></i>Dashboard</a></li>
-      <li><a href="session.html" class="block w-full px-4 py-2 rounded bg-[#D41736]"><i class="fa-solid fa-calendar-days mr-2"></i>Sessions</a></li>
-      <li><a href="subjects.html" class="block w-full px-4 py-2 rounded hover:bg-[#8E1C2D]"><i class="fa-solid fa-book mr-2"></i>Subjects</a></li>
-      <li><a href="students.html" class="block w-full px-4 py-2 rounded hover:bg-[#8E1C2D]"><i class="fa-solid fa-users mr-2"></i>Students</a></li>
-      <li><a href="reports.html" class="block w-full px-4 py-2 rounded hover:bg-[#8E1C2D]"><i class="fa-solid fa-file-lines mr-2"></i>Academic Analytics</a></li>
-      <li><a href="settings.html" class="block w-full px-4 py-2 rounded hover:bg-[#8E1C2D]"><i class="fa-solid fa-gear mr-2"></i>Settings</a></li>
+      <li><a href="index.html" class="block w-full px-4 py-2 rounded hover:bg-[#8E1C2D]"><i
+            class="fa-solid fa-chart-line mr-2"></i>Dashboard</a></li>
+      <li><a href="session.html" class="block w-full px-4 py-2 rounded bg-[#D41736]"><i
+            class="fa-solid fa-calendar-days mr-2"></i>Sessions</a></li>
+      <li><a href="subjects.html" class="block w-full px-4 py-2 rounded hover:bg-[#8E1C2D]"><i
+            class="fa-solid fa-book mr-2"></i>Subjects</a></li>
+      <li><a href="students.html" class="block w-full px-4 py-2 rounded hover:bg-[#8E1C2D]"><i
+            class="fa-solid fa-users mr-2"></i>Students</a></li>
+      <li><a href="reports.html" class="block w-full px-4 py-2 rounded hover:bg-[#8E1C2D]"><i
+            class="fa-solid fa-file-lines mr-2"></i>Academic Analytics</a></li>
+      <li><a href="settings.html" class="block w-full px-4 py-2 rounded hover:bg-[#8E1C2D]"><i
+            class="fa-solid fa-gear mr-2"></i>Settings</a></li>
     </ul>
   </aside>
 
-  <main :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'" class="flex-1 p-6 bg-gray-100 min-h-screen pt-20">
+  <main :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'"
+    class="flex-1 p-6 bg-gray-100 min-h-screen pt-20">
     <div class="flex justify-between items-center mb-6">
       <div>
         <h1 class="text-3xl font-bold text-gray-800 mb-2">Sessions</h1>
         <p class="text-gray-600">Manage and monitor academic sessions</p>
         <p x-show="message" x-text="message" class="text-sm text-[#D41736] font-medium mt-1"></p>
       </div>
-      <button @click="openModal({}, 'add')" class="bg-[#D41736] hover:bg-[#A6192E] text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+      <button @click="openModal({}, 'add')"
+        class="bg-[#D41736] hover:bg-[#A6192E] text-white font-semibold py-2 px-4 rounded-lg transition-colors">
         <i class="fa-solid fa-plus mr-1"></i>Add New Session
       </button>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-fr">
-      <template x-for="session in (searchQuery.length > 0 ? sessions.filter(s => s.subject.toLowerCase().includes(searchQuery.toLowerCase()) || s.professor.toLowerCase().includes(searchQuery.toLowerCase()) || s.program.toLowerCase().includes(searchQuery.toLowerCase())) : sessions)" :key="session.id">
-        <div class="bg-white rounded-xl border-2 border-gray-200 hover:border-[#D41736] p-4 shadow-md hover:shadow-xl transform transition duration-300 hover:scale-105">
+      <template
+        x-for="session in (searchQuery.length > 0 ? sessions.filter(s => s.subject.toLowerCase().includes(searchQuery.toLowerCase()) || s.professor.toLowerCase().includes(searchQuery.toLowerCase()) || s.program.toLowerCase().includes(searchQuery.toLowerCase())) : sessions)"
+        :key="session.id">
+        <div
+          class="bg-white rounded-xl border-2 border-gray-200 hover:border-[#D41736] p-4 shadow-md hover:shadow-xl transform transition duration-300 hover:scale-105">
           <div class="flex items-center justify-between mb-2">
-            <span class="bg-gradient-to-r from-[#D41736] to-[#A6192E] text-white px-3 py-1 rounded-full font-semibold text-xs flex items-center">
+            <span
+              class="bg-gradient-to-r from-[#D41736] to-[#A6192E] text-white px-3 py-1 rounded-full font-semibold text-xs flex items-center">
               <i class="fa-solid fa-graduation-cap mr-1"></i>
               <span x-text="session.program"></span>
             </span>
           </div>
-          
+
           <h3 class="text-xl font-bold text-gray-900 mb-1 flex items-center">
             <i class="fa-solid fa-calendar-alt text-[#D41736] mr-2"></i>
             Session&nbsp;<span x-text="session.number"></span>
           </h3>
 
-          <div class="h-10 mb-2"> <p class="text-sm text-gray-500 font-medium truncate-subjects" x-text="session.subject"></p>
+          <div class="h-10 mb-2">
+            <p class="text-sm text-gray-500 font-medium truncate-subjects" x-text="session.subject"></p>
           </div>
-          
+
           <p class="text-sm text-gray-500 mb-3 flex items-center">
             <i class="fa-solid fa-chalkboard-user mr-1"></i>
             Professor: <span class="ml-1" x-text="session.professor"></span>
           </p>
-          
+
           <div class="flex justify-center mb-3">
             <div class="relative w-24 h-24">
               <canvas :id="session.chartId"></canvas>
@@ -255,12 +266,14 @@
               </div>
             </div>
           </div>
-          
+
           <div class="flex gap-2">
-            <button @click="openModal(session, 'details')" class="w-full bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] hover:from-[#8E1C2D] hover:to-[#A6192E] text-white font-semibold py-2 rounded-lg transition-all duration-300 text-xs flex items-center justify-center">
+            <button @click="openModal(session, 'details')"
+              class="w-full bg-gradient-to-r from-[#A6192E] to-[#8E1C2D] hover:from-[#8E1C2D] hover:to-[#A6192E] text-white font-semibold py-2 rounded-lg transition-all duration-300 text-xs flex items-center justify-center">
               <i class="fa-solid fa-info-circle mr-1"></i>Details
             </button>
-            <button @click="openModal(session, 'edit')" class="w-full bg-[#252121] hover:bg-[#1a1616] text-white font-semibold py-2 rounded-lg transition-all duration-300 text-xs flex items-center justify-center">
+            <button @click="openModal(session, 'edit')"
+              class="w-full bg-[#252121] hover:bg-[#1a1616] text-white font-semibold py-2 rounded-lg transition-all duration-300 text-xs flex items-center justify-center">
               <i class="fa-solid fa-edit mr-1"></i>Edit
             </button>
           </div>
@@ -269,59 +282,53 @@
     </div>
   </main>
 
-  <div x-show="openModalFlag" 
-      x-cloak
-      x-transition.opacity 
-      @click.self="closeModal()" 
-      class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 p-4">
+  <div x-show="openModalFlag" x-cloak x-transition.opacity @click.self="closeModal()"
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 p-4">
 
-    <div x-show="openModalFlag"
-         x-transition
-         @click.outside="closeModal()"
-         class="bg-white rounded-xl shadow-2xl w-[700px] relative overflow-hidden">
-      
+    <div x-show="openModalFlag" x-transition @click.outside="closeModal()"
+      class="bg-white rounded-xl shadow-2xl w-[700px] relative overflow-hidden">
+
       <div class="bg-gradient-to-r from-[#D41736] to-[#A6192E] h-[70px] flex items-center justify-between px-6">
-        <h2 class="text-2xl text-white font-bold flex items-center" 
-            x-text="modalType === 'edit' ? ' Edit Session' : modalType === 'details' ? ' Session Details' : ' Add New Session'"></h2>
+        <h2 class="text-2xl text-white font-bold flex items-center"
+          x-text="modalType === 'edit' ? ' Edit Session' : modalType === 'details' ? ' Session Details' : ' Add New Session'">
+        </h2>
         <button @click="closeModal()" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
           <i class="fa-solid fa-times text-xl"></i>
         </button>
       </div>
 
       <div class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-        
-        <div x-show="isEditLocked" class="bg-yellow-100 border-l-4 border-[#F69A1C] text-yellow-800 p-4" role="alert" x-cloak>
+
+        <div x-show="isEditLocked" class="bg-yellow-100 border-l-4 border-[#F69A1C] text-yellow-800 p-4" role="alert"
+          x-cloak>
           <p class="font-bold">Editing Locked</p>
           <p x-text="editWarning"></p>
         </div>
-        
+
         <div class="grid grid-cols-3 gap-4">
           <div>
             <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
               <i class="fa-solid fa-hashtag mr-1 text-xs"></i>ID Session
             </label>
-            <input type="text" x-model="selectedSession.id" 
-                  class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-50 cursor-not-allowed text-sm" 
-                  readonly>
+            <input type="text" x-model="selectedSession.id"
+              class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-50 cursor-not-allowed text-sm" readonly>
           </div>
 
           <div>
             <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
               <i class="fa-solid fa-list-ol mr-1 text-xs"></i>Session #
             </label>
-            <input type="number" x-model="selectedSession.number" 
-                  class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-50 cursor-not-allowed text-sm" 
-                  readonly>
+            <input type="number" x-model="selectedSession.number"
+              class="border border-gray-300 rounded-md px-3 py-2 w-full bg-gray-50 cursor-not-allowed text-sm" readonly>
           </div>
 
           <div>
             <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
               <i class="fa-solid fa-graduation-cap mr-1 text-xs"></i>Program<span class="text-[#D41736] ml-1">*</span>
             </label>
-            <select 
-              x-model="selectedSession.programId"
-              @change="selectedSession.subjects = []; selectedSession.sessionName = `Session ${selectedSession.number}`" 
-              class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm" 
+            <select x-model="selectedSession.programId"
+              @change="selectedSession.subjects = []; selectedSession.sessionName = `Session ${selectedSession.number}`"
+              class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm"
               :disabled="modalType==='details' || isEditLocked"
               :class="{'bg-gray-50 cursor-not-allowed': modalType==='details' || isEditLocked}">
               <option value="">Select Program</option>
@@ -331,138 +338,133 @@
             </select>
           </div>
         </div>
-        
+
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
               <i class="fa-solid fa-calendar mr-1 text-xs"></i>Start Date<span class="text-[#D41736] ml-1">*</span>
             </label>
-            <input type="date" 
-                  x-model="selectedSession.startDate"
-                  class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm" 
-                  :readonly="modalType==='details' || isEditLocked"
-                  :class="{'bg-gray-50 cursor-not-allowed': modalType==='details' || isEditLocked}">
+            <input type="date" x-model="selectedSession.startDate"
+              class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm"
+              :readonly="modalType==='details' || isEditLocked"
+              :class="{'bg-gray-50 cursor-not-allowed': modalType==='details' || isEditLocked}">
           </div>
 
           <div>
             <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
               <i class="fa-solid fa-calendar-check mr-1 text-xs"></i>End Date<span class="text-[#D41736] ml-1">*</span>
             </label>
-            <input type="date" 
-                  x-model="selectedSession.endDate"
-                  class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm" 
-                  :readonly="modalType==='details' || isEditLocked"
-                  :class="{'bg-gray-50 cursor-not-allowed': modalType==='details' || isEditLocked}">
+            <input type="date" x-model="selectedSession.endDate"
+              class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:border-[#D41736] text-sm"
+              :readonly="modalType==='details' || isEditLocked"
+              :class="{'bg-gray-50 cursor-not-allowed': modalType==='details' || isEditLocked}">
           </div>
         </div>
 
-          <div class="grid grid-cols-3 gap-4 items-start">
-        
-            <div class="col-span-2">
-              <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
-                <i class="fa-solid fa-book-open mr-1 text-xs"></i>Subjects & Professors<span class="text-[#D41736] ml-1">*</span>
-              </label>
-              
-              <!-- 👁️ VISTA PARA DETAILS (SOLO LECTURA CON CHIP) -->
-              <template x-if="modalType === 'details'">
-                <div class="border border-gray-300 rounded-md w-full p-3 bg-gray-50 min-h-[42px]">
-                  
-                  <template x-if="selectedSession.coursesWithTeachers && selectedSession.coursesWithTeachers.length > 0">
-                    <div class="space-y-2">
-                      <template x-for="item in selectedSession.coursesWithTeachers" :key="item.courseCode">
-                        <div class="flex items-center gap-2 bg-white p-2 rounded border border-gray-200">
-                          <span class="bg-[#D41736] text-white px-3 py-1 rounded-full text-sm font-medium shrink-0">
-                            <i class="fa-solid fa-book mr-1"></i>
-                            <span x-text="item.courseCode"></span>
-                          </span>
-                          <div class="flex items-center text-gray-700 text-sm">
-                            <i class="fa-solid fa-chalkboard-user mr-1"></i>
-                            <span x-text="getTeacherName(item.teacherId)"></span>
-                          </div>
-                        </div>
-                      </template>
-                    </div>
-                  </template>
+        <div class="grid grid-cols-3 gap-4 items-start">
 
-                  <template x-if="!selectedSession.coursesWithTeachers || selectedSession.coursesWithTeachers.length === 0">
-                    <p class="text-gray-400 text-sm">No subjects assigned</p>
-                  </template>
-                  
-                </div>
-              </template>
-              
-              <!-- ✏️ VISTA PARA ADD/EDIT (CHIPS + DROPDOWN) -->
-              <template x-if="modalType !== 'details'">
-                <div>
-                  <!-- Chips de materias seleccionadas con profesor -->
-                  <div x-show="selectedSession.coursesWithTeachers && selectedSession.coursesWithTeachers.length > 0" 
-                      class="border border-gray-300 rounded-md w-full p-3 mb-2 bg-white min-h-[42px]">
-                    <div class="space-y-2">
-                      <template x-for="(item, index) in selectedSession.coursesWithTeachers" :key="index">
-                        <div class="flex items-center gap-2 bg-gray-50 p-2 rounded border border-gray-200">
-                          <span class="bg-[#D41736] text-white px-3 py-1 rounded-full text-sm font-medium shrink-0">
-                            <i class="fa-solid fa-book mr-1"></i>
-                            <span x-text="item.courseCode"></span>
-                          </span>
-                          
-                          <div class="flex-1 flex items-center border border-gray-300 rounded-md px-3 py-1 text-sm bg-white">
-                            <template x-if="isEditLocked">
-                              <div class="flex items-center text-gray-700">
-                                <i class="fa-solid fa-chalkboard-user mr-2"></i>
-                                <span x-text="getTeacherName(item.teacherId)"></span>
-                              </div>
-                            </template>
-                            <template x-if="!isEditLocked">
-                              <select 
-                                x-model="item.teacherId"
-                                class="w-full border-0 focus:outline-none focus:ring-0"
-                                style="background: transparent;">
-                                <option value="">Select Professor</option>
-                                <template x-for="teacher in allTeachers" :key="teacher.id">
-                                  <option :value="teacher.id" x-text="`${teacher.firstName} ${teacher.lastName}`"></option>
-                                </template>
-                              </select>
-                            </template>
-                          </div>
-                          
-                          <button 
-                            @click="removeCourseWithTeacher(index)"
-                            type="button"
-                            :disabled="isEditLocked"
-                            class="hover:bg-white hover:bg-opacity-20 rounded-full w-6 h-6 flex items-center justify-center disabled:opacity-50 bg-gray-500 text-white shrink-0">
-                            <i class="fa-solid fa-times text-xs"></i>
-                          </button>
-                        </div>
-                      </template>
+          <div class="col-span-2">
+            <label class="text-gray-600 text-sm mb-2 block font-medium flex items-center">
+              <i class="fa-solid fa-book-open mr-1 text-xs"></i>Subjects & Professors<span
+                class="text-[#D41736] ml-1">*</span>
+            </label>
+
+            <!-- 👁️ VISTA PARA DETAILS (SOLO LECTURA CON CHIP) -->
+            <template x-if="modalType === 'details'">
+              <div class="border border-gray-300 rounded-md w-full p-3 bg-gray-50 min-h-[42px]">
+
+                <div x-show="selectedSession.coursesWithTeachers && selectedSession.coursesWithTeachers.length > 0"
+                  class="space-y-2">
+                  <template x-for="item in selectedSession.coursesWithTeachers"
+                    :key="item.courseId + '-' + (item.groupNumber || 1)">
+                    <div class="flex items-center gap-2 bg-white p-2 rounded border border-gray-200">
+                      <span class="bg-[#D41736] text-white px-3 py-1 rounded-full text-sm font-medium shrink-0">
+                        <i class="fa-solid fa-book mr-1"></i>
+                        <span x-text="item.displayCode || item.courseCode"></span>
+                      </span>
+                      <div class="flex items-center text-gray-700 text-sm">
+                        <i class="fa-solid fa-chalkboard-user mr-1"></i>
+                        <span x-text="getTeacherName(item.teacherId)"></span>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <!-- Dropdown para agregar materias -->
-                  <select
-                    x-model="tempSubject"
-                    @change="addCourseWithTeacher()"
-                    class="border border-gray-300 rounded-md w-full p-2 focus:outline-none focus:border-[#D41736] text-sm"
-                    :disabled="isEditLocked || !selectedSession.programId"
-                    :class="{'bg-gray-50 cursor-not-allowed': isEditLocked || !selectedSession.programId}">
-                    <option value="">+ Add a subject</option>
-                    <template x-for="course in availableSubjects" :key="course.code">
-                      <option :value="course.code" x-text="course.name + ' (' + course.code + ')'"></option>
+                  </template>
+                </div>
+
+                <div x-show="!selectedSession.coursesWithTeachers || selectedSession.coursesWithTeachers.length === 0">
+                  <p class="text-gray-400 text-sm">No subjects assigned</p>
+                </div>
+
+              </div>
+            </template>
+
+            <!-- ✏️ VISTA PARA ADD/EDIT (CHIPS + DROPDOWN) -->
+            <template x-if="modalType !== 'details'">
+              <div>
+                <!-- Chips de materias seleccionadas con profesor -->
+                <div x-show="selectedSession.coursesWithTeachers && selectedSession.coursesWithTeachers.length > 0"
+                  class="border border-gray-300 rounded-md w-full p-3 mb-2 bg-white min-h-[42px]">
+                  <div class="space-y-2">
+                    <template x-for="(item, index) in selectedSession.coursesWithTeachers"
+                      :key="item.courseId + '-' + (item.groupNumber || 1)">
+                      <div class="flex items-center gap-2 bg-gray-50 p-2 rounded border border-gray-200">
+                        <span class="bg-[#D41736] text-white px-3 py-1 rounded-full text-sm font-medium shrink-0">
+                          <i class="fa-solid fa-book mr-1"></i>
+                          <span x-text="item.displayCode || item.courseCode"></span>
+                        </span>
+
+                        <div
+                          class="flex-1 flex items-center border border-gray-300 rounded-md px-3 py-1 text-sm bg-white">
+                          <template x-if="isEditLocked">
+                            <div class="flex items-center text-gray-700">
+                              <i class="fa-solid fa-chalkboard-user mr-2"></i>
+                              <span x-text="getTeacherName(item.teacherId)"></span>
+                            </div>
+                          </template>
+                          <template x-if="!isEditLocked">
+                            <select x-model="item.teacherId" class="w-full border-0 focus:outline-none focus:ring-0"
+                              style="background: transparent;">
+                              <option value="">Select Professor</option>
+                              <template x-for="teacher in allTeachers" :key="teacher.id">
+                                <option :value="teacher.id" x-text="`${teacher.firstName} ${teacher.lastName}`">
+                                </option>
+                              </template>
+                            </select>
+                          </template>
+                        </div>
+
+                        <button @click="removeCourseWithTeacher(index)" type="button" :disabled="isEditLocked"
+                          class="hover:bg-white hover:bg-opacity-20 rounded-full w-6 h-6 flex items-center justify-center disabled:opacity-50 bg-gray-500 text-white shrink-0">
+                          <i class="fa-solid fa-times text-xs"></i>
+                        </button>
+                      </div>
                     </template>
-                  </select>
-
-                  <p x-show="!selectedSession.programId" class="text-xs text-[#D41736] mt-1">
-                    <i class="fa-solid fa-arrow-up"></i> Please select a program first.
-                  </p>
-                  <p x-show="selectedSession.programId && filteredSubjectNames.length === 0" class="text-xs text-[#F69A1C] mt-1">
-                    <i class="fa-solid fa-exclamation-triangle"></i> No courses available for this program.
-                  </p>
+                  </div>
                 </div>
-              </template>
-            </div>
-          
+
+                <!-- Dropdown para agregar materias -->
+                <select x-model="tempSubject" @change="addCourseWithTeacher()"
+                  class="border border-gray-300 rounded-md w-full p-2 focus:outline-none focus:border-[#D41736] text-sm"
+                  :disabled="isEditLocked || !selectedSession.programId"
+                  :class="{'bg-gray-50 cursor-not-allowed': isEditLocked || !selectedSession.programId}">
+                  <option value="">+ Add a subject</option>
+                  <template x-for="course in availableSubjects" :key="course.code">
+                    <option :value="course.code" x-text="course.name + ' (' + course.code + ')'"></option>
+                  </template>
+                </select>
+
+                <p x-show="!selectedSession.programId" class="text-xs text-[#D41736] mt-1">
+                  <i class="fa-solid fa-arrow-up"></i> Please select a program first.
+                </p>
+                <p x-show="selectedSession.programId && filteredSubjectNames.length === 0"
+                  class="text-xs text-[#F69A1C] mt-1">
+                  <i class="fa-solid fa-exclamation-triangle"></i> No courses available for this program.
+                </p>
+              </div>
+            </template>
+          </div>
+
           <div class="flex items-center justify-center mt-[38px]">
-            <button
-              @click="openSubjectsModal()"
+            <button @click="openSubjectsModal()"
               :disabled="!selectedSession.id || selectedSession.id === 'Auto-generated'"
               class="bg-[#252121] hover:bg-[#1a1616] text-white font-semibold text-sm w-24 h-10 rounded-lg flex items-center justify-center transition disabled:opacity-50 disabled:cursor-not-allowed">
               <i class="fa-solid fa-sliders mr-1"></i>Manage
@@ -471,31 +473,27 @@
         </div>
 
         <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
-          <button @click="closeModal()" 
-                  class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">
+          <button @click="closeModal()"
+            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">
             Close
           </button>
-          
-          <button x-show="modalType==='edit' || modalType==='details'" 
-                  @click="requestDelete()" 
-                  class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 font-medium transition"
-                  x-cloak>
+
+          <button x-show="modalType==='edit' || modalType==='details'" @click="requestDelete()"
+            class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 font-medium transition" x-cloak>
             <i class="fa-solid fa-trash mr-1"></i>Delete
           </button>
 
-          <button x-show="modalType==='details'" 
-                  @click="sendNotifications(selectedSession.id)" 
-                  class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium transition flex items-center gap-2"
-                  x-cloak>
+          <button x-show="modalType==='details'" @click="sendNotifications(selectedSession.id)"
+            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium transition flex items-center gap-2"
+            x-cloak>
             <i class="fa-solid fa-envelope"></i>
             <span>Send Notifications</span>
           </button>
 
-          <button x-show="modalType==='edit' && !isEditLocked || modalType==='add'" 
-                  @click="saveSession()" 
-                  :disabled="modalType==='edit' && isEditLocked"
-                  class="px-4 py-2 bg-gradient-to-r from-[#D41736] to-[#A6192E] text-white rounded-md hover:from-[#A6192E] hover:to-[#D41736] font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  x-cloak>
+          <button x-show="modalType==='edit' && !isEditLocked || modalType==='add'" @click="saveSession()"
+            :disabled="modalType==='edit' && isEditLocked"
+            class="px-4 py-2 bg-gradient-to-r from-[#D41736] to-[#A6192E] text-white rounded-md hover:from-[#A6192E] hover:to-[#D41736] font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+            x-cloak>
             <i class="fa-solid fa-save mr-1"></i>Save
           </button>
         </div>
@@ -503,39 +501,34 @@
     </div>
   </div>
 
-  <div x-show="showSubjectsModal" 
-      x-cloak
-     x-transition.opacity 
-     @click.self="closeSubjectsModal()" 
-     class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-[60]">
+  <div x-show="showSubjectsModal" x-cloak x-transition.opacity @click.self="closeSubjectsModal()"
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-[60]">
 
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
       <div class="bg-gradient-to-r from-[#D41736] to-[#A6192E] h-16 flex items-center justify-between px-6">
-        <h2 class="text-2xl text-white font-bold flex items-center" 
-            x-text="subjectsView === 'list' ? ' Subject Management' : ' Students - ' + (selectedSubject?.name || '')"></h2>
-        <button @click="closeSubjectsModal()" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
+        <h2 class="text-2xl text-white font-bold flex items-center"
+          x-text="subjectsView === 'list' ? ' Subject Management' : ' Students - ' + (selectedSubject?.name || '')">
+        </h2>
+        <button @click="closeSubjectsModal()"
+          class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
           <i class="fa-solid fa-times text-xl"></i>
         </button>
       </div>
 
       <div class="p-6 overflow-y-auto" style="max-height: calc(90vh - 64px);">
-        
+
         <div class="flex gap-3 mb-6">
-          <button x-show="subjectsView === 'students'" 
-                  @click="backToSubjects()"
-                  class="bg-[#252121] hover:bg-[#1a1616] text-white px-4 py-2 rounded-lg transition-colors font-medium"
-                  x-cloak>
+          <button x-show="subjectsView === 'students'" @click="backToSubjects()"
+            class="bg-[#252121] hover:bg-[#1a1616] text-white px-4 py-2 rounded-lg transition-colors font-medium"
+            x-cloak>
             <i class="fa-solid fa-arrow-left mr-2"></i>Back
           </button>
-          
+
           <div class="flex-1 relative">
             <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-            <input
-              type="text"
-              x-model="subjectSearchTerm"
+            <input type="text" x-model="subjectSearchTerm"
               :placeholder="subjectsView === 'list' ? 'Search subjects...' : 'Search students...'"
-              class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#D41736]"
-            />
+              class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#D41736]" />
           </div>
         </div>
 
@@ -546,17 +539,17 @@
               <p>No subjects found</p>
             </div>
           </template>
-          
-          <template x-for="subject in filteredSubjects" :key="subject.id">
+
+          <template x-for="subject in filteredSubjects" :key="subject.offeringId || subject.id">
             <div class="bg-white rounded-lg shadow-md hover:shadow-xl transition-all p-4 border-l-4 border-[#D41736]">
               <div class="flex items-center justify-between">
                 <div @click="viewStudents(subject)" class="flex-1 cursor-pointer">
                   <div class="flex items-center gap-4">
-                    <div class="bg-red-50 border-2 border-[#D41736] rounded-lg p-3 w-16 h-16 flex items-center justify-center">
-                      <span class="text-2xl font-bold text-[#D41736]" 
-                            x-text="subject.students.length"></span>
+                    <div
+                      class="bg-red-50 border-2 border-[#D41736] rounded-lg p-3 w-16 h-16 flex items-center justify-center">
+                      <span class="text-2xl font-bold text-[#D41736]" x-text="subject.students.length"></span>
                     </div>
-                    
+
                     <div class="flex-1">
                       <h3 class="text-lg font-bold text-gray-800 flex items-center">
                         <i class="fa-solid fa-book-open text-[#A6192E] mr-2"></i>
@@ -564,21 +557,21 @@
                       </h3>
                       <p class="text-sm text-gray-500 flex items-center">
                         <i class="fa-solid fa-code mr-1"></i>
-                        <span x-text="subject.code"></span> • 
+                        <span x-text="subject.code"></span> •
                         <i class="fa-solid fa-chalkboard-user ml-2 mr-1"></i>
                         <span x-text="subject.teacher"></span>
                       </p>
-                      
+
                       <div class="mt-2 flex items-center gap-2">
                         <div class="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
-                          <div 
-                            class="bg-gradient-to-r from-[#D41736] to-[#A6192E] h-full transition-all"
+                          <div class="bg-gradient-to-r from-[#D41736] to-[#A6192E] h-full transition-all"
                             :style="`width: ${(subject.students.filter(s => s.status === 'active').length / subject.students.length) * 100}%`">
                           </div>
                         </div>
                         <span class="text-sm font-medium text-gray-600 flex items-center">
                           <i class="fa-solid fa-user-check mr-1 text-xs"></i>
-                          <span x-text="subject.students.filter(s => s.status === 'active').length"></span>/<span x-text="subject.students.length"></span> active
+                          <span x-text="subject.students.filter(s => s.status === 'active').length"></span>/<span
+                            x-text="subject.students.length"></span> active
                         </span>
                       </div>
                     </div>
@@ -590,7 +583,7 @@
         </div>
 
         <div x-show="subjectsView === 'students'" class="space-y-4" x-cloak>
-          
+
           <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-[#D41736]">
             <div class="flex items-center justify-between mb-4">
               <div>
@@ -606,14 +599,12 @@
                 </p>
               </div>
               <div class="flex items-center gap-3">
-                <button 
-                  @click="autoEnrollStudents(selectedSubject)"
+                <button @click="autoEnrollStudents(selectedSubject)"
                   class="bg-[#D41736] hover:bg-[#A6192E] text-white px-4 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
                   <i class="fa-solid fa-wand-magic-sparkles"></i>
                   <span>Auto-Enroll</span>
                 </button>
-                <button 
-                  @click="openAddStudentModal()"
+                <button @click="openAddStudentModal()"
                   class="bg-[#D41736] hover:bg-[#A6192E] text-white px-4 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
                   <i class="fa-solid fa-user-plus"></i>
                   Add Student
@@ -630,17 +621,18 @@
                 </div>
               </div>
             </div>
-            
+
             <div class="grid grid-cols-8 md:grid-cols-12 lg:grid-cols-16 gap-2">
               <template x-for="(student, index) in filteredStudents" :key="student.id">
                 <div :class="`aspect-square rounded-lg cursor-pointer transition-all hover:scale-110 hover:shadow-lg relative group ${
                        student.status === 'active' ? 'bg-[#D41736] hover:bg-[#A6192E]' : 'bg-gray-400 hover:bg-gray-500'
-                     }`"
-                     :title="`${student.name} - ${student.matricula}`">
+                     }`" :title="`${student.name} - ${student.matricula}`">
                   <div class="absolute inset-0 flex items-center justify-center text-white font-bold text-xs"
-                       x-text="index + 1"></div>
-                  
-                  <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none" x-cloak>
+                    x-text="index + 1"></div>
+
+                  <div
+                    class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none"
+                    x-cloak>
                     <div class="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-xl">
                       <p class="font-semibold" x-text="student.name"></p>
                       <p class="text-gray-300" x-text="student.matricula"></p>
@@ -660,12 +652,12 @@
             </h3>
             <div class="space-y-2 max-h-96 overflow-y-auto">
               <template x-for="(student, index) in filteredStudents" :key="student.id">
-                <div class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors border border-gray-200">
+                <div
+                  class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors border border-gray-200">
                   <div class="flex items-center gap-3">
                     <div :class="`w-8 h-8 rounded flex items-center justify-center text-white font-bold text-sm ${
                            student.status === 'active' ? 'bg-[#D41736] hover:bg-[#A6192E]' : 'bg-gray-400 hover:bg-gray-500'
-                         }`"
-                         x-text="index + 1">
+                         }`" x-text="index + 1">
                     </div>
                     <div>
                       <p class="font-medium text-gray-800" x-text="student.name"></p>
@@ -675,11 +667,10 @@
                   <div class="flex items-center gap-2">
                     <span :class="`px-3 py-1 rounded-full text-xs font-semibold ${
                             student.status === 'active' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
-                          }`"
-                          x-text="student.status === 'active' ? 'ACTIVE' : 'INACTIVE'">
+                          }`" x-text="student.status === 'active' ? 'ACTIVE' : 'INACTIVE'">
                     </span>
                     <button @click="deleteStudent(student.enrollmentId)"
-                            class="text-gray-400 hover:text-[#D41736] transition-colors p-1">
+                      class="text-gray-400 hover:text-[#D41736] transition-colors p-1">
                       <i class="fa-solid fa-trash-alt"></i>
                     </button>
                   </div>
@@ -691,19 +682,14 @@
 
       </div>
     </div>
-    
+
   </div>
 
-  <div x-show="showDeleteModal"
-       x-cloak
-       x-transition.opacity
-       class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75 z-[99]">
-    <div 
-      x-show="showDeleteModal"
-      x-transition
-      @click.outside="showDeleteModal = false"
+  <div x-show="showDeleteModal" x-cloak x-transition.opacity
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75 z-[99]">
+    <div x-show="showDeleteModal" x-transition @click.outside="showDeleteModal = false"
       class="bg-white rounded-xl shadow-2xl w-full max-w-md m-4">
-      
+
       <div class="flex items-center justify-between p-4 border-b border-gray-200">
         <h3 class="text-lg font-bold text-[#D41736] flex items-center">
           <i class="fa-solid fa-triangle-exclamation mr-2"></i>
@@ -713,18 +699,19 @@
           <i class="fa-solid fa-times"></i>
         </button>
       </div>
-      
+
       <div class="p-6">
-        <p class="text-gray-700">Are you sure you want to delete <strong x-text="`Session ${selectedSession.number}`"></strong>? This action cannot be undone.</p>
+        <p class="text-gray-700">Are you sure you want to delete <strong
+            x-text="`Session ${selectedSession.number}`"></strong>? This action cannot be undone.</p>
       </div>
 
       <div class="flex justify-end gap-3 p-4 bg-gray-50 rounded-b-xl">
-        <button @click="showDeleteModal = false" 
-                class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">
+        <button @click="showDeleteModal = false"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">
           Cancel
         </button>
-        <button @click="confirmDelete()" 
-                class="px-4 py-2 bg-[#D41736] text-white rounded-md hover:bg-[#A6192E] font-medium transition">
+        <button @click="confirmDelete()"
+          class="px-4 py-2 bg-[#D41736] text-white rounded-md hover:bg-[#A6192E] font-medium transition">
           <i class="fa-solid fa-trash mr-1"></i>Delete Session
         </button>
       </div>
@@ -732,34 +719,29 @@
   </div>
 
   <!-- MODAL PARA AGREGAR ESTUDIANTES -->
-  <div x-show="showAddStudentModal"
-      x-cloak
-      x-transition.opacity
-      @click.self="closeAddStudentModal()"
-      class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-[70]">
-    
+  <div x-show="showAddStudentModal" x-cloak x-transition.opacity @click.self="closeAddStudentModal()"
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-[70]">
+
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
       <div class="bg-gradient-to-r from-[#D41736] to-[#A6192E] h-16 flex items-center justify-between px-6">
         <h2 class="text-2xl text-white font-bold flex items-center">
-          <i class="fa-solid fa-user-plus mr-2"></i>Add Student to <span class="ml-1" x-text="selectedSubject?.name"></span>
+          <i class="fa-solid fa-user-plus mr-2"></i>Add Student to <span class="ml-1"
+            x-text="selectedSubject?.name"></span>
         </h2>
-        <button @click="closeAddStudentModal()" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
+        <button @click="closeAddStudentModal()"
+          class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
           <i class="fa-solid fa-times text-xl"></i>
         </button>
       </div>
 
       <div class="p-6 overflow-y-auto" style="max-height: calc(80vh - 64px);">
-        
+
         <!-- Búsqueda de estudiantes -->
         <div class="mb-4">
           <div class="relative">
             <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-            <input
-              type="text"
-              x-model="studentSearchTerm"
-              placeholder="Search available students..."
-              class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#D41736]"
-            />
+            <input type="text" x-model="studentSearchTerm" placeholder="Search available students..."
+              class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#D41736]" />
           </div>
         </div>
 
@@ -780,8 +762,9 @@
           </template>
 
           <template x-for="student in filteredAvailableStudents" :key="student.id">
-            <div class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors border border-gray-200 cursor-pointer"
-                @click="selectStudentToAdd(student)">
+            <div
+              class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors border border-gray-200 cursor-pointer"
+              @click="selectStudentToAdd(student)">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-[#D41736] flex items-center justify-center text-white font-bold">
                   <span x-text="student.name.charAt(0)"></span>
@@ -796,8 +779,7 @@
                   </p>
                 </div>
               </div>
-              <button 
-                @click.stop="addStudentToCourse(student.id)"
+              <button @click.stop="addStudentToCourse(student.id)"
                 class="bg-[#D41736] hover:bg-[#A6192E] text-white px-3 py-1 rounded-lg transition-colors text-sm font-medium">
                 <i class="fa-solid fa-plus mr-1"></i>Add
               </button>
@@ -807,8 +789,8 @@
       </div>
 
       <div class="flex justify-end gap-3 p-4 bg-gray-50 rounded-b-xl border-t">
-        <button @click="closeAddStudentModal()" 
-                class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">
+        <button @click="closeAddStudentModal()"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">
           Close
         </button>
       </div>
@@ -816,12 +798,9 @@
   </div>
 
   <!-- MODAL DE AUTO-ENROLLMENT -->
-  <div x-show="showAutoEnrollModalFlag"
-      x-cloak
-      x-transition.opacity
-      @click.self="closeAutoEnrollModal()"
-      class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-[70]">
-    
+  <div x-show="showAutoEnrollModalFlag" x-cloak x-transition.opacity @click.self="closeAutoEnrollModal()"
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-[70]">
+
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden">
       <!-- Header -->
       <div class="bg-gradient-to-r from-[#D41736] to-[#A6192E] p-6">
@@ -833,12 +812,12 @@
             </h2>
             <p class="text-white text-sm mt-1 opacity-90" x-show="autoEnrollData">
               <i class="fa-solid fa-book mr-1"></i>
-              <span x-text="autoEnrollData?.subject?.code"></span> - 
+              <span x-text="autoEnrollData?.subject?.code"></span> -
               <span x-text="autoEnrollData?.subject?.name"></span>
             </p>
           </div>
-          <button @click="closeAutoEnrollModal()" 
-                  class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
+          <button @click="closeAutoEnrollModal()"
+            class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
             <i class="fa-solid fa-times text-xl"></i>
           </button>
         </div>
@@ -846,79 +825,137 @@
 
       <!-- Summary Stats -->
       <div class="p-6 bg-gray-50 border-b border-gray-200">
-        <div class="grid grid-cols-3 gap-4">
+        <div class="grid grid-cols-4 gap-4">
+          <!-- Total Eligible (sin inscribir en ningún grupo) -->
           <div class="bg-white rounded-lg p-4 border-2 border-[#D41736]">
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-gray-600 font-medium">Total Eligible</p>
-                <p class="text-3xl font-bold text-[#D41736]" 
-                  x-text="autoEnrollData?.metadata?.totalEligible || 0"></p>
+                <p class="text-3xl font-bold text-[#D41736]" x-text="autoEnrollData?.metadata?.totalEligible || 0"></p>
+                <p class="text-xs text-gray-500 mt-1">Not enrolled yet</p>
               </div>
               <i class="fa-solid fa-users text-4xl text-[#D41736] opacity-20"></i>
             </div>
           </div>
 
+          <!-- Available Seats (lugares libres en este grupo) -->
           <div class="bg-white rounded-lg p-4 border-2 border-[#A6192E]">
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-gray-600 font-medium">Available Seats</p>
-                <p class="text-3xl font-bold text-[#A6192E]" 
-                  x-text="autoEnrollData?.metadata?.availableSeats || 0"></p>
+                <p class="text-3xl font-bold text-[#A6192E]" x-text="autoEnrollData?.metadata?.availableSeats || 0"></p>
+                <p class="text-xs text-gray-500 mt-1">
+                  <span x-text="autoEnrollData?.metadata?.currentEnrolled || 0"></span> /
+                  <span x-text="autoEnrollData?.metadata?.maxCapacity || 0"></span> enrolled
+                </p>
               </div>
               <i class="fa-solid fa-chair text-4xl text-[#A6192E] opacity-20"></i>
             </div>
           </div>
 
+          <!-- Max Capacity (capacidad total del grupo) -->
           <div class="bg-white rounded-lg p-4 border-2 border-[#252121]">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm text-gray-600 font-medium">To Enroll</p>
-                <p class="text-3xl font-bold text-[#252121]" 
-                  x-text="autoEnrollData?.metadata?.toEnroll || 0"></p>
+                <p class="text-sm text-gray-600 font-medium">Group Capacity</p>
+                <p class="text-3xl font-bold text-[#252121]" x-text="autoEnrollData?.metadata?.maxCapacity || 0"></p>
+                <p class="text-xs text-gray-500 mt-1">
+                  Max students
+                  <span x-show="autoEnrollData?.metadata?.groupNumber > 1"
+                    x-text="'(Group ' + autoEnrollData?.metadata?.groupNumber + ')'">
+                  </span>
+                </p>
               </div>
-              <i class="fa-solid fa-user-plus text-4xl text-[#252121] opacity-20"></i>
+              <i class="fa-solid fa-users-rectangle text-4xl text-[#252121] opacity-20"></i>
+            </div>
+          </div>
+
+          <!-- Total Enrolled (todos los grupos combinados) -->
+          <div class="bg-white rounded-lg p-4 border-2 border-blue-500">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600 font-medium">Already Enrolled</p>
+                <p class="text-3xl font-bold text-blue-600"
+                  x-text="autoEnrollData?.metadata?.totalEnrolledAllGroups || 0"></p>
+                <p class="text-xs text-gray-500 mt-1">
+                  Across
+                  <span x-text="autoEnrollData?.metadata?.allGroups?.length || 1"></span>
+                  group<span x-show="autoEnrollData?.metadata?.allGroups?.length > 1">s</span>
+                </p>
+              </div>
+              <i class="fa-solid fa-user-check text-4xl text-blue-500 opacity-20"></i>
             </div>
           </div>
         </div>
 
-        <!-- Warning de High Demand con botón de Create Group 2 -->
+        <!-- Info adicional: cuántos se inscribirán -->
+        <div class="mt-4 bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+          <div class="flex items-center">
+            <i class="fa-solid fa-info-circle text-blue-600 text-xl mr-3"></i>
+            <div>
+              <p class="font-bold text-blue-800">Enrollment Preview</p>
+              <p class="text-sm text-blue-700">
+                <span class="font-bold" x-text="autoEnrollData?.metadata?.toEnroll || 0"></span>
+                student<span x-show="autoEnrollData?.metadata?.toEnroll !== 1">s</span>
+                will be enrolled in
+                <span x-show="autoEnrollData?.metadata?.groupNumber > 1">
+                  Group <span x-text="autoEnrollData?.metadata?.groupNumber"></span>
+                </span>
+                <span x-show="!autoEnrollData?.metadata?.groupNumber || autoEnrollData?.metadata?.groupNumber === 1">
+                  this group
+                </span>
+                when you confirm.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Warning de High Demand -->
         <div x-show="autoEnrollData?.metadata?.totalEligible > autoEnrollData?.metadata?.availableSeats"
-            class="mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded"
-            x-cloak>
+          class="mt-4 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded" x-cloak>
           <div class="flex items-start justify-between">
             <div class="flex items-center flex-1">
               <i class="fa-solid fa-exclamation-triangle text-yellow-600 text-xl mr-3 flex-shrink-0"></i>
               <div class="flex-1">
                 <p class="font-bold text-yellow-800">High Demand Alert!</p>
                 <p class="text-sm text-yellow-700">
-                  <span x-text="autoEnrollData?.metadata?.totalEligible - autoEnrollData?.metadata?.availableSeats"></span>
-                  students will remain without enrollment. Consider creating Group 2 after this enrollment.
+                  <span class="font-bold"
+                    x-text="autoEnrollData?.metadata?.totalEligible - autoEnrollData?.metadata?.availableSeats"></span>
+                  student<span
+                    x-show="(autoEnrollData?.metadata?.totalEligible - autoEnrollData?.metadata?.availableSeats) !== 1">s</span>
+                  will remain without enrollment in this group.
+                  <span x-show="autoEnrollData?.metadata?.allGroups?.length > 1">
+                    You can use <strong>"Distribute Equally"</strong> or <strong>"Fill All Groups"</strong> to enroll
+                    across all <span x-text="autoEnrollData?.metadata?.allGroups?.length"></span> groups.
+                  </span>
+                  <span
+                    x-show="!autoEnrollData?.metadata?.allGroups || autoEnrollData?.metadata?.allGroups?.length <= 1">
+                    Consider creating an additional group.
+                  </span>
                 </p>
               </div>
             </div>
-            
-            <!-- 🆕 Botón para crear Grupo 2 
-            <button 
-              @click="createGroupTwoFromAutoEnroll()"
+
+            <button @click="createGroupTwoFromAutoEnroll()"
               class="ml-4 px-4 py-2 bg-gradient-to-r from-[#D41736] to-[#A6192E] text-white rounded-lg hover:from-[#A6192E] hover:to-[#D41736] transition font-medium shadow-md whitespace-nowrap flex items-center gap-2">
               <i class="fa-solid fa-plus-circle"></i>
-              <span>Create Group 2</span>
+              <span>Create Additional Group</span>
             </button>
-          -->
           </div>
         </div>
       </div>
 
       <!-- Warning si hay POCOS estudiantes (menos de 10) -->
-      <div x-show="autoEnrollData?.metadata?.totalEligible < 10 && autoEnrollData?.metadata?.totalEligible <= autoEnrollData?.metadata?.availableSeats"
-           class="mt-4 bg-red-50 border-l-4 border-red-400 p-4 rounded"
-           x-cloak>
+      <div
+        x-show="autoEnrollData?.metadata?.totalEligible < 10 && autoEnrollData?.metadata?.totalEligible <= autoEnrollData?.metadata?.availableSeats"
+        class="mt-4 bg-red-50 border-l-4 border-red-400 p-4 rounded" x-cloak>
         <div class="flex items-center">
           <i class="fa-solid fa-user-group text-red-600 text-xl mr-3"></i>
           <div>
             <p class="font-bold text-red-800">Low Enrollment Notice</p>
             <p class="text-sm text-red-700">
-              Only <span class="font-bold" x-text="autoEnrollData?.metadata?.totalEligible"></span> student<span x-show="autoEnrollData?.metadata?.totalEligible !== 1">s</span> eligible for this course.
+              Only <span class="font-bold" x-text="autoEnrollData?.metadata?.totalEligible"></span> student<span
+                x-show="autoEnrollData?.metadata?.totalEligible !== 1">s</span> eligible for this course.
               This is a small group, but you can proceed with enrollment if desired.
             </p>
           </div>
@@ -926,9 +963,9 @@
       </div>
 
       <!-- Success message si hay buenos números (10+) -->
-      <div x-show="autoEnrollData?.metadata?.totalEligible >= 10 && autoEnrollData?.metadata?.totalEligible <= autoEnrollData?.metadata?.availableSeats"
-           class="mt-4 bg-green-50 border-l-4 border-green-400 p-4 rounded"
-           x-cloak>
+      <div
+        x-show="autoEnrollData?.metadata?.totalEligible >= 10 && autoEnrollData?.metadata?.totalEligible <= autoEnrollData?.metadata?.availableSeats"
+        class="mt-4 bg-green-50 border-l-4 border-green-400 p-4 rounded" x-cloak>
         <div class="flex items-center">
           <i class="fa-solid fa-check-circle text-green-600 text-xl mr-3"></i>
           <div>
@@ -942,13 +979,9 @@
       <div class="p-6 pb-4 border-b border-gray-200">
         <div class="relative">
           <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-          <input
-            type="text"
-            x-model="autoEnrollData.searchTerm"
-            x-show="autoEnrollData !== null"
+          <input type="text" x-model="autoEnrollData.searchTerm" x-show="autoEnrollData !== null"
             placeholder="Search students by name, ID, or priority reason..."
-            class="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-[#D41736] transition"
-          />
+            class="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-[#D41736] transition" />
         </div>
       </div>
 
@@ -956,9 +989,10 @@
       <div class="p-6 overflow-y-auto" style="max-height: calc(85vh - 400px); min-height: 300px;">
         <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <i class="fa-solid fa-list-check mr-2 text-[#D41736]"></i>
-          Students to be Enrolled 
+          Students to be Enrolled
           <span class="ml-2 text-sm font-normal text-gray-500">
-            (Showing <span x-text="filteredAutoEnrollStudents.length"></span> of <span x-text="autoEnrollData?.students?.length || 0"></span>)
+            (Showing <span x-text="filteredAutoEnrollStudents.length"></span> of <span
+              x-text="autoEnrollData?.students?.length || 0"></span>)
           </span>
         </h3>
 
@@ -983,17 +1017,19 @@
           </template>
 
           <template x-for="(student, index) in filteredAutoEnrollStudents" :key="student.studentId">
-            <div class="bg-white border-2 border-gray-200 hover:border-[#D41736] rounded-lg p-4 transition-all hover:shadow-md">
+            <div
+              class="bg-white border-2 border-gray-200 hover:border-[#D41736] rounded-lg p-4 transition-all hover:shadow-md">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-4 flex-1">
                   <!-- Número de posición -->
-                  <div class="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-[#D41736] to-[#A6192E] flex items-center justify-center text-white font-bold text-lg shadow-md">
+                  <div
+                    class="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-[#D41736] to-[#A6192E] flex items-center justify-center text-white font-bold text-lg shadow-md">
                     <span x-text="index + 1"></span>
                   </div>
 
                   <!-- Info del estudiante -->
                   <div class="flex-1">
-                    <p class="font-bold text-gray-800 text-lg" 
+                    <p class="font-bold text-gray-800 text-lg"
                       x-text="`${student.studentFirstName} ${student.studentLastName}`"></p>
                     <div class="flex items-center gap-4 mt-1">
                       <p class="text-sm text-gray-600 flex items-center">
@@ -1037,13 +1073,13 @@
           Students are sorted by priority (highest to lowest)
         </div>
         <div class="flex gap-3">
-          <button @click="closeAutoEnrollModal()" 
-                  class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition">
+          <button @click="closeAutoEnrollModal()"
+            class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition">
             <i class="fa-solid fa-times mr-2"></i>Cancel
           </button>
-          <button @click="confirmAutoEnroll()" 
-                  :disabled="!autoEnrollData?.students || autoEnrollData.students.length === 0"
-                  class="px-6 py-3 bg-gradient-to-r from-[#D41736] to-[#A6192E] text-white rounded-lg hover:from-[#A6192E] hover:to-[#D41736] font-bold transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+          <button @click="confirmAutoEnroll()"
+            :disabled="!autoEnrollData?.students || autoEnrollData.students.length === 0"
+            class="px-6 py-3 bg-gradient-to-r from-[#D41736] to-[#A6192E] text-white rounded-lg hover:from-[#A6192E] hover:to-[#D41736] font-bold transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
             <i class="fa-solid fa-check-circle mr-2"></i>
             Confirm Enrollment (<span x-text="autoEnrollData?.metadata?.toEnroll || 0"></span> students)
           </button>
@@ -1052,7 +1088,8 @@
     </div>
   </div>
 
-  <footer :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'" class="bg-[#2D2828] border-t border-[#A6192E]">
+  <footer :class="open ? 'ml-60 transition-all duration-300' : 'ml-0 transition-all duration-300'"
+    class="bg-[#2D2828] border-t border-[#A6192E]">
     <div class="max-w-7xl mx-auto px-6 py-4">
       <div class="flex justify-between items-center">
         <p class="text-sm text-gray-300">© 2025 San Diego Global Knowledge University</p>
@@ -1060,5 +1097,165 @@
     </div>
   </footer>
 
+  <!-- Modal de Asignación de Profesor -->
+  <div x-show="showTeacherAssignmentModal" x-cloak x-transition.opacity @click.self="showTeacherAssignmentModal = false"
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-[80]">
+
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div class="bg-gradient-to-r from-[#D41736] to-[#A6192E] h-16 flex items-center justify-between px-6">
+        <h2 class="text-2xl text-white font-bold flex items-center">
+          <i class="fa-solid fa-chalkboard-user mr-2"></i>
+          Assign Teacher
+        </h2>
+        <button @click="showTeacherAssignmentModal = false"
+          class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
+          <i class="fa-solid fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <div class="p-6">
+        <div class="mb-6">
+          <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+            <p class="text-sm text-gray-600 mb-2">
+              <i class="fa-solid fa-info-circle mr-1"></i>
+              Group Information
+            </p>
+            <div class="space-y-1">
+              <p class="font-semibold text-gray-800">
+                <span x-text="selectedGroupForTeacher?.courseCode"></span>
+                <span x-show="selectedGroupForTeacher?.groupNumber > 1" class="text-[#D41736]"
+                  x-text="'-' + selectedGroupForTeacher?.groupNumber"></span>
+              </p>
+              <p class="text-sm text-gray-600">
+                <i class="fa-solid fa-calendar mr-1"></i>
+                <span x-text="selectedGroupForTeacher?.sessionName"></span>
+              </p>
+            </div>
+          </div>
+
+          <label class="block text-gray-700 text-sm font-medium mb-2">
+            <i class="fa-solid fa-user-tie mr-1"></i>
+            Select Teacher <span class="text-[#D41736]">*</span>
+          </label>
+          <select x-model="selectedTeacherId"
+            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-[#D41736] transition">
+            <option value="">-- Select a teacher --</option>
+            <template x-for="teacher in allTeachers" :key="teacher.id">
+              <option :value="teacher.id" x-text="`${teacher.firstName} ${teacher.lastName}`">
+              </option>
+            </template>
+          </select>
+        </div>
+
+        <div class="flex justify-end gap-3">
+          <button @click="showTeacherAssignmentModal = false"
+            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">
+            Cancel
+          </button>
+          <button @click="assignTeacherToGroup()"
+            class="px-4 py-2 bg-gradient-to-r from-[#D41736] to-[#A6192E] text-white rounded-md hover:from-[#A6192E] hover:to-[#D41736] font-medium transition">
+            <i class="fa-solid fa-check mr-1"></i>
+            Assign Teacher
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Opciones de Enrollment -->
+  <div x-show="showEnrollmentOptionsModal" x-cloak x-transition.opacity @click.self="showEnrollmentOptionsModal = false"
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-[75]">
+
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+      <div class="bg-gradient-to-r from-[#D41736] to-[#A6192E] h-16 flex items-center justify-between px-6">
+        <h2 class="text-2xl text-white font-bold flex items-center">
+          <i class="fa-solid fa-sliders mr-2"></i>
+          Enrollment Options
+        </h2>
+        <button @click="showEnrollmentOptionsModal = false"
+          class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
+          <i class="fa-solid fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <div class="p-6">
+        <div class="mb-6 bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+          <div class="flex items-center">
+            <i class="fa-solid fa-info-circle text-blue-600 text-xl mr-3"></i>
+            <div>
+              <p class="font-bold text-blue-800">Multiple Groups Detected</p>
+              <p class="text-sm text-blue-700">
+                This course has <span class="font-bold"
+                  x-text="pendingEnrollmentData?.existingGroups?.length || 0"></span> group(s).
+                Choose how to distribute students:
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <!-- Opción 1: Llenar grupo actual -->
+          <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all"
+            :class="enrollmentOption === 'current' ? 'border-[#D41736] bg-red-50' : 'border-gray-200 hover:border-gray-300'">
+            <input type="radio" x-model="enrollmentOption" value="current" class="mt-1 mr-3">
+            <div class="flex-1">
+              <p class="font-bold text-gray-800 flex items-center">
+                <i class="fa-solid fa-user-plus mr-2 text-[#D41736]"></i>
+                Fill Current Group Only
+              </p>
+              <p class="text-sm text-gray-600 mt-1">
+                Enroll students only in the first available group until it reaches capacity.
+              </p>
+            </div>
+          </label>
+
+          <!-- Opción 2: Llenar todos los grupos -->
+          <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all"
+            :class="enrollmentOption === 'all' ? 'border-[#D41736] bg-red-50' : 'border-gray-200 hover:border-gray-300'">
+            <input type="radio" x-model="enrollmentOption" value="all" class="mt-1 mr-3">
+            <div class="flex-1">
+              <p class="font-bold text-gray-800 flex items-center">
+                <i class="fa-solid fa-users mr-2 text-[#D41736]"></i>
+                Fill All Groups Sequentially
+              </p>
+              <p class="text-sm text-gray-600 mt-1">
+                Fill the first group completely, then the second, and so on until all students are enrolled.
+              </p>
+            </div>
+          </label>
+
+          <!-- Opción 3: Distribuir equitativamente -->
+          <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all"
+            :class="enrollmentOption === 'distribute' ? 'border-[#D41736] bg-red-50' : 'border-gray-200 hover:border-gray-300'">
+            <input type="radio" x-model="enrollmentOption" value="distribute" class="mt-1 mr-3">
+            <div class="flex-1">
+              <p class="font-bold text-gray-800 flex items-center">
+                <i class="fa-solid fa-scale-balanced mr-2 text-[#D41736]"></i>
+                Distribute Equally
+              </p>
+              <p class="text-sm text-gray-600 mt-1">
+                Distribute students evenly across all groups to balance enrollment.
+              </p>
+            </div>
+          </label>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-6 pt-4 border-t">
+          <button @click="showEnrollmentOptionsModal = false"
+            class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition">
+            <i class="fa-solid fa-times mr-1"></i>
+            Cancel
+          </button>
+          <button @click="executeAutoEnroll(enrollmentOption)"
+            class="px-6 py-2 bg-gradient-to-r from-[#D41736] to-[#A6192E] text-white rounded-lg hover:from-[#A6192E] hover:to-[#D41736] font-bold transition shadow-lg">
+            <i class="fa-solid fa-check-circle mr-1"></i>
+            Confirm Enrollment
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
+
 </html>
