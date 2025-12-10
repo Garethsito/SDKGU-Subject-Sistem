@@ -16,11 +16,11 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { MailModule } from './mail/mail.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { GradesModule } from './grades/grades.module';
-
+import { AdministratorsModule } from './administrators/administrators.module';
 import { EnrollmentAutomationModule } from './enrollment/enrollment-automation.module';
 
 @Module({
-  imports: [AuthModule, StudentsModule, SessionsModule, CoursesModule, ProgramsModule, TeachersModule, ScheduleModule.forRoot(), MailModule, NotificationsModule, GradesModule, EnrollmentAutomationModule],
+  imports: [AuthModule, StudentsModule, SessionsModule, CoursesModule, ProgramsModule, TeachersModule, ScheduleModule.forRoot(), MailModule, NotificationsModule, GradesModule, EnrollmentAutomationModule, AdministratorsModule,],
   controllers: [AppController],
   providers: [AppService, PrismaService, { provide: APP_GUARD, useClass: JwtAuthGuard }],
 })

@@ -1,5 +1,5 @@
 // Back-end/src/students/students.controller.ts
-import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, NotFoundException } from '@nestjs/common';
 import { StudentsService } from './students.service';
 
 @Controller('api/students')
@@ -77,6 +77,30 @@ export class StudentsController {
     } catch (error) {
       console.error('Error fetching student:', error);
       throw new NotFoundException(`Student with ID ${id} not found`);
+    }
+    
+  }
+
+  // 🆕 ENDPOINT PARA IMPORTAR ESTUDIANTES
+  @Post('import')
+  async importStudent(@Body() studentData: any) {
+    try {
+      console.log('📥 Importing student:', studentData);
+      
+      const result = await this.studentsService.importStudent(studentData);
+      
+      return {
+        success: true,
+        message: 'Student imported successfully',
+        student: result
+      };
+    } catch (error) {
+      console.error('❌ Error importing student:', error);
+      
+      return {
+        success: false,
+        message: error.message || 'Failed to import student'
+      };
     }
   }
 }
