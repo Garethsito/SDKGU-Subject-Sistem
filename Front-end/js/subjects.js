@@ -12,8 +12,13 @@ function coursesData() {
 
     showSelectSessionModal: false,
     selectedCourseForSession: null,
+    isCreatingNewGroup: false,
     availableSessions: [],
     loadingSessions: false,
+
+    showTeacherAssignmentModal: false,
+    selectedGroupForTeacher: null,
+    selectedTeacherId: '',
 
     filters: {
       program: 'all',
@@ -28,6 +33,7 @@ function coursesData() {
     newSessionTemplate: null,
     newSession: { number: null, startDate: '', endDate: '', status: 'Planning', courses: [] },
     newSessionCoursesInput: '',
+    tempSubject: '',
 
     toast: { show: false, message: '', type: 'success' },
 
@@ -380,139 +386,16 @@ function coursesData() {
         return;
       }
 
-      const programId = subject.programIds && subject.programIds.length > 0
-        ? subject.programIds[0]
-        : null;
-
-      if (!programId) {
-        this.showToast('Course has no associated program', 'error');
-        return;
-      }
-
-      try {
-        const response = await fetch('http://localhost:3000/api/enrollment-automation/add-to-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            courseId: parseInt(subject.id),
-            programId: programId
-          })
-        });
-
-        const result = await response.json();
-
-        if (!result.success) {
-          if (result.message.includes('already exists')) {
-            // Curso ya existe, ofrecer crear Grupo 2
-            if (confirm(`${result.message}\n\nWould you like to create Group 2 for this course?`)) {
-              await this.createGroupTwo(subject, programId);
-            }
-          } else if (result.message.includes('No active session')) {
-            // No hay sesión activa, abrir modal de selección
-            await this.openSessionSelectionModal(subject);
-          } else {
-            this.showToast(result.message, 'error');
-          }
-          return;
-        }
-
-        // Éxito
-        this.showToast(
-          `${subject.code} added to active session! ${result.eligibleStudents} students eligible.`,
-          'success'
-        );
-
-        await this.fetchCourses();
-        this.courses = [...this.allCourses];
-
-        if (result.eligibleStudents > 50) {
-          setTimeout(() => {
-            this.showToast(
-              `⚠️ ${result.eligibleStudents} students need this course. You may need to create Group 2.`,
-              'warning'
-            );
-          }, 2000);
-        }
-
-        this.selectedCourse = null;
-
-      } catch (error) {
-        console.error('Error adding course to session:', error);
-        this.showToast('Failed to add course to session', 'error');
-      }
+      // SIEMPRE abrir modal de selección de sesión
+      await this.openSessionSelectionModal(subject, false);
     },
 
     async createGroupTwo(subject, programId) {
-      try {
-        // Primero verificar que tengamos una sesión activa
-        const sessionCheckRes = await fetch('http://localhost:3000/api/enrollment-automation/add-to-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            courseId: parseInt(subject.id),
-            programId: programId,
-            createNewGroup: false  // Solo verificar si existe sesión
-          })
-        });
+      // Cerrar el modal de "missing students" si está abierto
+      this.selectedCourse = null;
 
-        const sessionCheck = await sessionCheckRes.json();
-
-        if (!sessionCheck.success) {
-          this.showToast('No active session found. Creating new session first...', 'warning');
-
-          // Redirigir a crear sesión o sugerir al usuario
-          if (confirm('No active session exists. Would you like to create a new session for this course?')) {
-            // Preparar datos y abrir modal de crear sesión
-            this.newSessionTemplate = {
-              id: subject.id,
-              code: subject.code,
-              name: subject.name
-            };
-            this.openCreateSessionModal();
-            return;
-          }
-          return;
-        }
-
-        // Si existe sesión, crear Grupo 2
-        const response = await fetch('http://localhost:3000/api/enrollment-automation/add-to-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            courseId: parseInt(subject.id),
-            programId: programId,
-            createNewGroup: true
-          })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          this.showToast(
-            `${result.message} - ${result.eligibleStudents} students eligible`,
-            'success'
-          );
-
-          await this.fetchCourses();
-          this.courses = [...this.allCourses];
-          this.selectedCourse = null;
-
-          if (result.eligibleStudents > 50) {
-            setTimeout(() => {
-              this.showToast(
-                `You may need to create additional groups. Total demand: ${result.eligibleStudents} students`,
-                'warning'
-              );
-            }, 2000);
-          }
-        } else {
-          this.showToast(result.message, 'error');
-        }
-
-      } catch (error) {
-        console.error('Error creating Group 2:', error);
-        this.showToast('Failed to create Group 2', 'error');
-      }
+      // Abrir modal de selección de sesión
+      await this.openSessionSelectionModal(subject, true); // true = crear nuevo grupo
     },
 
     clearFilters() {
@@ -567,19 +450,20 @@ function coursesData() {
     // Método para formatear fechas
     formatDate(dateString) {
       const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
       });
     },
 
     // Método para abrir modal de selección de sesión
-    async openSessionSelectionModal(subject) {
+    async openSessionSelectionModal(subject, isCreatingNewGroup = false) {
       this.selectedCourseForSession = subject;
+      this.isCreatingNewGroup = isCreatingNewGroup;
       this.showSelectSessionModal = true;
       this.loadingSessions = true;
-      
+
       try {
         // Obtener el programId del curso
         const programId = subject.programIds && subject.programIds.length > 0
@@ -595,12 +479,12 @@ function coursesData() {
         // Obtener sesiones activas del mismo programa
         const response = await fetch(`http://localhost:3000/api/sessions`);
         const allSessions = await response.json();
-        
+
         // Filtrar sesiones activas del mismo programa
         const now = new Date();
         this.availableSessions = allSessions
-          .filter(s => 
-            s.programId === programId && 
+          .filter(s =>
+            s.programId === programId &&
             new Date(s.endDate) > now
           )
           .map(s => ({
@@ -609,7 +493,7 @@ function coursesData() {
           }));
 
         console.log('Available sessions:', this.availableSessions);
-        
+
       } catch (error) {
         console.error('Error loading sessions:', error);
         this.showToast('Failed to load sessions', 'error');
@@ -623,55 +507,152 @@ function coursesData() {
       if (!this.selectedCourseForSession) return;
 
       try {
-        const response = await fetch(
-          `http://localhost:3000/api/sessions/${session.id}/courses`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              courseId: parseInt(this.selectedCourseForSession.id),
-              maxStudents: 50
-            })
-          }
-        );
+        let response;
 
-        const result = await response.json();
-
-        if (response.ok) {
-          this.showToast(
-            `${this.selectedCourseForSession.code} added to ${session.sessionName}!`,
-            'success'
+        if (this.isCreatingNewGroup) {
+          // Crear un nuevo grupo
+          response = await fetch(
+            'http://localhost:3000/api/enrollment-automation/add-to-session',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                courseId: parseInt(this.selectedCourseForSession.id),
+                programId: session.programId,
+                createNewGroup: true
+              })
+            }
           );
-          
-          this.showSelectSessionModal = false;
-          this.selectedCourse = null;
-          
-          // Recargar cursos
-          await this.fetchCourses();
-          this.courses = [...this.allCourses];
+
+          const result = await response.json();
+
+          if (response.ok && result.success) {
+            // Cerrar modal de selección de sesión
+            this.showSelectSessionModal = false;
+
+            // Guardar información del grupo para asignar profesor
+            this.selectedGroupForTeacher = {
+              offeringId: result.offeringId,
+              sessionId: result.sessionId,
+              sessionName: session.sessionName,
+              courseCode: this.selectedCourseForSession.code,
+              groupNumber: result.groupNumber
+            };
+
+            // Abrir modal de asignación de profesor
+            this.selectedTeacherId = '';
+            this.showTeacherAssignmentModal = true;
+          } else {
+            throw new Error(result.message || 'Failed to create group');
+          }
         } else {
-          throw new Error(result.message || 'Failed to add course');
+          // Agregar curso a la sesión (primer grupo) - MOSTRAR MODAL DE PROFESOR
+          response = await fetch(
+            `http://localhost:3000/api/sessions/${session.id}/courses`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                courseId: parseInt(this.selectedCourseForSession.id),
+                maxStudents: 50
+              })
+            }
+          );
+          const result = await response.json();
+          if (response.ok) {
+            // Cerrar modal de selección
+            this.showSelectSessionModal = false;
+            // Preparar datos para modal de profesor
+            this.selectedGroupForTeacher = {
+              offeringId: result.offeringId || result.id,
+              sessionId: session.id,
+              sessionName: session.sessionName,
+              courseCode: this.selectedCourseForSession.code,
+              groupNumber: 1  // Primer grupo
+            };
+            // Abrir modal de asignación de profesor
+            this.selectedTeacherId = '';
+            this.showTeacherAssignmentModal = true;
+          } else {
+            throw new Error(result.message || 'Failed to add course');
+          }
         }
-        
+
       } catch (error) {
-        console.error('Error adding course to session:', error);
-        this.showToast(error.message || 'Failed to add course to session', 'error');
+        console.error('Error:', error);
+        this.showToast(error.message || 'Failed to process request', 'error');
       }
     },
 
     // Método para crear nueva sesión desde el modal
     async createNewSessionForCourse() {
       this.showSelectSessionModal = false;
-      
+
       // Preparar template con el curso seleccionado
       this.newSessionTemplate = {
         id: this.selectedCourseForSession.id,
         code: this.selectedCourseForSession.code,
         name: this.selectedCourseForSession.name
       };
-      
+
       this.openCreateSessionModal();
     },
+
+    // Método para asignar profesor al grupo recién creado
+    async assignTeacherToGroup() {
+      if (!this.selectedTeacherId) {
+        this.showToast('Please select a teacher', 'error');
+        return;
+      }
+
+      if (!this.selectedGroupForTeacher) {
+        this.showToast('No group information available', 'error');
+        return;
+      }
+
+      try {
+        // Actualizar el offering con el teacherId
+        const response = await fetch(
+          `http://localhost:3000/api/sessions/${this.selectedGroupForTeacher.sessionId}/offerings/${this.selectedGroupForTeacher.offeringId}/teacher`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              teacherId: parseInt(this.selectedTeacherId)
+            })
+          }
+        );
+
+        if (response.ok) {
+          const groupName = this.selectedGroupForTeacher.groupNumber > 1
+            ? `${this.selectedGroupForTeacher.courseCode}-${this.selectedGroupForTeacher.groupNumber}`
+            : this.selectedGroupForTeacher.courseCode;
+
+          this.showToast(
+            `Group ${groupName} created and teacher assigned successfully!`,
+            'success'
+          );
+
+          // Cerrar modal
+          this.showTeacherAssignmentModal = false;
+          this.selectedGroupForTeacher = null;
+          this.selectedTeacherId = '';
+          this.isCreatingNewGroup = false;
+          this.selectedCourse = null;
+
+          // Recargar cursos
+          await this.fetchCourses();
+          this.courses = [...this.allCourses];
+        } else {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to assign teacher');
+        }
+      } catch (error) {
+        console.error('Error assigning teacher:', error);
+        this.showToast(error.message || 'Failed to assign teacher', 'error');
+      }
+    },
+
 
   }
 }
